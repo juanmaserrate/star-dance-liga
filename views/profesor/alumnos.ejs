@@ -1,0 +1,73 @@
+<%- include('../partials/header', { title: 'Padrón de Alumnos' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div class="card">
+    <div class="card-header">
+      <h1 class="card-title">👥 Mis Alumnos y Patinadores</h1>
+      <a href="/profesor/alumnos/nuevo" class="btn btn-gold">+ Registrar Nuevo Alumno</a>
+    </div>
+
+    <% if (typeof success !== 'undefined' && success) { %>
+      <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
+    <% } %>
+
+    <% if (students && students.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nombre y Apellido</th>
+              <th>DNI</th>
+              <th>Fecha Nac.</th>
+              <th>Seguro / Obra Social</th>
+              <th>Contacto Emergencia</th>
+              <th>Archivos / Fichas</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% students.forEach(s => { %>
+              <tr>
+                <td>
+                  <strong><%= s.last_name %>, <%= s.first_name %></strong>
+                  <% if (s.category_default) { %>
+                    <div style="font-size: 0.8rem; color: var(--gold-light);"><%= s.category_default %></div>
+                  <% } %>
+                </td>
+                <td><%= s.dni %></td>
+                <td><%= s.birth_date %></td>
+                <td>
+                  <%= s.health_insurance || 'Sin registrar' %>
+                  <% if (s.policy_number) { %>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">Pol: <%= s.policy_number %></div>
+                  <% } %>
+                </td>
+                <td>
+                  <%= s.emergency_contact || '-' %><br>
+                  <small style="color: var(--gold-primary);"><%= s.emergency_phone || '' %></small>
+                </td>
+                <td>
+                  <span class="badge badge-violet">📄 <%= s.doc_count %> adjuntos</span>
+                </td>
+                <td>
+                  <div style="display: flex; gap: 0.4rem;">
+                    <a href="/profesor/alumnos/<%= s.id %>/editar" class="btn btn-outline-gold btn-sm">✏️ Editar / Ficha</a>
+                    <a href="/profesor/inscribir?student_id=<%= s.id %>" class="btn btn-gold btn-sm">✍️ Inscribir</a>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">
+        Aún no has registrado alumnos en tu padrón de club.<br>
+        <a href="/profesor/alumnos/nuevo" class="btn btn-gold" style="margin-top: 1rem;">+ Cargar Primer Alumno</a>
+      </p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

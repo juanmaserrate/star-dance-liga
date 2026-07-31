@@ -1,0 +1,60 @@
+<%- include('../partials/header', { title: 'Certificado de Inscripción' }) %>
+
+<div style="padding: 1.5rem; text-align: center;" class="no-print">
+  <button onclick="window.print()" class="btn btn-gold" style="font-size: 1.1rem; padding: 0.75rem 2rem;">
+    🖨️ Imprimir / Descargar Certificado (PDF)
+  </button>
+  <a href="/profesor/dashboard" class="btn btn-secondary" style="margin-left: 1rem;">Volver al Panel</a>
+</div>
+
+<div class="certificate-box">
+  <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+    <img src="/img/logo.svg" alt="Star Dance Logo" style="width: 70px; height: 70px;">
+    <div>
+      <h1 style="margin: 0; font-size: 2rem;">LIGA STAR DANCE</h1>
+      <div style="letter-spacing: 2px; font-weight: 700; color: #d4af37; font-size: 0.9rem;">PATINAJE ARTÍSTICO OFICIAL</div>
+    </div>
+  </div>
+
+  <h3>CERTIFICADO DE INSCRIPCIÓN OFICIAL</h3>
+
+  <div class="cert-body">
+    Se certifica que la/el patinadora/or<br>
+    <span class="cert-highlight" style="font-size: 1.4rem;"><%= reg.last_name.toUpperCase() %>, <%= reg.first_name.toUpperCase() %></span><br>
+    <small>DNI N°: <strong><%= reg.dni %></strong> &bull; Club: <strong><%= reg.club_name %></strong></small>
+  </div>
+
+  <div class="cert-body" style="background: #fdfaf0; padding: 1.25rem; border-radius: 8px; border: 1px dashed #d4af37;">
+    ha quedado formalmente inscripta/o en el evento:<br>
+    <strong style="font-size: 1.25rem; color: #3b1959;"><%= reg.tournament_name %></strong><br>
+    <span style="font-size: 0.95rem;">📅 Fecha del Evento: <strong><%= reg.event_date %></strong> &bull; 📍 Sede: <strong><%= reg.venue %></strong></span>
+    
+    <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid #e2d196;">
+      Categoría: <span class="cert-highlight"><%= reg.category_name %></span><br>
+      Disciplina: <strong><%= reg.discipline %></strong> &bull; Nivel: <strong><%= reg.level %></strong>
+    </div>
+  </div>
+
+  <div style="margin-top: 1.5rem; font-size: 0.9rem; color: #555;">
+    Estado de Acreditación: 
+    <% if (reg.payment_status === 'paid') { %>
+      <strong style="color: #27ae60;">[ PAGADO Y CONFIRMADO ]</strong>
+    <% } else { %>
+      <strong style="color: #e67e22;">[ PENDIENTE DE PAGO ]</strong>
+    <% } %>
+    &bull; N° Registro: <strong>SD-<%= reg.id %>-2026</strong>
+  </div>
+
+  <div class="cert-footer">
+    <div class="cert-signature">
+      Firma Profesor/a Responsable<br>
+      <small style="font-weight: normal; color: #777;"><%= user.full_name %></small>
+    </div>
+    <div class="cert-signature">
+      Comité Organizador<br>
+      <small style="font-weight: normal; color: #777;">Liga Star Dance</small>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

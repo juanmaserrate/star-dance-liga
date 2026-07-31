@@ -1,0 +1,51 @@
+<%- include('../partials/header', { title: 'Iniciar Sesión' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper" style="display: flex; align-items: center; justify-content: center; min-height: 70vh;">
+  <div class="card" style="width: 100%; max-width: 440px; border-top: 5px solid var(--gold-primary);">
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+      <img src="/img/logo.svg" alt="Star Dance" style="width: 70px; height: 70px; margin-bottom: 0.5rem; filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.4));">
+      <h1 style="color: var(--gold-light); font-size: 1.6rem;">Ingreso a la Plataforma</h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Acceso para Profesores, Jueces y Administradores</p>
+    </div>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-danger alert-auto-dismiss">
+        ⚠️ <%= error %>
+      </div>
+    <% } %>
+
+    <% if (typeof success !== 'undefined' && success) { %>
+      <div class="alert alert-success alert-auto-dismiss">
+        ✅ <%= success %>
+      </div>
+    <% } %>
+
+    <form action="/auth/login" method="POST">
+      <div class="form-group">
+        <label class="form-label" for="username">Usuario / Identificador</label>
+        <input type="text" id="username" name="username" class="form-control" placeholder="Ej: profe.ana" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Contraseña</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+      </div>
+
+      <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 1rem;">
+        🔐 Entrar al Sistema
+      </button>
+    </form>
+
+    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(212,175,55,0.2); font-size: 0.85rem; color: var(--text-muted); text-align: center;">
+      <p>💡 <strong>Cuentas de demostración predeterminadas:</strong></p>
+      <div style="display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.5rem; text-align: left; background: rgba(18,6,28,0.6); padding: 0.65rem; border-radius: var(--radius-sm);">
+        <div>&bull; <strong>Admin:</strong> <code>admin</code> / <code>admin123</code></div>
+        <div>&bull; <strong>Profesor/a:</strong> <code>profe.ana</code> / <code>profe123</code></div>
+        <div>&bull; <strong>Juez:</strong> <code>juez</code> / <code>juez123</code></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

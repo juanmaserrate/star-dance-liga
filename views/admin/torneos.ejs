@@ -1,0 +1,67 @@
+<%- include('../partials/header', { title: 'Gestión de Torneos' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+    <div>
+      <h1 style="color: var(--gold-light); font-size: 1.8rem;">Gestión de Torneos de la Liga</h1>
+      <p style="color: var(--text-muted);">Armado de competencias, fechas y configuración de categorías.</p>
+    </div>
+    <a href="/admin/torneos/nuevo" class="btn btn-gold">+ Crear Nuevo Torneo</a>
+  </div>
+
+  <%- include('admin_nav') %>
+
+  <% if (typeof success !== 'undefined' && success) { %>
+    <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
+  <% } %>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">🏆 Torneos Registrados</h2>
+    </div>
+
+    <% if (tournaments && tournaments.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nombre del Torneo</th>
+              <th>Sede</th>
+              <th>Fecha Evento</th>
+              <th>Cierre Inscripción</th>
+              <th>Categorías</th>
+              <th>Inscriptos</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% tournaments.forEach(t => { %>
+              <tr>
+                <td><strong><%= t.name %></strong></td>
+                <td>📍 <%= t.venue %></td>
+                <td>📅 <%= t.event_date %></td>
+                <td>⏳ <%= t.registration_deadline %></td>
+                <td><span class="badge badge-violet"><%= t.category_count %> categorías</span></td>
+                <td><strong><%= t.reg_count %> patinadores</strong></td>
+                <td>
+                  <span class="badge <%= t.status === 'active' ? 'badge-paid' : 'badge-pending' %>">
+                    <%= t.status.toUpperCase() %>
+                  </span>
+                </td>
+                <td>
+                  <a href="/admin/torneos/<%= t.id %>/categorias" class="btn btn-outline-gold btn-sm">⚙️ Categorías y Horarios</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No hay torneos creados aún.</p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

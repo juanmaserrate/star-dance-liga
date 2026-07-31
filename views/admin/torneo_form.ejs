@@ -1,0 +1,61 @@
+<%- include('../partials/header', { title: 'Nuevo Torneo' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div class="card" style="max-width: 700px; margin: 0 auto;">
+    <div class="card-header">
+      <h1 class="card-title">🏆 Crear Nuevo Torneo</h1>
+      <a href="/admin/torneos" class="btn btn-secondary btn-sm">&larr; Volver</a>
+    </div>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-danger">⚠️ <%= error %></div>
+    <% } %>
+
+    <form action="/admin/torneos/nuevo" method="POST">
+      <div class="form-group">
+        <label class="form-label" for="name">Nombre del Torneo *</label>
+        <input type="text" id="name" name="name" class="form-control" placeholder="Ej: Torneo Apertura 2026 - Liga Star Dance" value="<%= tournament ? tournament.name : '' %>" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="description">Descripción / Presentación</label>
+        <textarea id="description" name="description" class="form-control" rows="3" placeholder="Información del evento..."><%= tournament ? tournament.description : '' %></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="venue">Sede / Polideportivo / Lugar *</label>
+        <input type="text" id="venue" name="venue" class="form-control" placeholder="Ej: Club Polideportivo San Martín, San Juan" value="<%= tournament ? tournament.venue : '' %>" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="event_date">Fecha del Evento *</label>
+          <input type="date" id="event_date" name="event_date" class="form-control" value="<%= tournament ? tournament.event_date : '' %>" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="registration_deadline">Cierre de Inscripciones *</label>
+          <input type="date" id="registration_deadline" name="registration_deadline" class="form-control" value="<%= tournament ? tournament.registration_deadline : '' %>" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="status">Estado del Torneo</label>
+        <select id="status" name="status" class="form-select">
+          <option value="upcoming" <%= tournament && tournament.status === 'upcoming' ? 'selected' : '' %>>Próximo (Inscripciones Abiertas)</option>
+          <option value="active" <%= tournament && tournament.status === 'active' ? 'selected' : '' %>>En Curso</option>
+          <option value="finished" <%= tournament && tournament.status === 'finished' ? 'selected' : '' %>>Finalizado</option>
+        </select>
+      </div>
+
+      <div style="margin-top: 2rem;">
+        <button type="submit" class="btn btn-gold" style="width: 100%;">
+          ✨ Crear Torneo y Continuar a Categorías &rarr;
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

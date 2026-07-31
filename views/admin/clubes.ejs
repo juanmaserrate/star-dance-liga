@@ -1,0 +1,87 @@
+<%- include('../partials/header', { title: 'Clubes Afiliados' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div style="margin-bottom: 1.5rem;">
+    <h1 style="color: var(--gold-light); font-size: 1.8rem;">Clubes e Instituciones Afiliadas</h1>
+    <p style="color: var(--text-muted);">Padrón oficial de clubes participantes de la Liga Star Dance.</p>
+  </div>
+
+  <%- include('admin_nav') %>
+
+  <% if (typeof success !== 'undefined' && success) { %>
+    <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
+  <% } %>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+    <!-- Add Club Form -->
+    <div class="card" style="margin: 0;">
+      <h2 class="card-title" style="margin-bottom: 1rem;">🏛️ Registrar Nuevo Club</h2>
+      
+      <form action="/admin/clubes" method="POST">
+        <div class="form-group">
+          <label class="form-label" for="name">Nombre del Club / Escuela *</label>
+          <input type="text" id="name" name="name" class="form-control" placeholder="Ej: Club Deportivo Estrella" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="city">Ciudad / Provincia</label>
+          <input type="text" id="city" name="city" class="form-control" placeholder="Ej: San Juan / Mendoza">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="representative">Representante / Delegado</label>
+          <input type="text" id="representative" name="representative" class="form-control" placeholder="Nombre del responsable">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="contact_phone">Teléfono de Contacto</label>
+          <input type="text" id="contact_phone" name="contact_phone" class="form-control" placeholder="Ej: +54 9 ...">
+        </div>
+
+        <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 0.5rem;">
+          ✨ Registrar Club
+        </button>
+      </form>
+    </div>
+
+    <!-- Clubs List Table -->
+    <div class="card" style="margin: 0;">
+      <h2 class="card-title" style="margin-bottom: 1rem;">📋 Clubes Inscriptos (<%= clubs.length %>)</h2>
+
+      <% if (clubs && clubs.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Club</th>
+                <th>Ciudad</th>
+                <th>Representante</th>
+                <th>Profesores</th>
+                <th>Alumnos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% clubs.forEach(c => { %>
+                <tr>
+                  <td><strong><%= c.name %></strong></td>
+                  <td><%= c.city || 'No especificada' %></td>
+                  <td>
+                    <%= c.representative || '-' %><br>
+                    <small style="color: var(--gold-primary);"><%= c.contact_phone %></small>
+                  </td>
+                  <td><span class="badge badge-violet"><%= c.teacher_count %> profes</span></td>
+                  <td><strong><%= c.student_count %> atletas</strong></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% else { %>
+        <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No hay clubes registrados.</p>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

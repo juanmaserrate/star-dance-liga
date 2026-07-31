@@ -1,0 +1,102 @@
+<%- include('../partials/header', { title: 'Dashboard Administrador' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div style="margin-bottom: 1.5rem;">
+    <h1 style="color: var(--gold-light); font-size: 1.8rem;">Módulo de Administración Star Dance</h1>
+    <p style="color: var(--text-muted);">Control general de la liga, acreditaciones, finanzas y padrón.</p>
+  </div>
+
+  <%- include('admin_nav') %>
+
+  <!-- Summary Stat Tiles -->
+  <div class="stat-grid">
+    <div class="stat-tile">
+      <div class="stat-icon">⛸️</div>
+      <div>
+        <div class="stat-val"><%= stats.totalSkaters %></div>
+        <div class="stat-label">Total Patinadores</div>
+      </div>
+    </div>
+
+    <div class="stat-tile">
+      <div class="stat-icon">📝</div>
+      <div>
+        <div class="stat-val"><%= stats.totalRegistrations %></div>
+        <div class="stat-label">Inscripciones Totales</div>
+      </div>
+    </div>
+
+    <div class="stat-tile">
+      <div class="stat-icon" style="color: #2ec4b6;">💰</div>
+      <div>
+        <div class="stat-val" style="color: #2ec4b6;">$<%= stats.totalPaid.toLocaleString() %></div>
+        <div class="stat-label">Recaudado (Pagado)</div>
+      </div>
+    </div>
+
+    <div class="stat-tile">
+      <div class="stat-icon" style="color: #ff9f1c;">⏳</div>
+      <div>
+        <div class="stat-val" style="color: #ff9f1c;">$<%= stats.totalPending.toLocaleString() %></div>
+        <div class="stat-label">Saldo Pendiente</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+    <!-- Inscriptos por Club -->
+    <div class="card" style="margin: 0;">
+      <h2 class="card-title" style="margin-bottom: 1rem;">🏛️ Inscriptos por Club</h2>
+      <% if (registrationsByClub && registrationsByClub.length > 0) { %>
+        <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.75rem;">
+          <% registrationsByClub.forEach(c => { %>
+            <li style="display: flex; justify-content: space-between; align-items: center; background: rgba(18,6,28,0.6); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-gold);">
+              <span><strong><%= c.club_name %></strong></span>
+              <span class="badge badge-violet" style="font-size: 0.9rem;"><%= c.count %> patinadores</span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } else { %>
+        <p style="color: var(--text-muted);">Sin datos registrados aún.</p>
+      <% } %>
+    </div>
+
+    <!-- Últimas Inscripciones -->
+    <div class="card" style="margin: 0;">
+      <h2 class="card-title" style="margin-bottom: 1rem;">⚡ Últimas Inscripciones</h2>
+      <% if (recentRegistrations && recentRegistrations.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Patinador/a</th>
+                <th>Club</th>
+                <th>Pago</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% recentRegistrations.forEach(r => { %>
+                <tr>
+                  <td><strong><%= r.last_name %>, <%= r.first_name %></strong></td>
+                  <td><%= r.club_name %></td>
+                  <td>
+                    <% if (r.payment_status === 'paid') { %>
+                      <span class="badge badge-paid">PAGADO</span>
+                    <% } else { %>
+                      <span class="badge badge-pending">PENDIENTE</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <p style="color: var(--text-muted);">Sin inscripciones recientes.</p>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,121 @@
+<%- include('../partials/header', { title: student && student.id ? 'Editar Alumno' : 'Nuevo Alumno' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div class="card" style="max-width: 800px; margin: 0 auto;">
+    <div class="card-header">
+      <h1 class="card-title">
+        <%= student && student.id ? '✏️ Editar Ficha de Alumno' : '👤 Alta de Alumno / Patinador' %>
+      </h1>
+      <a href="/profesor/alumnos" class="btn btn-secondary btn-sm">&larr; Volver al Padrón</a>
+    </div>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-danger">⚠️ <%= error %></div>
+    <% } %>
+
+    <form action="<%= student && student.id ? '/profesor/alumnos/' + student.id + '/editar' : '/profesor/alumnos/nuevo' %>" method="POST" enctype="multipart/form-data">
+      
+      <h3 style="color: var(--gold-light); margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.4rem;">
+        1. Datos Personales
+      </h3>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="first_name">Nombre *</label>
+          <input type="text" id="first_name" name="first_name" class="form-control" value="<%= student ? student.first_name : '' %>" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="last_name">Apellido *</label>
+          <input type="text" id="last_name" name="last_name" class="form-control" value="<%= student ? student.last_name : '' %>" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="dni">DNI / Documento *</label>
+          <input type="text" id="dni" name="dni" class="form-control" value="<%= student ? student.dni : '' %>" placeholder="Sin puntos" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="birth_date">Fecha de Nacimiento *</label>
+          <input type="date" id="birth_date" name="birth_date" class="form-control" value="<%= student ? student.birth_date : '' %>" required>
+        </div>
+      </div>
+
+      <h3 style="color: var(--gold-light); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.4rem;">
+        2. Cobertura Médica y Contacto de Emergencia
+      </h3>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="health_insurance">Obra Social / Seguro de Salud</label>
+          <input type="text" id="health_insurance" name="health_insurance" class="form-control" value="<%= student ? student.health_insurance : '' %>" placeholder="Ej: OSDE / Swiss Medical">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="policy_number">N° de Afiliado / Póliza</label>
+          <input type="text" id="policy_number" name="policy_number" class="form-control" value="<%= student ? student.policy_number : '' %>">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="emergency_contact">Contacto de Emergencia (Padre/Madre/Tutor)</label>
+          <input type="text" id="emergency_contact" name="emergency_contact" class="form-control" value="<%= student ? student.emergency_contact : '' %>" placeholder="Nombre completo">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="emergency_phone">Teléfono de Emergencia</label>
+          <input type="text" id="emergency_phone" name="emergency_phone" class="form-control" value="<%= student ? student.emergency_phone : '' %>" placeholder="Ej: +54 9 11 ...">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="medical_notes">Observaciones Médicas / Ficha Técnica</label>
+        <textarea id="medical_notes" name="medical_notes" class="form-control" rows="2" placeholder="Alergias, medicamentos, categoría habitual..."><%= student ? student.medical_notes : '' %></textarea>
+      </div>
+
+      <h3 style="color: var(--gold-light); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.4rem;">
+        3. Adjuntar Apto Médico o Documentación (Opcional)
+      </h3>
+
+      <% if (typeof documents !== 'undefined' && documents && documents.length > 0) { %>
+        <div style="margin-bottom: 1rem; background: rgba(18,6,28,0.6); padding: 0.85rem; border-radius: var(--radius-sm);">
+          <strong style="color: var(--gold-primary);">Archivos adjuntos actuales:</strong>
+          <ul style="margin-top: 0.5rem; margin-left: 1.25rem;">
+            <% documents.forEach(d => { %>
+              <li>
+                <a href="<%= d.file_path %>" target="_blank" style="color: var(--gold-light);">📄 <%= d.title %></a> 
+                <small style="color: var(--text-muted);">(<%= d.uploaded_at %>)</small>
+              </li>
+            <% }) %>
+          </ul>
+        </div>
+      <% } %>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="doc_title">Título del Archivo</label>
+          <input type="text" id="doc_title" name="doc_title" class="form-control" placeholder="Ej: Apto Médico 2026">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="documento">Seleccionar Archivo (PDF / Imagen)</label>
+          <input type="file" id="documento" name="documento" class="form-control" accept=".pdf,.png,.jpg,.jpeg">
+        </div>
+      </div>
+
+      <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+        <button type="submit" class="btn btn-gold" style="flex: 1;">
+          💾 <%= student && student.id ? 'Guardar Cambios' : 'Registrar Alumno' %>
+        </button>
+        <a href="/profesor/alumnos" class="btn btn-secondary">Cancelar</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

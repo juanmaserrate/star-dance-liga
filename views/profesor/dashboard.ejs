@@ -1,0 +1,100 @@
+<%- include('../partials/header', { title: 'Panel Profesor' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <!-- Header Title -->
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+    <div>
+      <h1 style="color: var(--gold-light); font-size: 1.8rem;">Panel de Profesor / Club</h1>
+      <p style="color: var(--text-muted);">Gestión de atletas, fichas médicas e inscripciones a torneos.</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+      <a href="/profesor/alumnos/nuevo" class="btn btn-gold">+ Cargar Alumno</a>
+      <a href="/profesor/inscribir" class="btn btn-outline-gold">✍️ Inscribir a Torneo</a>
+    </div>
+  </div>
+
+  <% if (typeof success !== 'undefined' && success) { %>
+    <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
+  <% } %>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger alert-auto-dismiss">⚠️ <%= error %></div>
+  <% } %>
+
+  <!-- Stats Grid -->
+  <div class="stat-grid">
+    <div class="stat-tile">
+      <div class="stat-icon">👥</div>
+      <div>
+        <div class="stat-val"><%= stats.totalStudents %></div>
+        <div class="stat-label">Mis Alumnos Registrados</div>
+      </div>
+    </div>
+
+    <div class="stat-tile">
+      <div class="stat-icon">📝</div>
+      <div>
+        <div class="stat-val"><%= stats.activeRegistrations %></div>
+        <div class="stat-label">Inscripciones Activas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Registrations Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">📜 Mis Inscripciones Realizadas</h2>
+      <a href="/profesor/inscribir" class="btn btn-gold btn-sm">+ Nueva Inscripción</a>
+    </div>
+
+    <% if (myRegistrations && myRegistrations.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Patinador/a</th>
+              <th>DNI</th>
+              <th>Torneo</th>
+              <th>Categoría</th>
+              <th>Fecha Evento</th>
+              <th>Estado Pago</th>
+              <th>Certificado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% myRegistrations.forEach(r => { %>
+              <tr>
+                <td><strong><%= r.last_name %>, <%= r.first_name %></strong></td>
+                <td><%= r.dni %></td>
+                <td><%= r.tournament_name %></td>
+                <td>
+                  <span class="badge badge-violet"><%= r.category_name %></span>
+                  <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.discipline %> - <%= r.level %></div>
+                </td>
+                <td><%= r.event_date %></td>
+                <td>
+                  <% if (r.payment_status === 'paid') { %>
+                    <span class="badge badge-paid">✅ PAGADO</span>
+                  <% } else { %>
+                    <span class="badge badge-pending">⏳ PENDIENTE</span>
+                  <% } %>
+                </td>
+                <td>
+                  <a href="/profesor/certificado/<%= r.id %>" target="_blank" class="btn btn-outline-gold btn-sm">🖨️ Certificado</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 2rem;">
+        No has inscripto alumnos en torneos recientemente.<br>
+        <a href="/profesor/inscribir" class="btn btn-gold btn-sm" style="margin-top: 0.75rem;">Ir al Formulario de Inscripción</a>
+      </p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

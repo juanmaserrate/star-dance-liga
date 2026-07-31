@@ -1,0 +1,128 @@
+<%- include('../partials/header', { title: 'Gestión de Inscripciones y Pagos' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+    <div>
+      <h1 style="color: var(--gold-light); font-size: 1.8rem;">Master de Inscripciones y Control de Pagos</h1>
+      <p style="color: var(--text-muted);">Listado general cargado automáticamente por los profesores.</p>
+    </div>
+    
+    <a href="/admin/exportar/csv?<%= selectedTournament ? 'tournament_id=' + selectedTournament + '&' : '' %><%= selectedClub ? 'club_id=' + selectedClub + '&' : '' %><%= selectedPayment ? 'payment_status=' + selectedPayment : '' %>" class="btn btn-gold">
+      📥 Exportar a Excel / CSV
+    </a>
+  </div>
+
+  <%- include('admin_nav') %>
+
+  <!-- Filter Bar -->
+  <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+    <form action="/admin/inscripciones" method="GET" class="form-row" style="align-items: flex-end;">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Filtrar por Torneo</label>
+        <select name="tournament_id" class="form-select" onchange="this.form.submit()">
+          <option value="">-- Todos los Torneos --</option>
+          <% tournaments.forEach(t => { %>
+            <option value="<%= t.id %>" <%= selectedTournament == t.id ? 'selected' : '' %>><%= t.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Filtrar por Club</label>
+        <select name="club_id" class="form-select" onchange="this.form.submit()">
+          <option value="">-- Todos los Clubes --</option>
+          <% clubs.forEach(c => { %>
+            <option value="<%= c.id %>" <%= selectedClub == c.id ? 'selected' : '' %>><%= c.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Estado de Pago</label>
+        <select name="payment_status" class="form-select" onchange="this.form.submit()">
+          <option value="">-- Todos los Estados --</option>
+          <option value="paid" <%= selectedPayment === 'paid' ? 'selected' : '' %>>Solo Pagados</option>
+          <option value="pending" <%= selectedPayment === 'pending' ? 'selected' : '' %>>Solo Pendientes</option>
+        </select>
+      </div>
+
+      <div>
+        <a href="/admin/inscripciones" class="btn btn-secondary btn-sm" style="height: 40px; display: flex; align-items: center;">Limpiar Filtros</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Registrations Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">📋 Patinadores Inscriptos (<%= registrations.length %>)</h2>
+    </div>
+
+    <% if (registrations && registrations.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Patinador/a</th>
+              <th>DNI</th>
+              <th>Club / Profesor</th>
+              <th>Torneo</th>
+              <th>Categoría / Nivel</th>
+              <th>Arancel</th>
+              <th>Documentación</th>
+              <th>Estado Pago</th>
+              <th>Acción Pago</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% registrations.forEach(r => { %>
+              <tr>
+                <td>
+                  <strong><%= r.last_name %>, <%= r.first_name %></strong><br>
+                  <small style="color: var(--text-muted);">Nac: <%= r.birth_date %></small>
+                </td>
+                <td><%= r.dni %></td>
+                <td>
+                  <strong><%= r.club_name %></strong><br>
+                  <small style="color: var(--gold-primary);">Profe: <%= r.teacher_name %></small>
+                </td>
+                <td><%= r.tournament_name %></td>
+                <td>
+                  <span class="badge badge-violet"><%= r.category_name %></span>
+                  <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.discipline %> - <%= r.level %></div>
+                </td>
+                <td style="font-weight: 700; color: var(--gold-light);">$<%= r.fee %></td>
+                <td>
+                  <% if (r.doc_count > 0) { %>
+                    <a href="/admin/alumnos/<%= r.student_id %>/documentos" class="btn btn-outline-gold btn-sm">📄 Ver Docs (<%= r.doc_count %>)</a>
+                  <% } else { %>
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">Sin adjuntos</span>
+                  <% } %>
+                </td>
+                <td>
+                  <% if (r.payment_status === 'paid') { %>
+                    <span class="badge badge-paid">✅ PAGADO</span>
+                  <% } else { %>
+                    <span class="badge badge-pending">⏳ PENDIENTE</span>
+                  <% } %>
+                </td>
+                <td>
+                  <form action="/admin/inscripciones/<%= r.id %>/pago" method="POST">
+                    <button type="submit" class="btn <%= r.payment_status === 'paid' ? 'btn-secondary' : 'btn-gold' %> btn-sm">
+                      <%= r.payment_status === 'paid' ? 'Marcar Pendiente' : 'Marcar Pagado' %>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">No se encontraron inscripciones con los filtros seleccionados.</p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

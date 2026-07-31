@@ -1,0 +1,81 @@
+<%- include('../partials/header', { title: 'Inicio' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <!-- Hero Section -->
+  <div class="hero-banner">
+    <img src="/img/logo.svg" alt="Liga Star Dance" class="hero-logo">
+    <h1 class="hero-title">Liga Star Dance</h1>
+    <p class="hero-subtitle">
+      Plataforma oficial de la Liga de Patinaje Artístico. Promoción de torneos, cuerpo de jueces, inscripción digital de atletas y fichas técnicas.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+      <a href="/torneos" class="btn btn-gold">Ver Próximos Torneos</a>
+      <% if (!user) { %>
+        <a href="/auth/login" class="btn btn-outline-gold">Ingreso Profesores / Clubes</a>
+      <% } else if (user.role === 'profesor') { %>
+        <a href="/profesor/alumnos/nuevo" class="btn btn-gold">+ Cargar Nuevo Alumno</a>
+      <% } else if (user.role === 'admin') { %>
+        <a href="/admin/torneos/nuevo" class="btn btn-gold">+ Crear Torneo</a>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stat-grid">
+    <div class="stat-tile">
+      <div class="stat-icon">🏆</div>
+      <div>
+        <div class="stat-val"><%= stats.tournaments %></div>
+        <div class="stat-label">Torneos Realizados</div>
+      </div>
+    </div>
+
+    <div class="stat-tile">
+      <div class="stat-icon">⛸️</div>
+      <div>
+        <div class="stat-val"><%= stats.skaters %></div>
+        <div class="stat-label">Patinadores Inscriptos</div>
+      </div>
+    </div>
+
+    <div class="stat-tile">
+      <div class="stat-icon">🏛️</div>
+      <div>
+        <div class="stat-val"><%= stats.clubs %></div>
+        <div class="stat-label">Clubes Afiliados</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Next Tournaments Preview -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">✨ Próximos Torneos y Competencias</h2>
+      <a href="/torneos" class="btn btn-outline-gold btn-sm">Ver Todos</a>
+    </div>
+
+    <% if (tournaments && tournaments.length > 0) { %>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem;">
+        <% tournaments.forEach(t => { %>
+          <div class="card" style="background: rgba(30, 10, 46, 0.6); margin-bottom: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+              <span class="badge badge-violet"><%= t.status === 'upcoming' ? 'Próximamente' : (t.status === 'active' ? 'En Curso' : 'Finalizado') %></span>
+              <small style="color: var(--gold-primary); font-weight: 700;">📅 <%= t.event_date %></small>
+            </div>
+            <h3 style="color: var(--gold-light); margin-bottom: 0.5rem;"><%= t.name %></h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+              📍 <strong>Sede:</strong> <%= t.venue %><br>
+              📝 <strong>Cierre inscripción:</strong> <%= t.registration_deadline %>
+            </p>
+            <a href="/torneos/<%= t.id %>" class="btn btn-outline-gold btn-sm" style="width: 100%;">Detalles y Categorías &rarr;</a>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No hay torneos activos en este momento.</p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

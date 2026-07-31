@@ -1,0 +1,81 @@
+<%- include('../partials/header', { title: 'Inscribir Alumno' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div class="card" style="max-width: 750px; margin: 0 auto;">
+    <div class="card-header">
+      <h1 class="card-title">✍️ Inscripción a Torneo</h1>
+      <a href="/profesor/dashboard" class="btn btn-secondary btn-sm">&larr; Volver al Panel</a>
+    </div>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-danger">⚠️ <%= error %></div>
+    <% } %>
+
+    <form action="/profesor/inscribir" method="POST">
+      
+      <!-- Select Student -->
+      <div class="form-group">
+        <label class="form-label" for="student_id">1. Seleccionar Alumno/a del Padrón *</label>
+        <% if (students && students.length > 0) { %>
+          <select id="student_id" name="student_id" class="form-select" required>
+            <option value="">-- Seleccionar Alumno --</option>
+            <% students.forEach(s => { %>
+              <option value="<%= s.id %>" <%= (preselectedStudentId == s.id) ? 'selected' : '' %>>
+                <%= s.last_name %>, <%= s.first_name %> (DNI: <%= s.dni %>)
+              </option>
+            <% }) %>
+          </select>
+        <% } else { %>
+          <div class="alert alert-danger" style="margin-top: 0.5rem;">
+            No tienes alumnos en tu padrón. <a href="/profesor/alumnos/nuevo" style="color: white; underline">Carga uno aquí primero</a>.
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Select Tournament -->
+      <div class="form-group">
+        <label class="form-label" for="tournament_select">2. Seleccionar Torneo *</label>
+        <select id="tournament_select" class="form-select" onchange="window.location.href='/profesor/inscribir?tournament_id=' + this.value + '<%= preselectedStudentId ? '&student_id=' + preselectedStudentId : '' %>'" required>
+          <% activeTournaments.forEach(t => { %>
+            <option value="<%= t.id %>" <%= (selectedTournamentId == t.id) ? 'selected' : '' %>>
+              <%= t.name %> (📅 <%= t.event_date %> - 📍 <%= t.venue %>)
+            </option>
+          <% }) %>
+        </select>
+        <input type="hidden" name="tournament_id" value="<%= selectedTournamentId %>">
+      </div>
+
+      <!-- Select Category -->
+      <div class="form-group">
+        <label class="form-label" for="category_id">3. Seleccionar Categoría y Nivel *</label>
+        <% if (categories && categories.length > 0) { %>
+          <select id="category_id" name="category_id" class="form-select" required>
+            <option value="">-- Seleccionar Categoría --</option>
+            <% categories.forEach(c => { %>
+              <option value="<%= c.id %>">
+                [<%= c.discipline %> - <%= c.level %>] <%= c.name %> (<%= c.min_age %>-<%= c.max_age %> años) - Arancel: $<%= c.fee %>
+              </option>
+            <% }) %>
+          </select>
+        <% } else { %>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">No hay categorías creadas para este torneo.</p>
+        <% } %>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="notes">Notas o Comentarios de la Inscripción</label>
+        <input type="text" id="notes" name="notes" class="form-control" placeholder="Ej: Música enviada / Consulta especial">
+      </div>
+
+      <div style="margin-top: 2rem;">
+        <button type="submit" class="btn btn-gold" style="width: 100%; font-size: 1.1rem;" <%= (!students || students.length === 0 || !categories || categories.length === 0) ? 'disabled' : '' %>>
+          ✨ Confirmar Inscripción de Alumno
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

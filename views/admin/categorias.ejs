@@ -1,0 +1,134 @@
+<%- include('../partials/header', { title: 'Categorías - ' + tournament.name }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div style="margin-bottom: 1.5rem;">
+    <span class="badge badge-violet">CONFIGURACIÓN DE CATEGORÍAS</span>
+    <h1 style="color: var(--gold-light); font-size: 1.8rem;"><%= tournament.name %></h1>
+    <p style="color: var(--text-muted);">Defina las categorías de edad, niveles, disciplinas, horarios y aranceles para este torneo.</p>
+  </div>
+
+  <%- include('admin_nav') %>
+
+  <% if (typeof success !== 'undefined' && success) { %>
+    <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
+  <% } %>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger alert-auto-dismiss">⚠️ <%= error %></div>
+  <% } %>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+    <!-- Form: Add Category -->
+    <div class="card" style="margin: 0;">
+      <h2 class="card-title" style="margin-bottom: 1rem;">➕ Nueva Categoría</h2>
+      
+      <form action="/admin/torneos/<%= tournament.id %>/categorias" method="POST">
+        <div class="form-group">
+          <label class="form-label" for="name">Nombre de Categoría *</label>
+          <input type="text" id="name" name="name" class="form-control" placeholder="Ej: Infantil A / C2 / Promocional" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="discipline">Disciplina *</label>
+            <select id="discipline" name="discipline" class="form-select" required>
+              <option value="Libre">Libre</option>
+              <option value="Escuela">Escuela / Figuras</option>
+              <option value="Danza">Danza Solo / Parejas</option>
+              <option value="Show">Show / Precision</option>
+              <option value="Iniciación">Iniciación / Formativo</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="level">Nivel / División *</label>
+            <select id="level" name="level" class="form-select" required>
+              <option value="Iniciación">Iniciación</option>
+              <option value="C Cero">C Cero</option>
+              <option value="C Tercera">C Tercera</option>
+              <option value="C Segunda">C Segunda</option>
+              <option value="C Primera">C Primera</option>
+              <option value="B Avanzado">B Avanzado</option>
+              <option value="A / Elite">A / Elite</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="min_age">Edad Mínima</label>
+            <input type="number" id="min_age" name="min_age" class="form-control" value="6" min="3" max="99">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="max_age">Edad Máxima</label>
+            <input type="number" id="max_age" name="max_age" class="form-control" value="12" min="3" max="99">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="gender">Género</label>
+            <select id="gender" name="gender" class="form-select">
+              <option value="Mixto">Mixto</option>
+              <option value="Femenino">Femenino</option>
+              <option value="Masculino">Masculino</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="fee">Arancel ($ ARS)</label>
+            <input type="number" id="fee" name="fee" class="form-control" value="15000" step="500">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="schedule">Horario Estimado de Competición</label>
+          <input type="text" id="schedule" name="schedule" class="form-control" placeholder="Ej: Sábado 10:30 hs">
+        </div>
+
+        <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 0.5rem;">
+          ✨ Guardar Categoría
+        </button>
+      </form>
+    </div>
+
+    <!-- Categories List -->
+    <div class="card" style="margin: 0;">
+      <h2 class="card-title" style="margin-bottom: 1rem;">📋 Categorías Creadas (<%= categories.length %>)</h2>
+
+      <% if (categories && categories.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th>Edades</th>
+                <th>Horario</th>
+                <th>Arancel</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% categories.forEach(c => { %>
+                <tr>
+                  <td>
+                    <strong><%= c.name %></strong>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);"><%= c.discipline %> - <%= c.level %></div>
+                  </td>
+                  <td><%= c.min_age %>-<%= c.max_age %> años</td>
+                  <td>🕒 <%= c.schedule || 'A confirmar' %></td>
+                  <td style="color: var(--gold-light); font-weight: 700;">$<%= c.fee %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% else { %>
+        <p style="color: var(--text-muted); text-align: center; padding: 2rem;">Aún no hay categorías en este torneo.</p>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

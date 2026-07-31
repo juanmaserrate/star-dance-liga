@@ -1,0 +1,35 @@
+<%- include('../partials/header', { title: 'Cuerpo de Jueces' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div class="card">
+    <div class="card-header">
+      <h1 class="card-title">⚖️ Jurado Oficial de la Liga Star Dance</h1>
+    </div>
+    <p style="color: var(--text-muted); margin-bottom: 2rem;">
+      Nuestro distinguido panel de jueces oficiales cuenta con certificación nacional e internacional para evaluar las disciplinas de Patín Artístico: Libre, Escuela, Danza, Show y Parejas de Alto Rendimiento.
+    </p>
+
+    <% if (judges && judges.length > 0) { %>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        <% judges.forEach(j => { %>
+          <div class="card" style="background: rgba(30, 10, 46, 0.7); text-align: center; margin: 0; border-top: 4px solid var(--gold-primary);">
+            <div style="width: 80px; height: 80px; margin: 0 auto 1rem; border-radius: 50%; background: rgba(212, 175, 55, 0.15); border: 2px solid var(--gold-primary); display: flex; align-items: center; justify-content: center; font-size: 2.2rem;">
+              ⭐
+            </div>
+            <h2 style="color: var(--gold-light); font-size: 1.3rem; margin-bottom: 0.3rem;"><%= j.full_name %></h2>
+            <span class="badge badge-violet" style="margin-bottom: 0.8rem;">JUEZ OFICIAL STAR DANCE</span>
+            <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 0.5rem;">
+              Certificación de Juzgamiento y Arbitraje Técnico.<br>
+              Especialidad: Evaluación Artística y Ejecución Técnica.
+            </p>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No hay jueces dados de alta en este momento.</p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

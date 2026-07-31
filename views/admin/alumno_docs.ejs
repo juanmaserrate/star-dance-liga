@@ -1,0 +1,45 @@
+<%- include('../partials/header', { title: 'Documentos - ' + student.first_name + ' ' + student.last_name }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div class="card" style="max-width: 750px; margin: 0 auto;">
+    <div class="card-header">
+      <h1 class="card-title">📄 Documentación y Ficha Técnica</h1>
+      <a href="/admin/inscripciones" class="btn btn-secondary btn-sm">&larr; Volver a Inscripciones</a>
+    </div>
+
+    <div style="background: rgba(18,6,28,0.7); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-gold); margin-bottom: 1.5rem;">
+      <h2 style="color: var(--gold-light); font-size: 1.3rem;"><%= student.last_name %>, <%= student.first_name %></h2>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem;">
+        DNI: <strong><%= student.dni %></strong> &bull; Fecha Nac: <strong><%= student.birth_date %></strong><br>
+        Club: <strong><%= student.club_name %></strong> &bull; Profesor Responsable: <strong><%= student.teacher_name %></strong>
+      </p>
+
+      <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(212,175,55,0.2); font-size: 0.9rem;">
+        🏥 <strong>Obra Social / Seguro:</strong> <%= student.health_insurance || 'Sin registrar' %> (Pol: <%= student.policy_number || '-' %>)<br>
+        📞 <strong>Contacto Emergencia:</strong> <%= student.emergency_contact || '-' %> (<%= student.emergency_phone || '-' %>)<br>
+        📝 <strong>Observaciones Médicas:</strong> <%= student.medical_notes || 'Ninguna' %>
+      </div>
+    </div>
+
+    <h3 style="color: var(--gold-primary); margin-bottom: 1rem;">📁 Archivos Adjuntos (Aptos Médicos / Fichas)</h3>
+
+    <% if (documents && documents.length > 0) { %>
+      <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <% documents.forEach(d => { %>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(30,10,46,0.8); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-gold);">
+            <div>
+              <strong style="color: var(--gold-light); font-size: 1.05rem;">📄 <%= d.title %></strong>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">Cargado el: <%= d.uploaded_at %></div>
+            </div>
+            <a href="<%= d.file_path %>" target="_blank" class="btn btn-gold btn-sm">👁️ Abrir / Ver Archivo</a>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No se han adjuntado archivos para este alumno.</p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

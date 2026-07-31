@@ -1,0 +1,76 @@
+<%- include('../partials/header', { title: tournament.name }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+      <div>
+        <span class="badge badge-violet" style="margin-bottom: 0.5rem;"><%= tournament.status.toUpperCase() %></span>
+        <h1 style="color: var(--gold-light); font-size: 2rem;"><%= tournament.name %></h1>
+      </div>
+      <% if (user && user.role === 'profesor') { %>
+        <a href="/profesor/inscribir?tournament_id=<%= tournament.id %>" class="btn btn-gold">✍️ Inscribir Alumnos</a>
+      <% } else if (!user) { %>
+        <a href="/auth/login" class="btn btn-gold">🔐 Iniciar Sesión para Inscribir Alumnos</a>
+      <% } %>
+    </div>
+
+    <p style="color: var(--text-muted); font-size: 1.05rem; margin-bottom: 1.5rem;"><%= tournament.description %></p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem; background: rgba(18, 6, 28, 0.7); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-gold);">
+      <div>
+        <small style="color: var(--gold-primary); text-transform: uppercase; font-weight: 700;">📍 Sede / Polideportivo</small>
+        <div style="font-size: 1.1rem; font-weight: 600;"><%= tournament.venue %></div>
+      </div>
+      <div>
+        <small style="color: var(--gold-primary); text-transform: uppercase; font-weight: 700;">📅 Fecha del Evento</small>
+        <div style="font-size: 1.1rem; font-weight: 600;"><%= tournament.event_date %></div>
+      </div>
+      <div>
+        <small style="color: var(--gold-primary); text-transform: uppercase; font-weight: 700;">⏳ Cierre de Inscripción</small>
+        <div style="font-size: 1.1rem; font-weight: 600;"><%= tournament.registration_deadline %></div>
+      </div>
+      <div>
+        <small style="color: var(--gold-primary); text-transform: uppercase; font-weight: 700;">👥 Total Inscriptos</small>
+        <div style="font-size: 1.1rem; font-weight: 600;"><%= totalRegistrations %> patinadores</div>
+      </div>
+    </div>
+
+    <h2 style="color: var(--gold-primary); margin-bottom: 1rem; font-size: 1.35rem;">📋 Categorías y Horarios Confirmados</h2>
+
+    <% if (categories && categories.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Categoría / Nombre</th>
+              <th>Disciplina</th>
+              <th>Nivel</th>
+              <th>Edades</th>
+              <th>Género</th>
+              <th>Horario Estimado</th>
+              <th>Arancel</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% categories.forEach(c => { %>
+              <tr>
+                <td><strong><%= c.name %></strong></td>
+                <td><%= c.discipline %></td>
+                <td><span class="badge badge-violet"><%= c.level %></span></td>
+                <td><%= c.min_age %> - <%= c.max_age %> años</td>
+                <td><%= c.gender %></td>
+                <td>🕒 <%= c.schedule || 'A confirmar' %></td>
+                <td style="color: var(--gold-light); font-weight: 700;">$<%= c.fee ? c.fee.toLocaleString() : '0' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 1.5rem;">Las categorías para este torneo aún no han sido publicadas.</p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

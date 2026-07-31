@@ -1,0 +1,90 @@
+<%- include('../partials/header', { title: 'Planilla de Juzgamiento' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;" class="no-print">
+    <div>
+      <h1 style="color: var(--gold-light); font-size: 1.8rem;">⚖️ Planilla Oficial de Evaluación (Jueces)</h1>
+      <p style="color: var(--text-muted);">Listado de competidores ordenado por categoría para la mesa examinadora.</p>
+    </div>
+    <button onclick="window.print()" class="btn btn-gold">🖨️ Imprimir Planillas de Juzgamiento</button>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="card no-print" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+    <form action="/juez/planilla" method="GET" class="form-row">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Seleccionar Torneo</label>
+        <select name="tournament_id" class="form-select" onchange="this.form.submit()">
+          <% tournaments.forEach(t => { %>
+            <option value="<%= t.id %>" <%= selectedTournamentId == t.id ? 'selected' : '' %>><%= t.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Filtrar Categoría</label>
+        <select name="category_id" class="form-select" onchange="this.form.submit()">
+          <option value="">-- Todas las Categorías --</option>
+          <% categories.forEach(c => { %>
+            <option value="<%= c.id %>" <%= selectedCategoryId == c.id ? 'selected' : '' %>><%= c.name %> (<%= c.discipline %> - <%= c.level %>)</option>
+          <% }) %>
+        </select>
+      </div>
+    </form>
+  </div>
+
+  <!-- Groups by Category -->
+  <% if (Object.keys(groupedCategories).length > 0) { %>
+    <% Object.values(groupedCategories).forEach(group => { %>
+      <div class="card" style="margin-bottom: 2rem; page-break-after: always;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--gold-primary); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+          <div>
+            <span class="badge badge-violet"><%= group.discipline %> - <%= group.level %></span>
+            <h2 style="color: var(--gold-light); font-size: 1.4rem; margin-top: 0.3rem;"><%= group.name %></h2>
+          </div>
+          <div style="color: var(--gold-primary); font-weight: 700;">
+            🕒 Horario: <%= group.schedule || 'A confirmar' %>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table" style="border: 1px solid var(--border-gold);">
+            <thead>
+              <tr>
+                <th style="width: 60px;">Orden</th>
+                <th>Patinador/a</th>
+                <th>Club</th>
+                <th style="width: 100px;">Técnica (0-10)</th>
+                <th style="width: 100px;">Artística (0-10)</th>
+                <th style="width: 100px;">Deducciones</th>
+                <th style="width: 100px;">Total Final</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% group.skaters.forEach((s, idx) => { %>
+                <tr>
+                  <td style="text-align: center; font-weight: 800; color: var(--gold-light);"><%= idx + 1 %></td>
+                  <td>
+                    <strong><%= s.last_name.toUpperCase() %>, <%= s.first_name %></strong>
+                  </td>
+                  <td><%= s.club_name %></td>
+                  <td style="background: rgba(255,255,255,0.05); min-width: 90px;"></td>
+                  <td style="background: rgba(255,255,255,0.05); min-width: 90px;"></td>
+                  <td style="background: rgba(255,255,255,0.05); min-width: 90px;"></td>
+                  <td style="background: rgba(212,175,55,0.1); min-width: 90px;"></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% }) %>
+  <% } else { %>
+    <div class="card">
+      <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">No hay inscriptos para el torneo o categoría seleccionada.</p>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>
