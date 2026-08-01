@@ -2,7 +2,7 @@
   <div class="nav-container">
     <a href="/" class="brand">
       <img src="/img/logo.svg" alt="Star Dance Logo">
-      <span>STAR DANCE</span>
+      <span>STAR DANCE LIGA</span>
     </a>
     
     <button class="mobile-toggle" id="mobileToggle" aria-label="Menú">&#9776;</button>
@@ -14,24 +14,28 @@
       
       <% if (user) { %>
         <% if (user.role === 'admin') { %>
-          <li><a href="/admin/dashboard" class="nav-link">Panel Admin</a></li>
+          <li><a href="/admin/dashboard" class="nav-link" style="color: var(--gold-light);">📊 Panel Admin</a></li>
+          <li><a href="/admin/cms" class="nav-link">🖥️ CMS</a></li>
+          <li><a href="/admin/inscripciones" class="nav-link">📜 Inscripciones</a></li>
+          <li><a href="/admin/finanzas" class="nav-link">💰 Finanzas</a></li>
         <% } else if (user.role === 'profesor') { %>
-          <li><a href="/profesor/dashboard" class="nav-link">Mis Alumnos</a></li>
+          <li><a href="/profesor/dashboard" class="nav-link" style="color: var(--gold-light);">📊 Mi Padrón</a></li>
+          <li><a href="/profesor/inscribir" class="nav-link">✍️ Inscribir Alumna/Grupo</a></li>
         <% } else if (user.role === 'juez') { %>
-          <li><a href="/juez/planilla" class="nav-link">Planilla Juez</a></li>
+          <li><a href="/juez/planilla" class="nav-link" style="color: var(--gold-light);">📋 Planilla Juez</a></li>
         <% } %>
 
         <li>
           <span class="user-pill">
-            <small><%= user.role.toUpperCase() %>:</small> <%= user.full_name %>
+            <small style="color: var(--gold-primary); font-weight: 800;"><%= user.role.toUpperCase() %>:</small> <%= user.full_name %>
           </span>
         </li>
         <li>
-          <a href="/auth/logout" class="btn btn-outline-gold btn-sm">Salir</a>
+          <a href="/auth/logout" class="btn btn-outline-gold btn-sm">Cerrar Sesión</a>
         </li>
       <% } else { %>
         <li>
-          <a href="/auth/login" class="btn btn-gold btn-sm">Ingreso Profesores/Jueces</a>
+          <a href="/auth/login" class="btn btn-gold btn-sm">Ingreso Profesores / Jueces</a>
         </li>
       <% } %>
     </ul>

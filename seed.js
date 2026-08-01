@@ -12,6 +12,7 @@ function seed() {
 
   // 2. Insert Users
   const passwordHashAdmin = bcrypt.hashSync('admin123', 10);
+  const passwordHashSandra = bcrypt.hashSync('Sandra2026', 10);
   const passwordHashProfe = bcrypt.hashSync('profe123', 10);
   const passwordHashJuez = bcrypt.hashSync('juez123', 10);
 
@@ -24,11 +25,14 @@ function seed() {
   insertUser.run(2, 'profe.ana', passwordHashProfe, 'PROF. ANA CLARA GÓMEZ', 'profesor', 1, 'ANA@ESTRELLAPATIN.COM', '+54 9 264 412 3456');
   insertUser.run(3, 'profe.carlos', passwordHashProfe, 'PROF. CARLOS ROSSI', 'profesor', 2, 'CARLOS@PATINSANJUAN.COM', '+54 9 264 598 7654');
   insertUser.run(4, 'juez', passwordHashJuez, 'MARIANA SOLA (JUEZ OFICIAL)', 'juez', null, 'JUEZ.MARIANA@STARDANCE.COM.AR', '+54 9 11 5432 1098');
+  insertUser.run(5, 'sandra', passwordHashSandra, 'SANDRA (ADMINISTRADORA)', 'admin', 1, 'sandra@stardance.com.ar', '+54 9 264 555 7777');
 
   // Multi-club assignment for teachers
   db.prepare(`INSERT OR IGNORE INTO user_clubs (user_id, club_id) VALUES (?, ?)`).run(2, 1);
   db.prepare(`INSERT OR IGNORE INTO user_clubs (user_id, club_id) VALUES (?, ?)`).run(2, 2); // Ana also manages Club 2
   db.prepare(`INSERT OR IGNORE INTO user_clubs (user_id, club_id) VALUES (?, ?)`).run(3, 2);
+  db.prepare(`INSERT OR IGNORE INTO user_clubs (user_id, club_id) VALUES (?, ?)`).run(5, 1);
+  db.prepare(`INSERT OR IGNORE INTO user_clubs (user_id, club_id) VALUES (?, ?)`).run(5, 2);
 
   // 3. Insert Tournaments
   const insertTournament = db.prepare(`
