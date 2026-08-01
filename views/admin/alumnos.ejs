@@ -1,0 +1,106 @@
+<%- include('../partials/header', { title: 'Padrón Único de Patinadoras' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+    <div>
+      <h1 style="color: var(--gold-light); font-size: 1.8rem;">👥 Padrón Único de Patinadoras (<%= students.length %>)</h1>
+      <p style="color: var(--text-muted);">Directorio maestro de deportistas de la liga con garantía de unicidad por DNI y edición completa.</p>
+    </div>
+
+    <a href="/admin/alumnos/nuevo" class="btn btn-gold">
+      ➕ Nueva Patinadora en Padrón
+    </a>
+  </div>
+
+  <% if (typeof success !== 'undefined' && success) { %>
+    <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
+  <% } %>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger alert-auto-dismiss">⚠️ <%= error %></div>
+  <% } %>
+
+  <!-- Search & Filter Bar -->
+  <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+    <form action="/admin/alumnos" method="GET" class="form-row" style="align-items: flex-end;">
+      <div class="form-group" style="margin-bottom: 0; flex: 2;">
+        <label class="form-label">Buscar Patinadora (Nombre, Apellido, DNI, CUIL)</label>
+        <input type="text" name="buscar" class="form-control" placeholder="Escriba para buscar por DNI, CUIL o Nombre..." value="<%= buscar %>">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Filtrar por Club</label>
+        <select name="club_id" class="form-select" onchange="this.form.submit()">
+          <option value="">-- Todos los Clubes --</option>
+          <% clubs.forEach(c => { %>
+            <option value="<%= c.id %>" <%= selectedClub == c.id ? 'selected' : '' %>><%= c.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem;">
+        <button type="submit" class="btn btn-gold" style="height: 40px;">🔍 Buscar</button>
+        <a href="/admin/alumnos" class="btn btn-secondary" style="height: 40px; display: flex; align-items: center;">Limpiar</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Skaters List Table -->
+  <div class="card">
+    <% if (students && students.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Patinadora (Unicidad)</th>
+              <th>DNI / CUIL</th>
+              <th>Edad (Año Cal.)</th>
+              <th>Club Afiliado</th>
+              <th>Profesora a Cargo</th>
+              <th>Obra Social / Póliza</th>
+              <th>Inscripciones</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% students.forEach(s => { %>
+              <tr>
+                <td>
+                  <strong><%= s.last_name %>, <%= s.first_name %></strong>
+                  <div style="font-size: 0.78rem; color: var(--gold-light);">Nac: <%= s.birth_date %></div>
+                </td>
+                <td>
+                  <strong><%= s.dni %></strong><br>
+                  <small style="color: var(--text-muted);"><%= s.cuil || '-' %></small>
+                </td>
+                <td>
+                  <span class="badge badge-violet"><%= s.age %> AÑOS</span>
+                </td>
+                <td><strong><%= s.club_name %></strong></td>
+                <td><span style="color: var(--gold-primary); font-size: 0.88rem;"><%= s.teacher_name %></span></td>
+                <td>
+                  <strong><%= s.health_insurance %></strong><br>
+                  <small style="color: var(--text-muted);">Póliza: <%= s.policy_number %></small>
+                </td>
+                <td>
+                  <span class="badge badge-paid"><%= s.reg_count %> competencias</span>
+                </td>
+                <td>
+                  <div style="display: flex; gap: 0.4rem;">
+                    <a href="/admin/alumnos/<%= s.id %>/editar" class="btn btn-gold btn-sm">✏️ Editar</a>
+                    <a href="/admin/alumnos/<%= s.id %>/documentos" class="btn btn-outline-gold btn-sm">📄 Docs (<%= s.doc_count %>)</a>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">No se encontraron patinadoras en el padrón con los filtros seleccionados.</p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

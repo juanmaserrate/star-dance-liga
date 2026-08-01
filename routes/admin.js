@@ -493,6 +493,181 @@ router.post('/usuarios', (req, res) => {
   }
 });
 
+// Master Skaters Directory for Admin (Padrón Único de Patinadoras)
+router.get('/alumnos', (req, res) => {
+  const { buscar, club_id } = req.query;
+
+  let query = `
+    SELECT s.*, 
+    c.name as club_name,
+    u.full_name as teacher_name,
+    (SELECT COUNT(*) FROM student_documents d WHERE d.student_id = s.id) as doc_count,
+    (SELECT COUNT(*) FROM registrations r WHERE r.student_id = s.id) as reg_count
+    FROM students s
+    JOIN clubs c ON s.club_id = c.id
+    JOIN users u ON s.teacher_id = u.id
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (buscar) {
+    const q = `%${buscar.trim().toUpperCase()}%`;
+    query += ` AND (UPPER(s.first_name) LIKE ? OR UPPER(s.last_name) LIKE ? OR s.dni LIKE ? OR s.cuil LIKE ?)`;
+    params.push(q, q, q, q);
+  }
+
+  if (club_id) {
+    query += ` AND s.club_id = ?`;
+    params.push(club_id);
+  }
+
+  query += ` ORDER BY s.last_name ASC, s.first_name ASC`;
+
+  const students = db.prepare(query).all(...params);
+  students.forEach(s => { s.age = getCalendarAge(s.birth_date); });
+
+  const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
+
+  res.render('admin/alumnos', {
+    user: req.session.user,
+    students,
+    clubs,
+    buscar: buscar || '',
+    selectedClub: club_id || '',
+    success: req.query.success || null,
+    error: req.query.error || null
+  });
+});
+
+// Form: New Skater by Admin
+router.get('/alumnos/nuevo', (req, res) => {
+  const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
+  const teachers = db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();
+
+  res.render('admin/alumno_form', {
+    user: req.session.user,
+    student: null,
+    clubs,
+    teachers,
+    error: null
+  });
+});
+
+// Save New Skater by Admin
+router.post('/alumnos/nuevo', (req, res) => {
+  const {
+    first_name, last_name, dni, cuil, birth_date, club_id, teacher_id,
+    health_insurance, policy_number, medical_notes, emergency_contact, emergency_phone
+  } = req.body;
+
+  if (!first_name || !last_name || !dni || !birth_date || !health_insurance || !policy_number) {
+    const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
+    const teachers = db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();
+    return res.render('admin/alumno_form', {
+      user: req.session.user,
+      student: req.body,
+      clubs,
+      teachers,
+      error: 'Nombre, Apellido, DNI, Fecha Nacimiento, Seguro y Póliza son requeridos.'
+    });
+  }
+
+  try {
+    db.prepare(`
+      INSERT INTO students (
+        teacher_id, club_id, first_name, last_name, dni, cuil, birth_date,
+        category_default, health_insurance, policy_number, medical_notes,
+        emergency_contact, emergency_phone
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      parseInt(teacher_id) || req.session.user.id,
+      parseInt(club_id) || 1,
+      first_name.trim().toUpperCase(),
+      last_name.trim().toUpperCase(),
+      dni.trim().toUpperCase(),
+      (cuil || '').trim().toUpperCase(),
+      birth_date,
+      'GENERAL',
+      health_insurance.trim().toUpperCase(),
+      policy_number.trim().toUpperCase(),
+      (medical_notes || '').toUpperCase(),
+      (emergency_contact || '').toUpperCase(),
+      (emergency_phone || '').toUpperCase()
+    );
+
+    res.redirect('/admin/alumnos?success=' + encodeURIComponent('Patinadora registrada exitosamente en el padrón único.'));
+  } catch (err) {
+    console.error('Error adding skater by admin:', err);
+    let msg = 'Error al registrar la deportista.';
+    if (err.message && err.message.includes('UNIQUE constraint failed')) {
+      msg = 'Ya existe una patinadora registrada en el padrón con ese DNI (Unicidad activa).';
+    }
+    const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
+    const teachers = db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();
+    res.render('admin/alumno_form', {
+      user: req.session.user,
+      student: req.body,
+      clubs,
+      teachers,
+      error: msg
+    });
+  }
+});
+
+// Form: Edit Skater by Admin
+router.get('/alumnos/:id/editar', (req, res) => {
+  const student = db.prepare(`SELECT * FROM students WHERE id = ?`).get(req.params.id);
+  if (!student) return res.status(404).render('error', { title: 'Patinadora no encontrada' });
+
+  const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
+  const teachers = db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();
+
+  res.render('admin/alumno_form', {
+    user: req.session.user,
+    student,
+    clubs,
+    teachers,
+    error: null
+  });
+});
+
+// Save Edited Skater Data by Admin
+router.post('/alumnos/:id/editar', (req, res) => {
+  const studentId = req.params.id;
+  const {
+    first_name, last_name, dni, cuil, birth_date, club_id, teacher_id,
+    health_insurance, policy_number, medical_notes, emergency_contact, emergency_phone
+  } = req.body;
+
+  try {
+    db.prepare(`
+      UPDATE students SET
+        first_name = ?, last_name = ?, dni = ?, cuil = ?, birth_date = ?, club_id = ?, teacher_id = ?,
+        health_insurance = ?, policy_number = ?, medical_notes = ?, emergency_contact = ?, emergency_phone = ?
+      WHERE id = ?
+    `).run(
+      first_name.trim().toUpperCase(),
+      last_name.trim().toUpperCase(),
+      dni.trim().toUpperCase(),
+      (cuil || '').trim().toUpperCase(),
+      birth_date,
+      parseInt(club_id) || 1,
+      parseInt(teacher_id) || req.session.user.id,
+      health_insurance.trim().toUpperCase(),
+      policy_number.trim().toUpperCase(),
+      (medical_notes || '').toUpperCase(),
+      (emergency_contact || '').toUpperCase(),
+      (emergency_phone || '').toUpperCase(),
+      studentId
+    );
+
+    res.redirect('/admin/alumnos?success=' + encodeURIComponent(`Datos de ${first_name.toUpperCase()} ${last_name.toUpperCase()} actualizados correctamente.`));
+  } catch (err) {
+    console.error('Error updating skater by admin:', err);
+    res.redirect('/admin/alumnos?error=' + encodeURIComponent('Error al actualizar datos de la patinadora.'));
+  }
+});
+
 // Admin Quick Password Reset Email Sender
 router.post('/usuarios/:id/restablecer', async (req, res) => {
   const userId = req.params.id;

@@ -1,0 +1,116 @@
+<%- include('../partials/header', { title: student && student.id ? 'Editar Patinadora' : 'Nueva Patinadora' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div class="card" style="max-width: 850px; margin: 0 auto;">
+    <div class="card-header">
+      <h1 class="card-title">
+        <%= student && student.id ? '✏️ Modificar Datos de Patinadora (Admin)' : '👤 Registro Directo de Patinadora (Admin)' %>
+      </h1>
+      <a href="/admin/alumnos" class="btn btn-secondary btn-sm">&larr; Volver al Padrón Maestro</a>
+    </div>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-danger">⚠️ <%= error %></div>
+    <% } %>
+
+    <form action="<%= student && student.id ? '/admin/alumnos/' + student.id + '/editar' : '/admin/alumnos/nuevo' %>" method="POST">
+      
+      <h3 style="color: var(--gold-light); margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.4rem;">
+        1. Datos de Identificación (Garantía de Unicidad por DNI)
+      </h3>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="first_name">Nombre *</label>
+          <input type="text" id="first_name" name="first_name" class="form-control" value="<%= student ? student.first_name : '' %>" placeholder="EJ: CATALINA" required style="text-transform: uppercase;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="last_name">Apellido *</label>
+          <input type="text" id="last_name" name="last_name" class="form-control" value="<%= student ? student.last_name : '' %>" placeholder="EJ: SANCHEZ" required style="text-transform: uppercase;">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="dni">DNI / Documento (Unicidad) *</label>
+          <input type="text" id="dni" name="dni" class="form-control" value="<%= student ? student.dni : '' %>" placeholder="Sin puntos" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="cuil">CUIL</label>
+          <input type="text" id="cuil" name="cuil" class="form-control" value="<%= student ? student.cuil : '' %>" placeholder="EJ: 27-57841590-4">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="birth_date">Fecha de Nacimiento *</label>
+          <input type="date" id="birth_date" name="birth_date" class="form-control" value="<%= student ? student.birth_date : '' %>" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="club_id">Club Afiliado *</label>
+          <select id="club_id" name="club_id" class="form-select" required>
+            <% clubs.forEach(c => { %>
+              <option value="<%= c.id %>" <%= student && student.club_id == c.id ? 'selected' : '' %>><%= c.name %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="teacher_id">Profesora / Usuario a Cargo *</label>
+          <select id="teacher_id" name="teacher_id" class="form-select" required>
+            <% teachers.forEach(t => { %>
+              <option value="<%= t.id %>" <%= student && student.teacher_id == t.id ? 'selected' : '' %>><%= t.full_name %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+
+      <h3 style="color: var(--gold-light); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.4rem;">
+        2. Cobertura Médica y Contacto de Emergencia
+      </h3>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="health_insurance">Obra Social / Seguro Médica *</label>
+          <input type="text" id="health_insurance" name="health_insurance" class="form-control" value="<%= student ? student.health_insurance : '' %>" placeholder="EJ: OSDE / SEGURO" required style="text-transform: uppercase;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="policy_number">N° de Póliza / Afiliado *</label>
+          <input type="text" id="policy_number" name="policy_number" class="form-control" value="<%= student ? student.policy_number : '' %>" placeholder="EJ: POL-998877" required style="text-transform: uppercase;">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="emergency_contact">Contacto de Emergencia</label>
+          <input type="text" id="emergency_contact" name="emergency_contact" class="form-control" value="<%= student ? student.emergency_contact : '' %>" placeholder="NOMBRE TUTOR" style="text-transform: uppercase;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="emergency_phone">Teléfono de Emergencia</label>
+          <input type="text" id="emergency_phone" name="emergency_phone" class="form-control" value="<%= student ? student.emergency_phone : '' %>" placeholder="EJ: +54 9 264 ...">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="medical_notes">Observaciones Médicas</label>
+        <textarea id="medical_notes" name="medical_notes" class="form-control" rows="2" placeholder="ALERGIAS, APTO MÉDICO..." style="text-transform: uppercase;"><%= student ? student.medical_notes : '' %></textarea>
+      </div>
+
+      <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+        <button type="submit" class="btn btn-gold" style="flex: 1;">
+          💾 <%= student && student.id ? 'Guardar Cambios de la Patinadora' : 'Registrar Patinadora en Padrón' %>
+        </button>
+        <a href="/admin/alumnos" class="btn btn-secondary">Cancelar</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
