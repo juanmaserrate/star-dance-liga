@@ -36,26 +36,26 @@
     <div class="stat-tile">
       <div class="stat-icon" style="color: #2ec4b6;">📈</div>
       <div>
-        <div class="stat-val" style="color: #2ec4b6;">$<%= revenueStats.total_net.toLocaleString() %></div>
+        <div class="stat-val" style="color: #2ec4b6;">$<%= (revenueStats.total_net || 0).toLocaleString() %></div>
         <div class="stat-label">Ingresos Netos Inscriptos</div>
-        <small style="color: var(--text-muted);">Bruto: $<%= revenueStats.total_gross.toLocaleString() %> (-$<%= revenueStats.total_discounts.toLocaleString() %> Becas)</small>
+        <small style="color: var(--text-muted);">Bruto: $<%= (revenueStats.total_gross || 0).toLocaleString() %> (-$<%= (revenueStats.total_discounts || 0).toLocaleString() %> Becas)</small>
       </div>
     </div>
 
     <div class="stat-tile">
       <div class="stat-icon" style="color: #e74c3c;">📉</div>
       <div>
-        <div class="stat-val" style="color: #e74c3c;">$<%= totalExpenses.toLocaleString() %></div>
+        <div class="stat-val" style="color: <%= (totalExpenses || 0) >= 0 ? '#e74c3c' : '#2ec4b6' %>;">$<%= (totalExpenses || 0).toLocaleString() %></div>
         <div class="stat-label">Total Gastos Operativos</div>
         <small style="color: var(--text-muted);"><%= expenses.length %> comprobantes/rubros</small>
       </div>
     </div>
 
     <div class="stat-tile">
-      <div class="stat-icon" style="color: <%= projectedProfit >= 0 ? '#2ec4b6' : '#e74c3c' %>;">⚖️</div>
+      <div class="stat-icon" style="color: <%= (projectedProfit || 0) >= 0 ? '#2ec4b6' : '#e74c3c' %>;">⚖️</div>
       <div>
-        <div class="stat-val" style="color: <%= projectedProfit >= 0 ? '#2ec4b6' : '#e74c3c' %>;">
-          $<%= projectedProfit.toLocaleString() %>
+        <div class="stat-val" style="color: <%= (projectedProfit || 0) >= 0 ? '#2ec4b6' : '#e74c3c' %>;">
+          $<%= (projectedProfit || 0).toLocaleString() %>
         </div>
         <div class="stat-label">Ganancia / Resultado Proyectado</div>
       </div>

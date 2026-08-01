@@ -398,6 +398,12 @@ router.post('/inscribir', (req, res) => {
     return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('Debe seleccionar al menos una patinadora.'));
   }
 
+  // Check for duplicate student IDs
+  const uniqueStudentIds = [...new Set(selectedStudentIds)];
+  if (uniqueStudentIds.length !== selectedStudentIds.length) {
+    return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('No podés seleccionar a la misma patinadora más de una vez en la misma inscripción.'));
+  }
+
   // Get main student and primary club
   const primaryStudent = db.prepare(`SELECT * FROM students WHERE id = ?`).get(selectedStudentIds[0]);
   const clubId = primaryStudent ? primaryStudent.club_id : (req.session.user.club_id || 1);

@@ -228,10 +228,61 @@
         row4.style.display = 'flex'; select4.disabled = false;
       }
     }
+    
+    // Trigger filtering on visibility updates
+    filterSelectedStudents();
   }
 
-  // Initialize visibility on page load
-  document.addEventListener('DOMContentLoaded', updateRowVisibility);
+  function filterSelectedStudents() {
+    const selects = [
+      document.getElementById('student_select_1'),
+      document.getElementById('student_select_2'),
+      document.getElementById('student_select_3'),
+      document.getElementById('student_select_4')
+    ];
+
+    // Gather currently selected values (excluding empty placeholder)
+    const selectedValues = selects
+      .filter(s => s && !s.disabled)
+      .map(s => s.value)
+      .filter(val => val !== '');
+
+    selects.forEach(currentSelect => {
+      if (!currentSelect || currentSelect.disabled) return;
+
+      const currentValue = currentSelect.value;
+      const options = currentSelect.querySelectorAll('option');
+
+      options.forEach(opt => {
+        if (opt.value === '') return; // Never disable placeholder
+
+        // Disable this option if it's selected in any other dropdown
+        if (selectedValues.includes(opt.value) && opt.value !== currentValue) {
+          opt.disabled = true;
+        } else {
+          opt.disabled = false;
+        }
+      });
+    });
+  }
+
+  // Attach event listeners to all student dropdowns
+  document.addEventListener('DOMContentLoaded', () => {
+    updateRowVisibility();
+    
+    const selects = [
+      document.getElementById('student_select_1'),
+      document.getElementById('student_select_2'),
+      document.getElementById('student_select_3'),
+      document.getElementById('student_select_4')
+    ];
+
+    selects.forEach(s => {
+      if (s) {
+        s.addEventListener('change', filterSelectedStudents);
+      }
+    });
+  });
 </script>
 
 <%- include('../partials/footer') %>
