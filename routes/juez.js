@@ -14,16 +14,18 @@ router.get('/planilla', (req, res) => {
 
   let categories = [];
   if (selectedTournamentId) {
-    categories = db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY min_age ASC, level ASC`).all(selectedTournamentId);
+    categories = db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY min_age ASC, division ASC`).all(selectedTournamentId);
   }
 
   let query = `
     SELECT r.*, 
-    s.first_name, s.last_name, s.birth_date,
+    COALESCE(s.first_name, r.group_name) as first_name,
+    COALESCE(s.last_name, 'GRUPO') as last_name,
+    s.birth_date,
     cl.name as club_name,
-    c.name as category_name, c.discipline, c.level, c.min_age, c.max_age, c.schedule
+    c.name as category_name, c.discipline, c.division as level, c.min_age, c.max_age, c.schedule
     FROM registrations r
-    JOIN students s ON r.student_id = s.id
+    LEFT JOIN students s ON r.student_id = s.id
     JOIN clubs cl ON r.club_id = cl.id
     JOIN categories c ON r.category_id = c.id
     WHERE r.tournament_id = ?

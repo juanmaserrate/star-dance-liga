@@ -1,11 +1,11 @@
-<%- include('../partials/header', { title: student && student.id ? 'Editar Alumno' : 'Nuevo Alumno' }) %>
+<%- include('../partials/header', { title: student && student.id ? 'Editar Patinadora' : 'Nueva Patinadora' }) %>
 <%- include('../partials/navbar') %>
 
 <div class="main-wrapper">
   <div class="card" style="max-width: 800px; margin: 0 auto;">
     <div class="card-header">
       <h1 class="card-title">
-        <%= student && student.id ? '✏️ Editar Ficha de Alumno' : '👤 Alta de Alumno / Patinador' %>
+        <%= student && student.id ? '✏️ Editar Ficha de Patinadora' : '👤 Alta de Patinadora' %>
       </h1>
       <a href="/profesor/alumnos" class="btn btn-secondary btn-sm">&larr; Volver al Padrón</a>
     </div>
@@ -17,18 +17,18 @@
     <form action="<%= student && student.id ? '/profesor/alumnos/' + student.id + '/editar' : '/profesor/alumnos/nuevo' %>" method="POST" enctype="multipart/form-data">
       
       <h3 style="color: var(--gold-light); margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.4rem;">
-        1. Datos Personales
+        1. Datos Personales (Almacenamiento en MAYÚSCULAS)
       </h3>
 
       <div class="form-row">
         <div class="form-group">
           <label class="form-label" for="first_name">Nombre *</label>
-          <input type="text" id="first_name" name="first_name" class="form-control" value="<%= student ? student.first_name : '' %>" required>
+          <input type="text" id="first_name" name="first_name" class="form-control" value="<%= student ? student.first_name : '' %>" placeholder="EJ: SOFÍA" required style="text-transform: uppercase;">
         </div>
 
         <div class="form-group">
           <label class="form-label" for="last_name">Apellido *</label>
-          <input type="text" id="last_name" name="last_name" class="form-control" value="<%= student ? student.last_name : '' %>" required>
+          <input type="text" id="last_name" name="last_name" class="form-control" value="<%= student ? student.last_name : '' %>" placeholder="EJ: MARTÍNEZ" required style="text-transform: uppercase;">
         </div>
       </div>
 
@@ -39,42 +39,60 @@
         </div>
 
         <div class="form-group">
+          <label class="form-label" for="cuil">CUIL</label>
+          <input type="text" id="cuil" name="cuil" class="form-control" value="<%= student ? student.cuil : '' %>" placeholder="EJ: 27-48123456-4">
+        </div>
+
+        <div class="form-group">
           <label class="form-label" for="birth_date">Fecha de Nacimiento *</label>
           <input type="date" id="birth_date" name="birth_date" class="form-control" value="<%= student ? student.birth_date : '' %>" required>
         </div>
       </div>
 
+      <div class="form-group">
+        <label class="form-label" for="club_id">Club Perteneciente *</label>
+        <select id="club_id" name="club_id" class="form-select" required>
+          <% if (typeof myClubs !== 'undefined' && myClubs && myClubs.length > 0) { %>
+            <% myClubs.forEach(c => { %>
+              <option value="<%= c.id %>" <%= student && student.club_id == c.id ? 'selected' : '' %>><%= c.name %></option>
+            <% }) %>
+          <% } else { %>
+            <option value="1">CLUB DEPORTIVO ESTRELLA</option>
+          <% } %>
+        </select>
+      </div>
+
       <h3 style="color: var(--gold-light); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.4rem;">
-        2. Cobertura Médica y Contacto de Emergencia
+        2. Cobertura Médica y Contacto de Emergencia (Obligatorios)
       </h3>
 
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label" for="health_insurance">Obra Social / Seguro de Salud</label>
-          <input type="text" id="health_insurance" name="health_insurance" class="form-control" value="<%= student ? student.health_insurance : '' %>" placeholder="Ej: OSDE / Swiss Medical">
+          <label class="form-label" for="health_insurance">Obra Social / Seguro de Salud *</label>
+          <input type="text" id="health_insurance" name="health_insurance" class="form-control" value="<%= student ? student.health_insurance : '' %>" placeholder="EJ: OSDE / SWISS MEDICAL" required style="text-transform: uppercase;">
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="policy_number">N° de Afiliado / Póliza</label>
-          <input type="text" id="policy_number" name="policy_number" class="form-control" value="<%= student ? student.policy_number : '' %>">
+          <label class="form-label" for="policy_number">N° de Afiliado / Póliza de Seguro *</label>
+          <input type="text" id="policy_number" name="policy_number" class="form-control" value="<%= student ? student.policy_number : '' %>" placeholder="EJ: 987654321" required style="text-transform: uppercase;">
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label class="form-label" for="emergency_contact">Contacto de Emergencia (Padre/Madre/Tutor)</label>
-          <input type="text" id="emergency_contact" name="emergency_contact" class="form-control" value="<%= student ? student.emergency_contact : '' %>" placeholder="Nombre completo">
+          <input type="text" id="emergency_contact" name="emergency_contact" class="form-control" value="<%= student ? student.emergency_contact : '' %>" placeholder="NOMBRE COMPLETO" style="text-transform: uppercase;">
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="emergency_phone">Teléfono de Emergencia</label>
-          <input type="text" id="emergency_phone" name="emergency_phone" class="form-control" value="<%= student ? student.emergency_phone : '' %>" placeholder="Ej: +54 9 11 ...">
+          <label class="form-label" for="emergency_phone">Teléfono de Emergencia de Contacto</label>
+          <input type="text" id="emergency_phone" name="emergency_phone" class="form-control" value="<%= student ? student.emergency_phone : '' %>" placeholder="EJ: +54 9 264 ...">
         </div>
       </div>
 
       <div class="form-group">
         <label class="form-label" for="medical_notes">Observaciones Médicas / Ficha Técnica</label>
-        <textarea id="medical_notes" name="medical_notes" class="form-control" rows="2" placeholder="Alergias, medicamentos, categoría habitual..."><%= student ? student.medical_notes : '' %></textarea>
+        <textarea id="medical_notes" name="medical_notes" class="form-control" rows="2" placeholder="ALERGIAS, MEDICAMENTOS, APTO MÉDICO..." style="text-transform: uppercase;"><%= student ? student.medical_notes : '' %></textarea>
       </div>
 
       <h3 style="color: var(--gold-light); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.4rem;">
@@ -98,7 +116,7 @@
       <div class="form-row">
         <div class="form-group">
           <label class="form-label" for="doc_title">Título del Archivo</label>
-          <input type="text" id="doc_title" name="doc_title" class="form-control" placeholder="Ej: Apto Médico 2026">
+          <input type="text" id="doc_title" name="doc_title" class="form-control" placeholder="EJ: APTO MÉDICO 2026" style="text-transform: uppercase;">
         </div>
 
         <div class="form-group">
@@ -109,7 +127,7 @@
 
       <div style="margin-top: 2rem; display: flex; gap: 1rem;">
         <button type="submit" class="btn btn-gold" style="flex: 1;">
-          💾 <%= student && student.id ? 'Guardar Cambios' : 'Registrar Alumno' %>
+          💾 <%= student && student.id ? 'Guardar Cambios' : 'Registrar Patinadora' %>
         </button>
         <a href="/profesor/alumnos" class="btn btn-secondary">Cancelar</a>
       </div>

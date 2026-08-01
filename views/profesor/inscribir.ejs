@@ -1,10 +1,10 @@
-<%- include('../partials/header', { title: 'Inscribir Alumno' }) %>
+<%- include('../partials/header', { title: 'Inscribir Alumna / Grupo' }) %>
 <%- include('../partials/navbar') %>
 
 <div class="main-wrapper">
-  <div class="card" style="max-width: 750px; margin: 0 auto;">
+  <div class="card" style="max-width: 850px; margin: 0 auto;">
     <div class="card-header">
-      <h1 class="card-title">✍️ Inscripción a Torneo</h1>
+      <h1 class="card-title">✍️ Inscripción a Torneo (Individual o Grupal)</h1>
       <a href="/profesor/dashboard" class="btn btn-secondary btn-sm">&larr; Volver al Panel</a>
     </div>
 
@@ -14,28 +14,9 @@
 
     <form action="/profesor/inscribir" method="POST">
       
-      <!-- Select Student -->
-      <div class="form-group">
-        <label class="form-label" for="student_id">1. Seleccionar Alumno/a del Padrón *</label>
-        <% if (students && students.length > 0) { %>
-          <select id="student_id" name="student_id" class="form-select" required>
-            <option value="">-- Seleccionar Alumno --</option>
-            <% students.forEach(s => { %>
-              <option value="<%= s.id %>" <%= (preselectedStudentId == s.id) ? 'selected' : '' %>>
-                <%= s.last_name %>, <%= s.first_name %> (DNI: <%= s.dni %>)
-              </option>
-            <% }) %>
-          </select>
-        <% } else { %>
-          <div class="alert alert-danger" style="margin-top: 0.5rem;">
-            No tienes alumnos en tu padrón. <a href="/profesor/alumnos/nuevo" style="color: white; underline">Carga uno aquí primero</a>.
-          </div>
-        <% } %>
-      </div>
-
       <!-- Select Tournament -->
       <div class="form-group">
-        <label class="form-label" for="tournament_select">2. Seleccionar Torneo *</label>
+        <label class="form-label" for="tournament_select">1. Seleccionar Torneo *</label>
         <select id="tournament_select" class="form-select" onchange="window.location.href='/profesor/inscribir?tournament_id=' + this.value + '<%= preselectedStudentId ? '&student_id=' + preselectedStudentId : '' %>'" required>
           <% activeTournaments.forEach(t => { %>
             <option value="<%= t.id %>" <%= (selectedTournamentId == t.id) ? 'selected' : '' %>>
@@ -46,21 +27,105 @@
         <input type="hidden" name="tournament_id" value="<%= selectedTournamentId %>">
       </div>
 
-      <!-- Select Category -->
+      <!-- Select Category & Discipline -->
       <div class="form-group">
-        <label class="form-label" for="category_id">3. Seleccionar Categoría y Nivel *</label>
+        <label class="form-label" for="category_id">2. Seleccionar Disciplina y Categoría *</label>
         <% if (categories && categories.length > 0) { %>
           <select id="category_id" name="category_id" class="form-select" required>
             <option value="">-- Seleccionar Categoría --</option>
             <% categories.forEach(c => { %>
               <option value="<%= c.id %>">
-                [<%= c.discipline %> - <%= c.level %>] <%= c.name %> (<%= c.min_age %>-<%= c.max_age %> años) - Arancel: $<%= c.fee %>
+                [<%= c.discipline %>] <%= c.name %> (<%= c.min_age %>-<%= c.max_age %> años) - Arancel: $<%= c.fee %>
               </option>
             <% }) %>
           </select>
         <% } else { %>
           <p style="color: var(--text-muted); font-size: 0.9rem;">No hay categorías creadas para este torneo.</p>
         <% } %>
+      </div>
+
+      <!-- Registration Type -->
+      <div class="form-group">
+        <label class="form-label" for="group_type">3. Tipo de Inscripción *</label>
+        <select id="group_type" name="group_type" class="form-select">
+          <option value="Individual">Individual (1 Patinadora)</option>
+          <option value="Dúo">Dúo (2 Patinadoras)</option>
+          <option value="Trío">Trío (3 Patinadoras)</option>
+          <option value="Cuarteto">Cuarteto (4 Patinadoras)</option>
+          <option value="Small">Small Group (Hasta 6 Patinadoras)</option>
+          <option value="Show">Show (Hasta 30 Patinadoras)</option>
+          <option value="Precisión">Precisión (Hasta 30 Patinadoras)</option>
+          <option value="Parejas Mixtas">Parejas Mixtas (2 Patinadores)</option>
+        </select>
+      </div>
+
+      <!-- Select Students Line-by-Line -->
+      <div class="form-group" id="student_selection_box">
+        <label class="form-label">4. Seleccionar Patinadora(s) del Padrón (Línea por Línea) *</label>
+        <small style="color: var(--gold-light); display: block; margin-bottom: 0.5rem;">
+          ℹ️ En grupos (Dúos, Tríos, Cuartetos, etc.), la categoría y edad del grupo se evalúan según la participante de mayor categoría o edad.
+        </small>
+
+        <% if (students && students.length > 0) { %>
+          <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <span style="font-weight: 700; color: var(--gold-primary); min-width: 60px;">Renglón 1:</span>
+              <select name="student_ids" class="form-select" required>
+                <option value="">-- Seleccionar Patinadora Principal --</option>
+                <% students.forEach(s => { %>
+                  <option value="<%= s.id %>" <%= (preselectedStudentId == s.id) ? 'selected' : '' %>>
+                    <%= s.last_name %>, <%= s.first_name %> (DNI: <%= s.dni %> | <%= s.age %> AÑOS | <%= s.club_name %>)
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <span style="font-weight: 700; color: var(--gold-primary); min-width: 60px;">Renglón 2:</span>
+              <select name="student_ids" class="form-select">
+                <option value="">-- Opcional (Para Dúo / Pareja / Grupos) --</option>
+                <% students.forEach(s => { %>
+                  <option value="<%= s.id %>">
+                    <%= s.last_name %>, <%= s.first_name %> (DNI: <%= s.dni %> | <%= s.age %> AÑOS | <%= s.club_name %>)
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <span style="font-weight: 700; color: var(--gold-primary); min-width: 60px;">Renglón 3:</span>
+              <select name="student_ids" class="form-select">
+                <option value="">-- Opcional (Para Trío / Grupos) --</option>
+                <% students.forEach(s => { %>
+                  <option value="<%= s.id %>">
+                    <%= s.last_name %>, <%= s.first_name %> (DNI: <%= s.dni %> | <%= s.age %> AÑOS | <%= s.club_name %>)
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <span style="font-weight: 700; color: var(--gold-primary); min-width: 60px;">Renglón 4:</span>
+              <select name="student_ids" class="form-select">
+                <option value="">-- Opcional (Para Cuarteto / Grupos) --</option>
+                <% students.forEach(s => { %>
+                  <option value="<%= s.id %>">
+                    <%= s.last_name %>, <%= s.first_name %> (DNI: <%= s.dni %> | <%= s.age %> AÑOS | <%= s.club_name %>)
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="alert alert-danger" style="margin-top: 0.5rem;">
+            No tienes patinadoras en tu padrón. <a href="/profesor/alumnos/nuevo" style="color: white; text-decoration: underline">Carga una aquí primero</a>.
+          </div>
+        <% } %>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="group_name">Nombre de Fantasía del Grupo / Pareja (Si aplica)</label>
+        <input type="text" id="group_name" name="group_name" class="form-control" placeholder="Ej: LAS ESTRELLAS DEL SUR">
       </div>
 
       <div class="form-group">
@@ -70,7 +135,7 @@
 
       <div style="margin-top: 2rem;">
         <button type="submit" class="btn btn-gold" style="width: 100%; font-size: 1.1rem;" <%= (!students || students.length === 0 || !categories || categories.length === 0) ? 'disabled' : '' %>>
-          ✨ Confirmar Inscripción de Alumno
+          ✨ Confirmar Inscripción en MAYÚSCULAS
         </button>
       </div>
 

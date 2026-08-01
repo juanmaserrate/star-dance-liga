@@ -68,7 +68,7 @@ router.get('/torneos/:id', (req, res) => {
     return res.status(404).render('error', { title: 'Torneo No Encontrado', message: 'El torneo solicitado no existe.' });
   }
 
-  const categories = db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY min_age ASC, level ASC`).all(tournamentId);
+  const categories = db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY min_age ASC, division ASC`).all(tournamentId);
   const totalRegistrations = db.prepare(`SELECT COUNT(*) as count FROM registrations WHERE tournament_id = ?`).get(tournamentId).count;
 
   res.render('public/torneo_detail', {

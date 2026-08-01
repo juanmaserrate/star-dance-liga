@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    const uniqueName = 'doc_' + Date.now() + '_' + Math.round(Math.random() * 1E9) + ext;
+    const uniqueName = 'DOC_' + Date.now() + '_' + Math.round(Math.random() * 1E9) + ext;
     cb(null, uniqueName);
   }
 });
@@ -25,6 +25,14 @@ const upload = multer({ storage });
 // All routes require role 'profesor'
 router.use(requireAuth, requireRole('profesor'));
 
+// Helper: Calculate age from birth date in calendar year
+function getCalendarAge(birthDateStr) {
+  if (!birthDateStr) return 0;
+  const birthYear = new Date(birthDateStr).getFullYear();
+  const currentYear = new Date().getFullYear();
+  return Math.max(0, currentYear - birthYear);
+}
+
 // Dashboard Profesor
 router.get('/dashboard', (req, res) => {
   const teacherId = req.session.user.id;
@@ -32,24 +40,48 @@ router.get('/dashboard', (req, res) => {
   const totalStudents = db.prepare(`SELECT COUNT(*) as count FROM students WHERE teacher_id = ?`).get(teacherId).count;
   const activeRegistrations = db.prepare(`SELECT COUNT(*) as count FROM registrations WHERE teacher_id = ?`).get(teacherId).count;
 
-  const students = db.prepare(`
+  // Teacher's assigned clubs
+  const myClubs = db.prepare(`
+    SELECT c.* FROM clubs c
+    JOIN user_clubs uc ON c.id = uc.club_id
+    WHERE uc.user_id = ?
+    ORDER BY c.name ASC
+  `).all(teacherId);
+
+  const selectedClubId = req.query.club_id || (myClubs.length > 0 ? myClubs[0].id : null);
+
+  let studentQuery = `
     SELECT s.*, 
+    c.name as club_name,
     (SELECT COUNT(*) FROM student_documents d WHERE d.student_id = s.id) as doc_count,
     (SELECT COUNT(*) FROM registrations r WHERE r.student_id = s.id) as reg_count
     FROM students s
+    JOIN clubs c ON s.club_id = c.id
     WHERE s.teacher_id = ?
-    ORDER BY s.last_name ASC, s.first_name ASC
-  `).all(teacherId);
+  `;
+  const studentParams = [teacherId];
+  if (selectedClubId) {
+    studentQuery += ` AND s.club_id = ?`;
+    studentParams.push(selectedClubId);
+  }
+  studentQuery += ` ORDER BY s.last_name ASC, s.first_name ASC`;
+
+  const students = db.prepare(studentQuery).all(...studentParams);
+
+  // Add calculated age to students
+  students.forEach(s => { s.age = getCalendarAge(s.birth_date); });
 
   const myRegistrations = db.prepare(`
     SELECT r.*, 
     s.first_name, s.last_name, s.dni,
     t.name as tournament_name, t.event_date,
-    c.name as category_name, c.discipline, c.level, c.fee
+    c.name as category_name, c.discipline, c.fee,
+    cl.name as club_name
     FROM registrations r
-    JOIN students s ON r.student_id = s.id
+    LEFT JOIN students s ON r.student_id = s.id
     JOIN tournaments t ON r.tournament_id = t.id
     JOIN categories c ON r.category_id = c.id
+    JOIN clubs cl ON r.club_id = cl.id
     WHERE r.teacher_id = ?
     ORDER BY r.created_at DESC
   `).all(teacherId);
@@ -57,6 +89,8 @@ router.get('/dashboard', (req, res) => {
   res.render('profesor/dashboard', {
     user: req.session.user,
     stats: { totalStudents, activeRegistrations },
+    myClubs,
+    selectedClubId,
     students,
     myRegistrations,
     success: req.query.success || null,
@@ -64,17 +98,44 @@ router.get('/dashboard', (req, res) => {
   });
 });
 
-// Students List Page
+// Create New Club by Teacher
+router.post('/clubes/nuevo', (req, res) => {
+  const teacherId = req.session.user.id;
+  const { name, city, contact_phone } = req.body;
+
+  if (!name) return res.redirect('/profesor/dashboard?error=' + encodeURIComponent('El nombre del club es obligatorio.'));
+
+  const uppercaseName = name.trim().toUpperCase();
+
+  try {
+    const info = db.prepare(`
+      INSERT INTO clubs (name, representative, contact_phone, city)
+      VALUES (?, ?, ?, ?)
+    `).run(uppercaseName, req.session.user.full_name.toUpperCase(), contact_phone || '', (city || '').toUpperCase());
+
+    const newClubId = info.lastInsertRowid;
+    db.prepare(`INSERT OR IGNORE INTO user_clubs (user_id, club_id) VALUES (?, ?)`).run(teacherId, newClubId);
+
+    res.redirect('/profesor/dashboard?club_id=' + newClubId + '&success=' + encodeURIComponent(`Club ${uppercaseName} creado correctamente.`));
+  } catch (err) {
+    console.error('Error creating club:', err);
+    res.redirect('/profesor/dashboard?error=' + encodeURIComponent('El club ya existe o no pudo crearse.'));
+  }
+});
+
+// Students Roster Page
 router.get('/alumnos', (req, res) => {
   const teacherId = req.session.user.id;
   const students = db.prepare(`
-    SELECT s.*, 
-    (SELECT COUNT(*) FROM student_documents d WHERE d.student_id = s.id) as doc_count,
-    (SELECT COUNT(*) FROM registrations r WHERE r.student_id = s.id) as reg_count
+    SELECT s.*, c.name as club_name,
+    (SELECT COUNT(*) FROM student_documents d WHERE d.student_id = s.id) as doc_count
     FROM students s
+    JOIN clubs c ON s.club_id = c.id
     WHERE s.teacher_id = ?
     ORDER BY s.last_name ASC, s.first_name ASC
   `).all(teacherId);
+
+  students.forEach(s => { s.age = getCalendarAge(s.birth_date); });
 
   res.render('profesor/alumnos', {
     user: req.session.user,
@@ -86,67 +147,95 @@ router.get('/alumnos', (req, res) => {
 
 // Form: New Student
 router.get('/alumnos/nuevo', (req, res) => {
+  const teacherId = req.session.user.id;
+  const myClubs = db.prepare(`
+    SELECT c.* FROM clubs c
+    JOIN user_clubs uc ON c.id = uc.club_id
+    WHERE uc.user_id = ?
+    ORDER BY c.name ASC
+  `).all(teacherId);
+
   res.render('profesor/alumno_form', {
     user: req.session.user,
     student: null,
+    myClubs,
     error: null
   });
 });
 
-// Save New Student
+// Save New Student (All Text UPPERCASE)
 router.post('/alumnos/nuevo', upload.single('documento'), (req, res) => {
   const teacherId = req.session.user.id;
-  const clubId = req.session.user.club_id || 1; // Default to club 1 if unassigned
 
   const {
-    first_name, last_name, dni, birth_date, category_default,
+    first_name, last_name, dni, cuil, birth_date, club_id, category_default,
     health_insurance, policy_number, medical_notes, emergency_contact, emergency_phone
   } = req.body;
 
-  if (!first_name || !last_name || !dni || !birth_date) {
+  if (!first_name || !last_name || !dni || !birth_date || !health_insurance || !policy_number) {
+    const myClubs = db.prepare(`
+      SELECT c.* FROM clubs c JOIN user_clubs uc ON c.id = uc.club_id WHERE uc.user_id = ? ORDER BY c.name ASC
+    `).all(teacherId);
+
     return res.render('profesor/alumno_form', {
       user: req.session.user,
       student: req.body,
-      error: 'Nombre, Apellido, DNI y Fecha de Nacimiento son obligatorios.'
+      myClubs,
+      error: 'Nombre, Apellido, DNI, Fecha Nacimiento, Seguro y N° Póliza son obligatorios.'
     });
   }
 
   try {
     const stmt = db.prepare(`
       INSERT INTO students (
-        teacher_id, club_id, first_name, last_name, dni, birth_date,
+        teacher_id, club_id, first_name, last_name, dni, cuil, birth_date,
         category_default, health_insurance, policy_number, medical_notes,
         emergency_contact, emergency_phone
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const info = stmt.run(
-      teacherId, clubId, first_name.trim(), last_name.trim(), dni.trim(), birth_date,
-      category_default || '', health_insurance || '', policy_number || '', medical_notes || '',
-      emergency_contact || '', emergency_phone || ''
+      teacherId,
+      parseInt(club_id) || req.session.user.club_id || 1,
+      first_name.trim().toUpperCase(),
+      last_name.trim().toUpperCase(),
+      dni.trim().toUpperCase(),
+      (cuil || '').trim().toUpperCase(),
+      birth_date,
+      (category_default || '').toUpperCase(),
+      health_insurance.trim().toUpperCase(),
+      policy_number.trim().toUpperCase(),
+      (medical_notes || '').toUpperCase(),
+      (emergency_contact || '').toUpperCase(),
+      (emergency_phone || '').toUpperCase()
     );
 
     const studentId = info.lastInsertRowid;
 
-    // Handle optional document upload
     if (req.file) {
-      const docTitle = req.body.doc_title || 'Apto Médico / Seguro';
+      const docTitle = (req.body.doc_title || 'APTO MÉDICO / SEGURO').toUpperCase();
       db.prepare(`
         INSERT INTO student_documents (student_id, title, doc_type, file_path)
         VALUES (?, ?, ?, ?)
       `).run(studentId, docTitle, 'apto_medico', '/uploads/' + req.file.filename);
     }
 
-    res.redirect('/profesor/alumnos?success=' + encodeURIComponent('Alumno cargado correctamente en el padrón.'));
+    res.redirect('/profesor/alumnos?success=' + encodeURIComponent('Patinadora registrada en el padrón en MAYÚSCULAS.'));
   } catch (err) {
     console.error('Error saving student:', err);
-    let errMsg = 'Error al registrar el alumno en la base de datos.';
+    let errMsg = 'Error al registrar la patinadora.';
     if (err.message && err.message.includes('UNIQUE constraint failed: students.dni')) {
-      errMsg = 'Ya existe un alumno registrado con ese DNI.';
+      errMsg = 'Ya existe una patinadora registrada con ese DNI.';
     }
+
+    const myClubs = db.prepare(`
+      SELECT c.* FROM clubs c JOIN user_clubs uc ON c.id = uc.club_id WHERE uc.user_id = ? ORDER BY c.name ASC
+    `).all(teacherId);
+
     res.render('profesor/alumno_form', {
       user: req.session.user,
       student: req.body,
+      myClubs,
       error: errMsg
     });
   }
@@ -157,77 +246,83 @@ router.get('/alumnos/:id/editar', (req, res) => {
   const teacherId = req.session.user.id;
   const student = db.prepare(`SELECT * FROM students WHERE id = ? AND teacher_id = ?`).get(req.params.id, teacherId);
 
-  if (!student) {
-    return res.status(404).render('error', { title: 'Alumno No Encontrado', message: 'No se encontró el alumno especificado.' });
-  }
+  if (!student) return res.status(404).render('error', { title: 'Patinadora no encontrada' });
 
+  const myClubs = db.prepare(`
+    SELECT c.* FROM clubs c JOIN user_clubs uc ON c.id = uc.club_id WHERE uc.user_id = ? ORDER BY c.name ASC
+  `).all(teacherId);
   const documents = db.prepare(`SELECT * FROM student_documents WHERE student_id = ?`).all(student.id);
 
   res.render('profesor/alumno_form', {
     user: req.session.user,
     student,
+    myClubs,
     documents,
     error: null
   });
 });
 
-// Update Student
+// Update Student Form
 router.post('/alumnos/:id/editar', upload.single('documento'), (req, res) => {
   const teacherId = req.session.user.id;
   const studentId = req.params.id;
 
   const {
-    first_name, last_name, dni, birth_date, category_default,
+    first_name, last_name, dni, cuil, birth_date, club_id, category_default,
     health_insurance, policy_number, medical_notes, emergency_contact, emergency_phone
   } = req.body;
 
   try {
     db.prepare(`
       UPDATE students SET
-        first_name = ?, last_name = ?, dni = ?, birth_date = ?,
+        first_name = ?, last_name = ?, dni = ?, cuil = ?, birth_date = ?, club_id = ?,
         category_default = ?, health_insurance = ?, policy_number = ?, medical_notes = ?,
         emergency_contact = ?, emergency_phone = ?
       WHERE id = ? AND teacher_id = ?
     `).run(
-      first_name.trim(), last_name.trim(), dni.trim(), birth_date,
-      category_default || '', health_insurance || '', policy_number || '', medical_notes || '',
-      emergency_contact || '', emergency_phone || '',
+      first_name.trim().toUpperCase(),
+      last_name.trim().toUpperCase(),
+      dni.trim().toUpperCase(),
+      (cuil || '').trim().toUpperCase(),
+      birth_date,
+      parseInt(club_id) || 1,
+      (category_default || '').toUpperCase(),
+      health_insurance.trim().toUpperCase(),
+      policy_number.trim().toUpperCase(),
+      (medical_notes || '').toUpperCase(),
+      (emergency_contact || '').toUpperCase(),
+      (emergency_phone || '').toUpperCase(),
       studentId, teacherId
     );
 
-    // Save document if uploaded
     if (req.file) {
-      const docTitle = req.body.doc_title || 'Documentación Médica / Ficha';
+      const docTitle = (req.body.doc_title || 'APTO MÉDICO / FICHA').toUpperCase();
       db.prepare(`
         INSERT INTO student_documents (student_id, title, doc_type, file_path)
         VALUES (?, ?, ?, ?)
       `).run(studentId, docTitle, 'apto_medico', '/uploads/' + req.file.filename);
     }
 
-    res.redirect('/profesor/alumnos?success=' + encodeURIComponent('Datos del alumno actualizados.'));
+    res.redirect('/profesor/alumnos?success=' + encodeURIComponent('Ficha de patinadora actualizada.'));
   } catch (err) {
     console.error('Error updating student:', err);
-    res.render('profesor/alumno_form', {
-      user: req.session.user,
-      student: { ...req.body, id: studentId },
-      documents: db.prepare(`SELECT * FROM student_documents WHERE student_id = ?`).all(studentId),
-      error: 'Error al actualizar los datos del alumno.'
-    });
+    res.redirect('/profesor/alumnos?error=' + encodeURIComponent('Error al actualizar datos.'));
   }
 });
 
-// Form: Enroll Student into Category
+// Form: Enrollment Wizard (Individual & Group Registrations)
 router.get('/inscribir', (req, res) => {
   const teacherId = req.session.user.id;
 
   const students = db.prepare(`SELECT * FROM students WHERE teacher_id = ? ORDER BY last_name ASC`).all(teacherId);
+  students.forEach(s => { s.age = getCalendarAge(s.birth_date); });
+
   const activeTournaments = db.prepare(`SELECT * FROM tournaments WHERE status != 'finished' ORDER BY event_date ASC`).all();
-
   const selectedTournamentId = req.query.tournament_id || (activeTournaments.length > 0 ? activeTournaments[0].id : null);
+  
   let categories = [];
-
   if (selectedTournamentId) {
-    categories = db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY min_age ASC, name ASC`).all(selectedTournamentId);
+    categories = db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY discipline ASC, min_age ASC, name ASC`).all(selectedTournamentId);
   }
 
   res.render('profesor/inscribir', {
@@ -237,33 +332,77 @@ router.get('/inscribir', (req, res) => {
     selectedTournamentId,
     categories,
     preselectedStudentId: req.query.student_id || null,
-    error: null
+    error: req.query.error || null
   });
 });
 
-// Submit Enrollment
+// Submit Enrollment (Supports Individual & Group Highest Category Rule)
 router.post('/inscribir', (req, res) => {
   const teacherId = req.session.user.id;
-  const clubId = req.session.user.club_id || 1;
-  const { student_id, tournament_id, category_id, notes } = req.body;
+  const { tournament_id, category_id, is_group, group_name, group_type, student_ids, notes } = req.body;
 
-  if (!student_id || !tournament_id || !category_id) {
-    return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('Debe seleccionar alumno, torneo y categoría.'));
+  if (!tournament_id || !category_id) {
+    return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('Debe seleccionar torneo y categoría.'));
   }
 
-  try {
-    db.prepare(`
-      INSERT INTO registrations (
-        tournament_id, category_id, student_id, club_id, teacher_id, status, payment_status, notes
-      ) VALUES (?, ?, ?, ?, ?, 'registered', 'pending', ?)
-    `).run(tournament_id, category_id, student_id, clubId, teacherId, notes || '');
+  const category = db.prepare(`SELECT * FROM categories WHERE id = ?`).get(category_id);
+  if (!category) return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('Categoría inválida.'));
 
-    res.redirect('/profesor/dashboard?success=' + encodeURIComponent('Alumno inscripto correctamente en la categoría elegida.'));
+  // Get student IDs list
+  let selectedStudentIds = [];
+  if (Array.isArray(student_ids)) {
+    selectedStudentIds = student_ids.filter(id => id);
+  } else if (student_ids) {
+    selectedStudentIds = [student_ids];
+  } else if (req.body.student_id) {
+    selectedStudentIds = [req.body.student_id];
+  }
+
+  if (selectedStudentIds.length === 0) {
+    return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('Debe seleccionar al menos una patinadora.'));
+  }
+
+  // Get main student and primary club
+  const primaryStudent = db.prepare(`SELECT * FROM students WHERE id = ?`).get(selectedStudentIds[0]);
+  const clubId = primaryStudent ? primaryStudent.club_id : (req.session.user.club_id || 1);
+
+  const isGroupReg = (is_group === '1' || selectedStudentIds.length > 1) ? 1 : 0;
+  const fee = category.fee || 0;
+
+  try {
+    const info = db.prepare(`
+      INSERT INTO registrations (
+        tournament_id, category_id, student_id, club_id, teacher_id, is_group, group_name, group_type,
+        status, payment_status, original_fee, discount_amount, final_fee, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'registered', 'pending', ?, 0, ?, ?)
+    `).run(
+      tournament_id,
+      category_id,
+      selectedStudentIds[0],
+      clubId,
+      teacherId,
+      isGroupReg,
+      isGroupReg ? ((group_name || 'GRUPO STAR DANCE').toUpperCase()) : null,
+      group_type || 'Individual',
+      fee,
+      fee,
+      (notes || '').toUpperCase()
+    );
+
+    const regId = info.lastInsertRowid;
+
+    // Insert all group members
+    const insertMember = db.prepare(`INSERT INTO registration_members (registration_id, student_id) VALUES (?, ?)`);
+    selectedStudentIds.forEach(stId => {
+      insertMember.run(regId, parseInt(stId));
+    });
+
+    res.redirect('/profesor/dashboard?success=' + encodeURIComponent(`Inscripción realizada en la categoría ${category.name}.`));
   } catch (err) {
     console.error('Error in registration:', err);
     let errorMsg = 'Error al procesar la inscripción.';
     if (err.message && err.message.includes('UNIQUE constraint failed')) {
-      errorMsg = 'El alumno ya se encuentra inscripto en esa categoría para este torneo.';
+      errorMsg = 'Una de las patinadoras ya se encuentra inscripta en esa categoría.';
     }
     res.redirect('/profesor/inscribir?error=' + encodeURIComponent(errorMsg));
   }
@@ -276,12 +415,12 @@ router.get('/certificado/:id', (req, res) => {
 
   const registration = db.prepare(`
     SELECT r.*, 
-    s.first_name, s.last_name, s.dni, s.birth_date, s.health_insurance,
+    s.first_name, s.last_name, s.dni, s.birth_date, s.health_insurance, s.policy_number,
     t.name as tournament_name, t.venue, t.event_date,
-    c.name as category_name, c.discipline, c.level, c.fee,
+    c.name as category_name, c.discipline, c.division as level, c.fee,
     cl.name as club_name
     FROM registrations r
-    JOIN students s ON r.student_id = s.id
+    LEFT JOIN students s ON r.student_id = s.id
     JOIN tournaments t ON r.tournament_id = t.id
     JOIN categories c ON r.category_id = c.id
     JOIN clubs cl ON r.club_id = cl.id
@@ -292,9 +431,17 @@ router.get('/certificado/:id', (req, res) => {
     return res.status(404).render('error', { title: 'Certificado No Encontrado', message: 'No se encontró la inscripción solicitada.' });
   }
 
+  // Get members if group
+  const members = db.prepare(`
+    SELECT s.* FROM students s
+    JOIN registration_members rm ON s.id = rm.student_id
+    WHERE rm.registration_id = ?
+  `).all(regId);
+
   res.render('profesor/certificado', {
     user: req.session.user,
-    reg: registration
+    reg: registration,
+    members
   });
 });
 

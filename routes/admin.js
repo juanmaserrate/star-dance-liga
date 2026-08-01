@@ -7,6 +7,14 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 // All routes require role 'admin'
 router.use(requireAuth, requireRole('admin'));
 
+// Helper: Calculate age from birth date in calendar year
+function getCalendarAge(birthDateStr) {
+  if (!birthDateStr) return 0;
+  const birthYear = new Date(birthDateStr).getFullYear();
+  const currentYear = new Date().getFullYear();
+  return Math.max(0, currentYear - birthYear);
+}
+
 // Admin Dashboard
 router.get('/dashboard', (req, res) => {
   const totalSkaters = db.prepare(`SELECT COUNT(*) as count FROM students`).get().count;
@@ -16,11 +24,13 @@ router.get('/dashboard', (req, res) => {
 
   const paidStats = db.prepare(`
     SELECT 
-      SUM(CASE WHEN r.payment_status = 'paid' THEN c.fee ELSE 0 END) as total_paid,
-      SUM(CASE WHEN r.payment_status = 'pending' THEN c.fee ELSE 0 END) as total_pending
-    FROM registrations r
-    JOIN categories c ON r.category_id = c.id
+      SUM(CASE WHEN payment_status = 'paid' THEN final_fee ELSE 0 END) as total_paid,
+      SUM(CASE WHEN payment_status = 'pending' THEN final_fee ELSE 0 END) as total_pending,
+      SUM(discount_amount) as total_discounts
+    FROM registrations
   `).get();
+
+  const totalExpenses = db.prepare(`SELECT SUM(amount) as sum FROM tournament_expenses`).get().sum || 0;
 
   const registrationsByClub = db.prepare(`
     SELECT cl.name as club_name, COUNT(r.id) as count
@@ -32,12 +42,13 @@ router.get('/dashboard', (req, res) => {
 
   const recentRegistrations = db.prepare(`
     SELECT r.*, 
-    s.first_name, s.last_name, s.dni,
+    COALESCE(s.first_name, r.group_name) as first_name,
+    COALESCE(s.last_name, '') as last_name,
     cl.name as club_name,
     t.name as tournament_name,
-    c.name as category_name, c.fee
+    c.name as category_name
     FROM registrations r
-    JOIN students s ON r.student_id = s.id
+    LEFT JOIN students s ON r.student_id = s.id
     JOIN clubs cl ON r.club_id = cl.id
     JOIN tournaments t ON r.tournament_id = t.id
     JOIN categories c ON r.category_id = c.id
@@ -52,7 +63,9 @@ router.get('/dashboard', (req, res) => {
       totalClubs,
       totalTournaments,
       totalPaid: paidStats.total_paid || 0,
-      totalPending: paidStats.total_pending || 0
+      totalPending: paidStats.total_pending || 0,
+      totalDiscounts: paidStats.total_discounts || 0,
+      totalExpenses
     },
     registrationsByClub,
     recentRegistrations,
@@ -61,7 +74,7 @@ router.get('/dashboard', (req, res) => {
   });
 });
 
-// Master Registrations Table (Filterable & Payment toggle)
+// Master Registrations Table (With Filters, Payment Toggle & Discount Manager)
 router.get('/inscripciones', (req, res) => {
   const { tournament_id, club_id, payment_status } = req.query;
 
@@ -70,11 +83,11 @@ router.get('/inscripciones', (req, res) => {
     s.first_name, s.last_name, s.dni, s.birth_date, s.health_insurance, s.policy_number, s.emergency_contact, s.emergency_phone,
     cl.name as club_name,
     t.name as tournament_name,
-    c.name as category_name, c.discipline, c.level, c.fee,
+    c.name as category_name, c.discipline, c.division as level, c.fee,
     u.full_name as teacher_name,
     (SELECT COUNT(*) FROM student_documents d WHERE d.student_id = s.id) as doc_count
     FROM registrations r
-    JOIN students s ON r.student_id = s.id
+    LEFT JOIN students s ON r.student_id = s.id
     JOIN clubs cl ON r.club_id = cl.id
     JOIN tournaments t ON r.tournament_id = t.id
     JOIN categories c ON r.category_id = c.id
@@ -83,22 +96,17 @@ router.get('/inscripciones', (req, res) => {
   `;
   const params = [];
 
-  if (tournament_id) {
-    query += ` AND r.tournament_id = ?`;
-    params.push(tournament_id);
-  }
-  if (club_id) {
-    query += ` AND r.club_id = ?`;
-    params.push(club_id);
-  }
-  if (payment_status) {
-    query += ` AND r.payment_status = ?`;
-    params.push(payment_status);
-  }
+  if (tournament_id) { query += ` AND r.tournament_id = ?`; params.push(tournament_id); }
+  if (club_id) { query += ` AND r.club_id = ?`; params.push(club_id); }
+  if (payment_status) { query += ` AND r.payment_status = ?`; params.push(payment_status); }
 
   query += ` ORDER BY r.created_at DESC`;
 
   const registrations = db.prepare(query).all(...params);
+  registrations.forEach(r => {
+    if (r.birth_date) r.age = getCalendarAge(r.birth_date);
+  });
+
   const tournaments = db.prepare(`SELECT * FROM tournaments ORDER BY event_date DESC`).all();
   const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
 
@@ -130,30 +138,52 @@ router.post('/inscripciones/:id/pago', (req, res) => {
   res.redirect(referer);
 });
 
-// Export CSV / Excel matching stardance.com.ar layout
+// Apply Discount / Bonificación
+router.post('/inscripciones/:id/descuento', (req, res) => {
+  const regId = req.params.id;
+  const { discount_amount, discount_reason } = req.body;
+
+  const reg = db.prepare(`SELECT original_fee FROM registrations WHERE id = ?`).get(regId);
+  if (reg) {
+    const disc = parseFloat(discount_amount) || 0;
+    const finalFee = Math.max(0, reg.original_fee - disc);
+
+    db.prepare(`
+      UPDATE registrations SET discount_amount = ?, discount_reason = ?, final_fee = ?
+      WHERE id = ?
+    `).run(disc, (discount_reason || '').toUpperCase(), finalFee, regId);
+  }
+
+  res.redirect('/admin/inscripciones?success=' + encodeURIComponent('Bonificación / Descuento aplicado correctamente.'));
+});
+
+// Export CSV / Excel (UPPERCASE Headers & Fields matching production)
 router.get('/exportar/csv', (req, res) => {
   const { tournament_id, club_id, payment_status } = req.query;
 
   let query = `
     SELECT 
-      t.name as Torneo,
-      s.first_name as Nombre,
-      s.last_name as Apellido,
-      s.dni as DNI,
+      t.name as TORNEO,
+      COALESCE(s.first_name, r.group_name) as NOMBRE,
+      COALESCE(s.last_name, 'GRUPO') as APELLIDO,
+      COALESCE(s.dni, '-') as DNI,
       COALESCE(s.cuil, '-') as CUIL,
-      s.birth_date as Fecha_Nacimiento,
-      (CAST(strftime('%Y', 'now') AS INT) - CAST(strftime('%Y', s.birth_date) AS INT)) as Edad,
-      cl.name as Club,
-      c.name as Categoria,
-      c.discipline as Disciplina,
-      u.full_name as Profesora_A_Cargo,
-      u.email as Email_Profesora,
-      u.phone as Celular_Profesora,
-      COALESCE(s.health_insurance, '-') as Seguro_ObraSocial,
-      COALESCE(s.policy_number, '-') as Nro_Poliza,
-      r.payment_status as Estado_Pago
+      COALESCE(s.birth_date, '-') as FECHA_NACIMIENTO,
+      CASE WHEN s.birth_date IS NOT NULL THEN (CAST(strftime('%Y', 'now') AS INT) - CAST(strftime('%Y', s.birth_date) AS INT)) ELSE 0 END as EDAD,
+      cl.name as CLUB,
+      c.name as CATEGORÍA,
+      c.discipline as DISCIPLINA,
+      u.full_name as PROFESORA_A_CARGO,
+      u.email as EMAIL_PROFESORA,
+      u.phone as CELULAR_PROFESORA,
+      COALESCE(s.health_insurance, '-') as SEGURO_OBRA_SOCIAL,
+      COALESCE(s.policy_number, '-') as NRO_PÓLIZA,
+      r.original_fee as ARANCEL_BASE,
+      r.discount_amount as BONIFICACIÓN,
+      r.final_fee as ARANCEL_FINAL,
+      r.payment_status as ESTADO_PAGO
     FROM registrations r
-    JOIN students s ON r.student_id = s.id
+    LEFT JOIN students s ON r.student_id = s.id
     JOIN clubs cl ON r.club_id = cl.id
     JOIN tournaments t ON r.tournament_id = t.id
     JOIN categories c ON r.category_id = c.id
@@ -170,22 +200,106 @@ router.get('/exportar/csv', (req, res) => {
 
   const rows = db.prepare(query).all(...params);
 
-  // Generate CSV with UTF-8 BOM so Excel opens Spanish accents cleanly
-  let csv = '\uFEFF'; // UTF-8 BOM
+  // Generate CSV with UTF-8 BOM so Excel opens Spanish accents cleanly in UPPERCASE
+  let csv = '\uFEFF';
   if (rows.length > 0) {
     const headers = Object.keys(rows[0]);
     csv += headers.join(';') + '\n';
     rows.forEach(row => {
-      const values = headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`);
+      const values = headers.map(h => `"${String(row[h] || '').toUpperCase().replace(/"/g, '""')}"`);
       csv += values.join(';') + '\n';
     });
   } else {
-    csv += 'Sin resultados\n';
+    csv += 'SIN RESULTADOS\n';
   }
 
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="Inscripciones_StarDance_${Date.now()}.csv"`);
+  res.setHeader('Content-Disposition', `attachment; filename="INSCRIPCIONES_STAR_DANCE_${Date.now()}.csv"`);
   res.send(csv);
+});
+
+// Admin Financial Forecast & Expense Tracker Module
+router.get('/finanzas', (req, res) => {
+  const tournaments = db.prepare(`SELECT * FROM tournaments ORDER BY event_date DESC`).all();
+  const selectedTournamentId = req.query.tournament_id || (tournaments.length > 0 ? tournaments[0].id : null);
+
+  let expenses = [];
+  let revenueStats = { total_gross: 0, total_discounts: 0, total_net: 0, total_paid: 0, total_pending: 0 };
+
+  if (selectedTournamentId) {
+    expenses = db.prepare(`SELECT * FROM tournament_expenses WHERE tournament_id = ? ORDER BY expense_date DESC`).all(selectedTournamentId);
+
+    revenueStats = db.prepare(`
+      SELECT 
+        SUM(original_fee) as total_gross,
+        SUM(discount_amount) as total_discounts,
+        SUM(final_fee) as total_net,
+        SUM(CASE WHEN payment_status = 'paid' THEN final_fee ELSE 0 END) as total_paid,
+        SUM(CASE WHEN payment_status = 'pending' THEN final_fee ELSE 0 END) as total_pending
+      FROM registrations
+      WHERE tournament_id = ?
+    `).get(selectedTournamentId) || revenueStats;
+  }
+
+  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const projectedProfit = (revenueStats.total_net || 0) - totalExpenses;
+
+  res.render('admin/finanzas', {
+    user: req.session.user,
+    tournaments,
+    selectedTournamentId,
+    expenses,
+    revenueStats,
+    totalExpenses,
+    projectedProfit,
+    success: req.query.success || null,
+    error: req.query.error || null
+  });
+});
+
+// Add Tournament Expense
+router.post('/finanzas/gastos', (req, res) => {
+  const { tournament_id, expense_category, description, amount, expense_date } = req.body;
+
+  if (!tournament_id || !expense_category || !description || !amount) {
+    return res.redirect('/admin/finanzas?error=' + encodeURIComponent('Todos los campos del gasto son requeridos.'));
+  }
+
+  try {
+    db.prepare(`
+      INSERT INTO tournament_expenses (tournament_id, expense_category, description, amount, expense_date)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      tournament_id,
+      expense_category,
+      description.trim().toUpperCase(),
+      parseFloat(amount) || 0,
+      expense_date || new Date().toISOString().split('T')[0]
+    );
+
+    res.redirect(`/admin/finanzas?tournament_id=${tournament_id}&success=` + encodeURIComponent('Gasto registrado en el presupuesto del torneo.'));
+  } catch (err) {
+    console.error('Error adding expense:', err);
+    res.redirect('/admin/finanzas?error=' + encodeURIComponent('Error al registrar gasto.'));
+  }
+});
+
+// Annual Leaderboards & Scores Overview
+router.get('/posiciones', (req, res) => {
+  const clubLeaderboard = db.prepare(`
+    SELECT cl.name as club_name, cl.city,
+    SUM(cs.points) as total_points,
+    COUNT(DISTINCT cs.tournament_id) as tournaments_participated
+    FROM club_scores cs
+    JOIN clubs cl ON cs.club_id = cl.id
+    GROUP BY cl.id
+    ORDER BY total_points DESC
+  `).all();
+
+  res.render('admin/posiciones', {
+    user: req.session.user,
+    clubLeaderboard
+  });
 });
 
 // Manage Tournaments List
@@ -231,9 +345,9 @@ router.post('/torneos/nuevo', (req, res) => {
     const info = db.prepare(`
       INSERT INTO tournaments (name, description, venue, event_date, registration_deadline, status)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(name.trim(), description || '', venue.trim(), event_date, registration_deadline, status || 'upcoming');
+    `).run(name.trim().toUpperCase(), (description || '').toUpperCase(), venue.trim().toUpperCase(), event_date, registration_deadline, status || 'upcoming');
 
-    res.redirect(`/admin/torneos/${info.lastInsertRowid}/categorias?success=` + encodeURIComponent('Torneo creado. Ahora añada las categorías.'));
+    res.redirect(`/admin/torneos/${info.lastInsertRowid}/categorias?success=` + encodeURIComponent('Torneo creado. Configure las categorías.'));
   } catch (err) {
     console.error('Error creating tournament:', err);
     res.render('admin/torneo_form', {
@@ -249,7 +363,7 @@ router.get('/torneos/:id/categorias', (req, res) => {
   const tournament = db.prepare(`SELECT * FROM tournaments WHERE id = ?`).get(req.params.id);
   if (!tournament) return res.status(404).render('error', { title: 'Torneo No Encontrado' });
 
-  const categories = db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY min_age ASC, level ASC`).all(tournament.id);
+  const categories = db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY discipline ASC, min_age ASC, division ASC`).all(tournament.id);
 
   res.render('admin/categorias', {
     user: req.session.user,
@@ -263,20 +377,27 @@ router.get('/torneos/:id/categorias', (req, res) => {
 // Save Category
 router.post('/torneos/:id/categorias', (req, res) => {
   const tournamentId = req.params.id;
-  const { name, discipline, level, min_age, max_age, gender, schedule, fee } = req.body;
+  const { name, discipline, division, level, min_age, max_age, gender, schedule, fee } = req.body;
 
-  if (!name || !discipline || !level) {
-    return res.redirect(`/admin/torneos/${tournamentId}/categorias?error=` + encodeURIComponent('Nombre, disciplina y nivel son requeridos.'));
+  if (!name || !discipline) {
+    return res.redirect(`/admin/torneos/${tournamentId}/categorias?error=` + encodeURIComponent('Nombre y disciplina son requeridos.'));
   }
 
   try {
     db.prepare(`
-      INSERT INTO categories (tournament_id, name, discipline, level, min_age, max_age, gender, schedule, fee)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO categories (tournament_id, name, discipline, division, level, min_age, max_age, gender, schedule, fee)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      tournamentId, name.trim(), discipline.trim(), level.trim(),
-      parseInt(min_age) || 0, parseInt(max_age) || 99,
-      gender || 'Mixto', schedule || '', parseFloat(fee) || 0
+      tournamentId,
+      name.trim().toUpperCase(),
+      discipline.trim().toUpperCase(),
+      (division || '').toUpperCase(),
+      (level || '').toUpperCase(),
+      parseInt(min_age) || 0,
+      parseInt(max_age) || 99,
+      gender || 'MIXTO',
+      (schedule || '').toUpperCase(),
+      parseFloat(fee) || 0
     );
 
     res.redirect(`/admin/torneos/${tournamentId}/categorias?success=` + encodeURIComponent('Categoría agregada correctamente al torneo.'));
@@ -291,7 +412,7 @@ router.get('/clubes', (req, res) => {
   const clubs = db.prepare(`
     SELECT c.*, 
     (SELECT COUNT(*) FROM students s WHERE s.club_id = c.id) as student_count,
-    (SELECT COUNT(*) FROM users u WHERE u.club_id = c.id AND u.role = 'profesor') as teacher_count
+    (SELECT COUNT(*) FROM user_clubs uc WHERE uc.club_id = c.id) as teacher_count
     FROM clubs c
     ORDER BY c.name ASC
   `).all();
@@ -313,7 +434,7 @@ router.post('/clubes', (req, res) => {
     db.prepare(`
       INSERT INTO clubs (name, representative, contact_phone, city)
       VALUES (?, ?, ?, ?)
-    `).run(name.trim(), representative || '', contact_phone || '', city || '');
+    `).run(name.trim().toUpperCase(), (representative || '').toUpperCase(), contact_phone || '', (city || '').toUpperCase());
 
     res.redirect('/admin/clubes?success=' + encodeURIComponent('Club registrado exitosamente.'));
   } catch (err) {
@@ -352,10 +473,14 @@ router.post('/usuarios', (req, res) => {
 
   try {
     const password_hash = bcrypt.hashSync(password, 10);
-    db.prepare(`
+    const info = db.prepare(`
       INSERT INTO users (username, password_hash, full_name, role, club_id, email, phone)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(username.trim().toLowerCase(), password_hash, full_name.trim(), role, club_id || null, email || '', phone || '');
+    `).run(username.trim().toLowerCase(), password_hash, full_name.trim().toUpperCase(), role, club_id || null, (email || '').toUpperCase(), phone || '');
+
+    if (club_id) {
+      db.prepare(`INSERT OR IGNORE INTO user_clubs (user_id, club_id) VALUES (?, ?)`).run(info.lastInsertRowid, club_id);
+    }
 
     res.redirect('/admin/usuarios?success=' + encodeURIComponent(`Usuario ${username} creado correctamente.`));
   } catch (err) {
