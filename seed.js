@@ -11,10 +11,10 @@ function seed() {
   insertClub.run(3, 'CLUB PATÍN SOL NACIENTE', 'PROF. MARÍA TORRES', '+54 9 261 433 2211', 'MENDOZA');
 
   // 2. Insert Users
-  const passwordHashAdmin = bcrypt.hashSync('admin123', 10);
+  const passwordHashAdmin = bcrypt.hashSync('admin', 10);
   const passwordHashSandra = bcrypt.hashSync('Sandra2026', 10);
-  const passwordHashProfe = bcrypt.hashSync('profe123', 10);
-  const passwordHashJuez = bcrypt.hashSync('juez123', 10);
+  const passwordHashProfe = bcrypt.hashSync('profe', 10);
+  const passwordHashJuez = bcrypt.hashSync('juez', 10);
 
   const insertUser = db.prepare(`
     INSERT OR IGNORE INTO users (id, username, password_hash, full_name, role, club_id, email, phone)
@@ -22,7 +22,7 @@ function seed() {
   `);
 
   insertUser.run(1, 'admin', passwordHashAdmin, 'ADMINISTRADOR STAR DANCE', 'admin', 1, 'ADMIN@STARDANCE.COM.AR', '+54 9 264 000 1111');
-  insertUser.run(2, 'profe.ana', passwordHashProfe, 'PROF. ANA CLARA GÓMEZ', 'profesor', 1, 'ANA@ESTRELLAPATIN.COM', '+54 9 264 412 3456');
+  insertUser.run(2, 'profe', passwordHashProfe, 'PROF. ANA CLARA GÓMEZ', 'profesor', 1, 'ANA@ESTRELLAPATIN.COM', '+54 9 264 412 3456');
   insertUser.run(3, 'profe.carlos', passwordHashProfe, 'PROF. CARLOS ROSSI', 'profesor', 2, 'CARLOS@PATINSANJUAN.COM', '+54 9 264 598 7654');
   insertUser.run(4, 'juez', passwordHashJuez, 'MARIANA SOLA (JUEZ OFICIAL)', 'juez', null, 'JUEZ.MARIANA@STARDANCE.COM.AR', '+54 9 11 5432 1098');
   insertUser.run(5, 'sandra', passwordHashSandra, 'SANDRA (ADMINISTRADORA)', 'admin', 1, 'sandra@stardance.com.ar', '+54 9 264 555 7777');
