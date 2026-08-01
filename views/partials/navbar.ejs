@@ -1,42 +1,52 @@
 <nav class="navbar">
-  <div class="nav-container">
-    <a href="<%= user ? (user.role === 'admin' ? '/admin/dashboard' : (user.role === 'profesor' ? '/profesor/dashboard' : '/juez/planilla')) : '/' %>" class="brand">
-      <img src="/img/logo.svg" alt="Star Dance Logo">
-      <span>STAR DANCE LIGA</span>
-    </a>
-    
-    <button class="mobile-toggle" id="mobileToggle" aria-label="Menú">&#9776;</button>
+  <div class="nav-container" style="flex-direction: column; align-items: stretch; gap: 0.75rem;">
+    <!-- Top Row: Brand Logo, User Badge & Logout -->
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+      <a href="<%= user ? (user.role === 'admin' ? '/admin/dashboard' : (user.role === 'profesor' ? '/profesor/dashboard' : '/juez/planilla')) : '/' %>" class="brand">
+        <img src="/img/logo.svg" alt="Star Dance Logo">
+        <span>STAR DANCE LIGA</span>
+      </a>
+      
+      <button class="mobile-toggle" id="mobileToggle" aria-label="Menú">&#9776;</button>
 
-    <ul class="nav-links" id="navLinks">
-      <% if (user) { %>
-        <% if (user.role === 'admin') { %>
-          <li><a href="/admin/dashboard" class="nav-link" style="color: var(--gold-light);">📊 Panel Admin</a></li>
-          <li><a href="/admin/cms" class="nav-link">🖥️ CMS</a></li>
-          <li><a href="/admin/inscripciones" class="nav-link">📜 Inscripciones</a></li>
-          <li><a href="/admin/finanzas" class="nav-link">💰 Finanzas</a></li>
-        <% } else if (user.role === 'profesor') { %>
-          <li><a href="/profesor/dashboard" class="nav-link" style="color: var(--gold-light);">📊 Mi Padrón</a></li>
-          <li><a href="/profesor/inscribir" class="nav-link">✍️ Inscribir Alumna/Grupo</a></li>
-        <% } else if (user.role === 'juez') { %>
-          <li><a href="/juez/planilla" class="nav-link" style="color: var(--gold-light);">📋 Planilla Juez</a></li>
-        <% } %>
-
-        <li>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <% if (user) { %>
           <span class="user-pill">
             <small style="color: var(--gold-primary); font-weight: 800;"><%= user.role.toUpperCase() %>:</small> <%= user.full_name %>
           </span>
-        </li>
-        <li>
           <a href="/auth/logout" class="btn btn-outline-gold btn-sm">Cerrar Sesión</a>
-        </li>
-      <% } else { %>
-        <li><a href="/" class="nav-link">Inicio</a></li>
-        <li><a href="/torneos" class="nav-link">Torneos</a></li>
-        <li><a href="/jueces" class="nav-link">Jueces</a></li>
-        <li>
-          <a href="/auth/login" class="btn btn-gold btn-sm">Ingreso Profesores / Jueces</a>
-        </li>
-      <% } %>
-    </ul>
+        <% } else { %>
+          <ul class="nav-links" style="margin: 0;">
+            <li><a href="/" class="nav-link">Inicio</a></li>
+            <li><a href="/torneos" class="nav-link">Torneos</a></li>
+            <li><a href="/jueces" class="nav-link">Jueces</a></li>
+            <li><a href="/auth/login" class="btn btn-gold btn-sm">Ingreso Profesores / Jueces</a></li>
+          </ul>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Logged-in Banner: Golden Modules Box for each user role -->
+    <% if (user) { %>
+      <div class="role-subnav-box" style="margin-bottom: 0.25rem;">
+        <% if (user.role === 'admin') { %>
+          <a href="/admin/dashboard" class="role-subnav-btn">📊 Status</a>
+          <a href="/admin/cms" class="role-subnav-btn">🖥️ Página Principal</a>
+          <a href="/admin/inscripciones" class="role-subnav-btn">📜 Inscripciones y Pagos</a>
+          <a href="/admin/finanzas" class="role-subnav-btn">💰 Gastos y Presupuesto</a>
+          <a href="/admin/posiciones" class="role-subnav-btn">🥇 Puntajes de Clubes</a>
+          <a href="/admin/torneos" class="role-subnav-btn">🏆 Torneos y Categorías</a>
+          <a href="/admin/clubes" class="role-subnav-btn">🏛️ Clubes</a>
+          <a href="/admin/usuarios" class="role-subnav-btn">👥 Usuarios (Profes/Jueces)</a>
+        <% } else if (user.role === 'profesor') { %>
+          <a href="/profesor/dashboard" class="role-subnav-btn">📊 Status / Padrón</a>
+          <a href="/profesor/alumnos/nuevo" class="role-subnav-btn">👤 Nueva Patinadora</a>
+          <a href="/profesor/inscribir" class="role-subnav-btn">✍️ Inscribir Alumna / Grupo</a>
+        <% } else if (user.role === 'juez') { %>
+          <a href="/juez/planilla" class="role-subnav-btn">📋 Planilla de Juzgamiento</a>
+          <a href="/admin/posiciones" class="role-subnav-btn">🥇 Puntajes de Clubes</a>
+        <% } %>
+      </div>
+    <% } %>
   </div>
 </nav>
