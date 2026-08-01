@@ -241,6 +241,42 @@ router.post('/alumnos/nuevo', upload.single('documento'), (req, res) => {
   }
 });
 
+// View Student Profile / Details
+router.get('/alumnos/:id/ver', (req, res) => {
+  const teacherId = req.session.user.id;
+  const student = db.prepare(`
+    SELECT s.*, c.name as club_name, u.full_name as teacher_name
+    FROM students s
+    JOIN clubs c ON s.club_id = c.id
+    JOIN users u ON s.teacher_id = u.id
+    WHERE s.id = ? AND s.teacher_id = ?
+  `).get(req.params.id, teacherId);
+
+  if (!student) return res.status(404).render('error', { title: 'Patinadora no encontrada', message: 'La deportista solicitada no está registrada bajo tu padrón.' });
+
+  student.age = getCalendarAge(student.birth_date);
+
+  const documents = db.prepare(`SELECT * FROM student_documents WHERE student_id = ?`).all(student.id);
+
+  const registrations = db.prepare(`
+    SELECT r.*, 
+    t.name as tournament_name, t.event_date, t.venue,
+    c.name as category_name, c.discipline
+    FROM registrations r
+    JOIN tournaments t ON r.tournament_id = t.id
+    JOIN categories c ON r.category_id = c.id
+    WHERE r.student_id = ?
+    ORDER BY t.event_date DESC
+  `).all(student.id);
+
+  res.render('profesor/alumno_detalle', {
+    user: req.session.user,
+    student,
+    documents,
+    registrations
+  });
+});
+
 // Edit Student Form
 router.get('/alumnos/:id/editar', (req, res) => {
   const teacherId = req.session.user.id;

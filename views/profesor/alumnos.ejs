@@ -4,7 +4,7 @@
 <div class="main-wrapper">
   <div class="card">
     <div class="card-header">
-      <h1 class="card-title">👥 Mis Alumnos y Patinadores</h1>
+      <h1 class="card-title">👥 Mis Alumnos y Patinadores (<%= students.length %>)</h1>
       <a href="/profesor/alumnos/nuevo" class="btn btn-gold">+ Registrar Nuevo Alumno</a>
     </div>
 
@@ -12,48 +12,50 @@
       <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
     <% } %>
 
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-danger alert-auto-dismiss">⚠️ <%= error %></div>
+    <% } %>
+
     <% if (students && students.length > 0) { %>
       <div class="table-responsive">
         <table class="table">
           <thead>
             <tr>
-              <th>Nombre y Apellido</th>
+              <th>Nombre</th>
+              <th>Apellido</th>
               <th>DNI</th>
-              <th>Fecha Nac.</th>
-              <th>Seguro / Obra Social</th>
+              <th>CUIL</th>
+              <th>Fecha Nacimiento</th>
+              <th>Edad</th>
+              <th>Club</th>
+              <th>Obra Social / Seguro</th>
+              <th>N° Póliza</th>
               <th>Contacto Emergencia</th>
-              <th>Archivos / Fichas</th>
+              <th>Teléfono Emergencia</th>
+              <th>Documentos</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             <% students.forEach(s => { %>
               <tr>
-                <td>
-                  <strong><%= s.last_name %>, <%= s.first_name %></strong>
-                  <% if (s.category_default) { %>
-                    <div style="font-size: 0.8rem; color: var(--gold-light);"><%= s.category_default %></div>
-                  <% } %>
-                </td>
-                <td><%= s.dni %></td>
+                <td><strong><%= s.first_name %></strong></td>
+                <td><strong><%= s.last_name %></strong></td>
+                <td><strong style="color: var(--gold-light);"><%= s.dni %></strong></td>
+                <td><%= s.cuil || '-' %></td>
                 <td><%= s.birth_date %></td>
-                <td>
-                  <%= s.health_insurance || 'Sin registrar' %>
-                  <% if (s.policy_number) { %>
-                    <div style="font-size: 0.78rem; color: var(--text-muted);">Pol: <%= s.policy_number %></div>
-                  <% } %>
-                </td>
-                <td>
-                  <%= s.emergency_contact || '-' %><br>
-                  <small style="color: var(--gold-primary);"><%= s.emergency_phone || '' %></small>
-                </td>
-                <td>
-                  <span class="badge badge-violet">📄 <%= s.doc_count %> adjuntos</span>
-                </td>
+                <td><span class="badge badge-violet"><%= s.age %> AÑOS</span></td>
+                <td><strong><%= s.club_name %></strong></td>
+                <td><%= s.health_insurance || '-' %></td>
+                <td><%= s.policy_number || '-' %></td>
+                <td><%= s.emergency_contact || '-' %></td>
+                <td><span style="color: var(--gold-primary); font-size: 0.88rem;"><%= s.emergency_phone || '-' %></span></td>
+                <td><span class="badge badge-violet">📄 <%= s.doc_count %></span></td>
                 <td>
                   <div style="display: flex; gap: 0.4rem;">
-                    <a href="/profesor/alumnos/<%= s.id %>/editar" class="btn btn-outline-gold btn-sm">✏️ Editar / Ficha</a>
-                    <a href="/profesor/inscribir?student_id=<%= s.id %>" class="btn btn-gold btn-sm">✍️ Inscribir</a>
+                    <a href="/profesor/alumnos/<%= s.id %>/ver" class="btn btn-outline-gold btn-sm" title="Ver ficha técnica completa">🔍 Ver Datos</a>
+                    <a href="/profesor/alumnos/<%= s.id %>/editar" class="btn btn-secondary btn-sm" title="Editar datos">✏️ Editar</a>
+                    <a href="/profesor/inscribir?student_id=<%= s.id %>" class="btn btn-gold btn-sm" title="Inscribir a torneo">✍️ Inscribir</a>
                   </div>
                 </td>
               </tr>

@@ -1,0 +1,118 @@
+<%- include('../partials/header', { title: 'Ficha de Alumna' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div class="card" style="max-width: 900px; margin: 0 auto; border-top: 5px solid var(--gold-primary);">
+    <div class="card-header">
+      <h1 class="card-title">👤 Ficha Técnica y Datos de la Alumna</h1>
+      <div style="display: flex; gap: 0.5rem;">
+        <a href="/profesor/alumnos/<%= student.id %>/editar" class="btn btn-gold btn-sm">✏️ Editar Datos</a>
+        <a href="/profesor/alumnos" class="btn btn-secondary btn-sm">&larr; Volver al Padrón</a>
+      </div>
+    </div>
+
+    <!-- Student Personal Profile Card -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+      <div style="background: rgba(18, 6, 28, 0.6); padding: 1.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border-gold);">
+        <h2 style="color: var(--gold-light); font-size: 1.4rem; margin-bottom: 0.5rem;"><%= student.last_name %>, <%= student.first_name %></h2>
+        <span class="badge badge-violet" style="margin-bottom: 1rem;"><%= student.age %> AÑOS (AÑO CALENDARIO)</span>
+
+        <ul style="list-style: none; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.95rem;">
+          <li>📌 <strong>DNI:</strong> <%= student.dni %></li>
+          <li>📌 <strong>CUIL:</strong> <%= student.cuil || '-' %></li>
+          <li>📅 <strong>Fecha Nacimiento:</strong> <%= student.birth_date %></li>
+          <li>🏛️ <strong>Club:</strong> <%= student.club_name %></li>
+          <li>👩‍🏫 <strong>Profesora:</strong> <%= student.teacher_name %></li>
+        </ul>
+      </div>
+
+      <div style="background: rgba(18, 6, 28, 0.6); padding: 1.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border-gold);">
+        <h3 style="color: var(--gold-light); font-size: 1.1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.4rem;">
+          🏥 Cobertura Médica y Contacto
+        </h3>
+
+        <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.95rem;">
+          <li>🩺 <strong>Obra Social / Seguro:</strong> <%= student.health_insurance %></li>
+          <li>📄 <strong>N° de Póliza:</strong> <%= student.policy_number %></li>
+          <li>👤 <strong>Tutor / Contacto Emergencia:</strong> <%= student.emergency_contact || '-' %></li>
+          <li>📞 <strong>Teléfono Emergencia:</strong> <%= student.emergency_phone || '-' %></li>
+          <li>📋 <strong>Observaciones Médicas:</strong> <%= student.medical_notes || 'Sin observaciones' %></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Student Documents -->
+    <div style="margin-bottom: 2rem;">
+      <h3 style="color: var(--gold-light); font-size: 1.15rem; margin-bottom: 1rem;">📄 Documentación y Aptos Médicos (<%= documents.length %>)</h3>
+      <% if (documents && documents.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Documento</th>
+                <th>Fecha Carga</th>
+                <th>Archivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% documents.forEach(d => { %>
+                <tr>
+                  <td><strong><%= d.title %></strong></td>
+                  <td><%= d.uploaded_at %></td>
+                  <td><a href="<%= d.file_path %>" target="_blank" class="btn btn-outline-gold btn-sm">📥 Descargar / Ver</a></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">No hay archivos adjuntos cargados para esta deportista aún.</p>
+      <% } %>
+    </div>
+
+    <!-- Student Registration History -->
+    <div>
+      <h3 style="color: var(--gold-light); font-size: 1.15rem; margin-bottom: 1rem;">🏆 Historial de Torneos e Inscripciones (<%= registrations.length %>)</h3>
+      <% if (registrations && registrations.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Torneo</th>
+                <th>Fecha Torneo</th>
+                <th>Categoría y Disciplina</th>
+                <th>Estado Pago</th>
+                <th>Arancel Net</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% registrations.forEach(r => { %>
+                <tr>
+                  <td><strong><%= r.tournament_name %></strong></td>
+                  <td><%= r.event_date %></td>
+                  <td>
+                    <span class="badge badge-violet"><%= r.category_name %></span>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.discipline %></div>
+                  </td>
+                  <td>
+                    <% if (r.payment_status === 'paid') { %>
+                      <span class="badge badge-paid">✅ PAGADO</span>
+                    <% } else { %>
+                      <span class="badge badge-pending">⏳ PENDIENTE</span>
+                    <% } %>
+                  </td>
+                  <td style="font-weight: 700; color: var(--gold-light);">$<%= r.final_fee %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Esta deportista no registra inscripciones previas en torneos.</p>
+      <% } %>
+    </div>
+
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
