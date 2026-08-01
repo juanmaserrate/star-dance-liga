@@ -50,6 +50,16 @@ function seed() {
     'upcoming'
   );
 
+  insertTournament.run(
+    2,
+    'TORNEO PRUEBA',
+    'Torneo de prueba oficial de la Liga Star Dance. Disciplinas: Libre, Free Dance, Solo Dance, Parejas, Dúos, Tríos, Cuartetos, Small, Show y Precisión.',
+    'ESTADIO ALDO CANTONI / POLIDEPORTIVO SAN JUAN',
+    '2026-10-15',
+    '2026-10-01',
+    'upcoming'
+  );
+
   // 4. Insert Comprehensive Disciplines & Categories
   const insertCategory = db.prepare(`
     INSERT OR IGNORE INTO categories (id, tournament_id, name, discipline, division, min_age, max_age, gender, schedule, fee)
