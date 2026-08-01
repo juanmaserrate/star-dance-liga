@@ -1,6 +1,6 @@
 <nav class="navbar">
   <div class="nav-container">
-    <a href="/" class="brand">
+    <a href="<%= user ? (user.role === 'admin' ? '/admin/dashboard' : (user.role === 'profesor' ? '/profesor/dashboard' : '/juez/planilla')) : '/' %>" class="brand">
       <img src="/img/logo.svg" alt="Star Dance Logo">
       <span>STAR DANCE LIGA</span>
     </a>
@@ -8,10 +8,6 @@
     <button class="mobile-toggle" id="mobileToggle" aria-label="Menú">&#9776;</button>
 
     <ul class="nav-links" id="navLinks">
-      <li><a href="/" class="nav-link">Inicio</a></li>
-      <li><a href="/torneos" class="nav-link">Torneos</a></li>
-      <li><a href="/jueces" class="nav-link">Jueces</a></li>
-      
       <% if (user) { %>
         <% if (user.role === 'admin') { %>
           <li><a href="/admin/dashboard" class="nav-link" style="color: var(--gold-light);">📊 Panel Admin</a></li>
@@ -34,6 +30,9 @@
           <a href="/auth/logout" class="btn btn-outline-gold btn-sm">Cerrar Sesión</a>
         </li>
       <% } else { %>
+        <li><a href="/" class="nav-link">Inicio</a></li>
+        <li><a href="/torneos" class="nav-link">Torneos</a></li>
+        <li><a href="/jueces" class="nav-link">Jueces</a></li>
         <li>
           <a href="/auth/login" class="btn btn-gold btn-sm">Ingreso Profesores / Jueces</a>
         </li>
