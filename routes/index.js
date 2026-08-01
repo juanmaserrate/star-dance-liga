@@ -2,45 +2,45 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 
+// Helper to get CMS setting by key
+function getSetting(key, fallback = '') {
+  try {
+    const row = db.prepare(`SELECT value FROM site_settings WHERE key = ?`).get(key);
+    return row ? row.value : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
 // Home / Landing Page
 router.get('/', (req, res) => {
-  try {
-    const upcomingTournaments = db.prepare(`
-      SELECT * FROM tournaments 
-      WHERE status != 'finished' 
-      ORDER stroke BY event_date ASC LIMIT 3
-    `).all();
+  const upcomingTournaments = db.prepare(`
+    SELECT * FROM tournaments 
+    ORDER BY event_date ASC LIMIT 3
+  `).all();
 
-    const stats = {
-      tournaments: db.prepare(`SELECT COUNT(*) as count FROM tournaments`).get().count,
-      clubs: db.prepare(`SELECT COUNT(*) as count FROM clubs`).get().count,
-      skaters: db.prepare(`SELECT COUNT(*) as count FROM students`).get().count
-    };
+  const stats = {
+    tournaments: db.prepare(`SELECT COUNT(*) as count FROM tournaments`).get().count,
+    clubs: db.prepare(`SELECT COUNT(*) as count FROM clubs`).get().count,
+    skaters: db.prepare(`SELECT COUNT(*) as count FROM students`).get().count
+  };
 
-    res.render('public/index', {
-      user: req.session.user || null,
-      tournaments: upcomingTournaments,
-      stats
-    });
-  } catch (err) {
-    // Fallback if sqlite syntax differs
-    const upcomingTournaments = db.prepare(`
-      SELECT * FROM tournaments 
-      ORDER BY event_date ASC LIMIT 3
-    `).all();
+  const cms = {
+    hero_title: getSetting('hero_title', 'LIGA DE PATINAJE ARTÍSTICO STAR DANCE'),
+    hero_subtitle: getSetting('hero_subtitle', 'Plataforma oficial de gestión de torneos, cuerpo de jueces e inscripciones.'),
+    about_title: getSetting('about_title', 'SOBRE LA LIGA STAR DANCE Y NUESTRO PROPÓSITO'),
+    about_content: getSetting('about_content', 'La Liga Star Dance nace con el propósito de promover y profesionalizar el Patinaje Artístico sobre ruedas.'),
+    slides: db.prepare(`SELECT * FROM home_slides WHERE is_active = 1 ORDER BY order_index ASC`).all(),
+    disciplines: db.prepare(`SELECT * FROM discipline_info ORDER BY order_index ASC`).all(),
+    judges: db.prepare(`SELECT * FROM judge_profiles ORDER BY order_index ASC`).all()
+  };
 
-    const stats = {
-      tournaments: db.prepare(`SELECT COUNT(*) as count FROM tournaments`).get().count,
-      clubs: db.prepare(`SELECT COUNT(*) as count FROM clubs`).get().count,
-      skaters: db.prepare(`SELECT COUNT(*) as count FROM students`).get().count
-    };
-
-    res.render('public/index', {
-      user: req.session.user || null,
-      tournaments: upcomingTournaments,
-      stats
-    });
-  }
+  res.render('public/index', {
+    user: req.session.user || null,
+    tournaments: upcomingTournaments,
+    stats,
+    cms
+  });
 });
 
 // Public Tournaments List
@@ -81,11 +81,7 @@ router.get('/torneos/:id', (req, res) => {
 
 // Public Judges Panel Page
 router.get('/jueces', (req, res) => {
-  const judges = db.prepare(`
-    SELECT id, full_name, email, phone 
-    FROM users 
-    WHERE role = 'juez'
-  `).all();
+  const judges = db.prepare(`SELECT * FROM judge_profiles ORDER BY order_index ASC`).all();
 
   res.render('public/jueces', {
     user: req.session.user || null,

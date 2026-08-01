@@ -514,4 +514,132 @@ router.get('/alumnos/:id/documentos', (req, res) => {
   });
 });
 
+// CMS Admin Control Panel for Public Home Page
+router.get('/cms', (req, res) => {
+  const getSetting = (key) => {
+    const row = db.prepare(`SELECT value FROM site_settings WHERE key = ?`).get(key);
+    return row ? row.value : '';
+  };
+
+  const hero_title = getSetting('hero_title') || 'LIGA DE PATINAJE ARTÍSTICO STAR DANCE';
+  const hero_subtitle = getSetting('hero_subtitle') || 'Plataforma oficial de gestión de torneos, cuerpo de jueces e inscripciones.';
+  const about_title = getSetting('about_title') || 'SOBRE LA LIGA STAR DANCE Y NUESTRO PROPÓSITO';
+  const about_content = getSetting('about_content') || 'La Liga Star Dance nace con la misión de impulsar y promover el Patinaje Artístico sobre ruedas...';
+
+  const slides = db.prepare(`SELECT * FROM home_slides ORDER BY order_index ASC`).all();
+  const judges = db.prepare(`SELECT * FROM judge_profiles ORDER BY order_index ASC`).all();
+  const disciplines = db.prepare(`SELECT * FROM discipline_info ORDER BY order_index ASC`).all();
+
+  res.render('admin/cms', {
+    user: req.session.user,
+    cms: {
+      hero_title,
+      hero_subtitle,
+      about_title,
+      about_content,
+      slides,
+      judges,
+      disciplines
+    },
+    success: req.query.success || null,
+    error: req.query.error || null
+  });
+});
+
+// Update Hero Title & Subtitle
+router.post('/cms/hero', (req, res) => {
+  const { hero_title, hero_subtitle } = req.body;
+  const setSetting = db.prepare(`INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)`);
+  setSetting.run('hero_title', (hero_title || '').toUpperCase());
+  setSetting.run('hero_subtitle', hero_subtitle || '');
+
+  res.redirect('/admin/cms?success=' + encodeURIComponent('Banner principal de la Home actualizado.'));
+});
+
+// Update About Us / Purpose
+router.post('/cms/about', (req, res) => {
+  const { about_title, about_content } = req.body;
+  const setSetting = db.prepare(`INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)`);
+  setSetting.run('about_title', (about_title || '').toUpperCase());
+  setSetting.run('about_content', about_content || '');
+
+  res.redirect('/admin/cms?success=' + encodeURIComponent('Sección Sobre la Liga y Propósito actualizada.'));
+});
+
+// Add New Slide Banner
+router.post('/cms/slides', (req, res) => {
+  const { title, subtitle, image_url, button_text, button_link } = req.body;
+  if (!title) return res.redirect('/admin/cms?error=' + encodeURIComponent('El título del slide es requerido.'));
+
+  try {
+    db.prepare(`
+      INSERT INTO home_slides (title, subtitle, image_url, button_text, button_link)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      title.toUpperCase(),
+      subtitle || '',
+      image_url || '/img/logo.svg',
+      (button_text || 'VER MÁS').toUpperCase(),
+      button_link || '/torneos'
+    );
+    res.redirect('/admin/cms?success=' + encodeURIComponent('Nuevo slide/banner agregado a la portada.'));
+  } catch (err) {
+    console.error('Error adding slide:', err);
+    res.redirect('/admin/cms?error=' + encodeURIComponent('Error al agregar slide.'));
+  }
+});
+
+// Delete Slide Banner
+router.post('/cms/slides/:id/eliminar', (req, res) => {
+  db.prepare(`DELETE FROM home_slides WHERE id = ?`).run(req.params.id);
+  res.redirect('/admin/cms?success=' + encodeURIComponent('Slide eliminado de la portada.'));
+});
+
+// Add Judge Profile with Photo & Info
+router.post('/cms/jueces', (req, res) => {
+  const { name, title, photo_url, bio, specialty } = req.body;
+  if (!name || !title) return res.redirect('/admin/cms?error=' + encodeURIComponent('Nombre y título del juez son requeridos.'));
+
+  try {
+    db.prepare(`
+      INSERT INTO judge_profiles (name, title, photo_url, bio, specialty)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      name.toUpperCase(),
+      title.toUpperCase(),
+      photo_url || '/img/logo.svg',
+      bio || '',
+      (specialty || '').toUpperCase()
+    );
+    res.redirect('/admin/cms?success=' + encodeURIComponent('Perfil de juez agregado al sitio público.'));
+  } catch (err) {
+    console.error('Error adding judge:', err);
+    res.redirect('/admin/cms?error=' + encodeURIComponent('Error al agregar juez.'));
+  }
+});
+
+// Delete Judge Profile
+router.post('/cms/jueces/:id/eliminar', (req, res) => {
+  db.prepare(`DELETE FROM judge_profiles WHERE id = ?`).run(req.params.id);
+  res.redirect('/admin/cms?success=' + encodeURIComponent('Perfil de juez eliminado.'));
+});
+
+// Add Discipline Public Info Card
+router.post('/cms/disciplinas', (req, res) => {
+  const { name, description, icon } = req.body;
+  if (!name || !description) return res.redirect('/admin/cms?error=' + encodeURIComponent('Nombre y descripción son requeridos.'));
+
+  try {
+    db.prepare(`
+      INSERT INTO discipline_info (name, description, icon)
+      VALUES (?, ?, ?)
+    `).run(name.toUpperCase(), description, icon || '⛸️');
+
+    res.redirect('/admin/cms?success=' + encodeURIComponent('Tarjeta informativa de disciplina agregada.'));
+  } catch (err) {
+    console.error('Error adding discipline info:', err);
+    res.redirect('/admin/cms?error=' + encodeURIComponent('Error al agregar disciplina.'));
+  }
+});
+
 module.exports = router;

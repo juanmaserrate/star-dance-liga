@@ -143,7 +143,41 @@ function seed() {
   insertExpense.run(2, 1, 'Alquiler de Polideportivo', 'ALQUILER ALDO CANTONI (2 DÍAS)', 1200000, '2026-08-01');
   insertExpense.run(3, 1, 'Sonido e Iluminación', 'EQUIPO DE SONIDO PROFESIONAL Y PANTALLA LED', 350000, '2026-08-01');
 
-  console.log('✅ Base de datos actualizada con catálogo completo de disciplinas, formato MAYÚSCULAS y módulo financiero.');
+  // 8. CMS Site Settings
+  const setSetting = db.prepare(`INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)`);
+  setSetting.run('hero_title', 'LIGA DE PATINAJE ARTÍSTICO STAR DANCE');
+  setSetting.run('hero_subtitle', 'Plataforma oficial de gestión de torneos, cuerpo de jueces, inscripción digital de patinadoras y fichas técnicas.');
+  setSetting.run('about_title', 'SOBRE LA LIGA STAR DANCE Y NUESTRO PROPÓSITO');
+  setSetting.run('about_content', 'La Liga Star Dance nace con la misión de impulsar, promover y profesionalizar el Patinaje Artístico sobre ruedas. Ofrecemos un marco competitivo sano, transparente y de máxima calidad técnica para deportistas desde categorías Iniciales e Infantil hasta Másters y Elite.');
+
+  // 9. CMS Home Slides
+  const insertSlide = db.prepare(`
+    INSERT OR IGNORE INTO home_slides (id, title, subtitle, image_url, button_text, button_link, order_index)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  insertSlide.run(1, 'GRAN TORNEO APERTURA 2026', 'Competencia clasificatoria en el Estadio Aldo Cantoni con todas las disciplinas.', '/img/logo.svg', 'VER PRÓXIMOS TORNEOS', '/torneos', 1);
+  insertSlide.run(2, 'CUERPO DE JUECES OFICIALES', 'Conoce a nuestro distinguido jurado acreditado para evaluaciones individuales y grupales.', '/img/logo.svg', 'CONOCER JURADO', '/jueces', 2);
+
+  // 10. CMS Judge Profiles
+  const insertJudge = db.prepare(`
+    INSERT OR IGNORE INTO judge_profiles (id, name, title, photo_url, bio, specialty, order_index)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  insertJudge.run(1, 'MARIANA SOLA', 'JUEZ NACIONAL OFICIAL', '/img/logo.svg', 'Especialista técnica en disciplinas Libre y Parejas con más de 12 años de trayectoria arbitral.', 'LIBRE Y PAREJAS', 1);
+  insertJudge.run(2, 'MARTA BENÍTEZ', 'JUEZ INTERNACIONAL DE DANZA', '/img/logo.svg', 'Juez oficial de Free Dance, Solo Dance, Show y Precisión. Certificación continental.', 'DANCE, SHOW Y PRECISIÓN', 2);
+
+  // 11. CMS Discipline Info
+  const insertDisciplineInfo = db.prepare(`
+    INSERT OR IGNORE INTO discipline_info (id, name, description, icon, order_index)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  insertDisciplineInfo.run(1, 'LIBRE', 'Evaluación técnica de saltos, trompos y trabajo de pies. Divisiones C (Exhibición a 1era C), B (Promo B a 1era B) y A Federadas.', '⛸️', 1);
+  insertDisciplineInfo.run(2, 'FREE DANCE & SOLO DANCE', 'Danza sobre ruedas con énfasis en la interpretación musical, técnica de cantos y fluidez. Niveles desde Debutantes hasta Style.', '💃', 2);
+  insertDisciplineInfo.run(3, 'PAREJAS MIXTAS', 'Trabajo en pareja con elevaciones, trompos combinados y sincronismo perfecto. Evaluación según el integrante de mayor categoría.', '👫', 3);
+  insertDisciplineInfo.run(4, 'DÚOS, TRÍOS Y CUARTETOS', 'Grupos pequeños categorizados por colores (Naranja a Violeta). Evaluación según la deportista de mayor categoría o edad.', '⭐', 4);
+  insertDisciplineInfo.run(5, 'SMALL GROUP, SHOW Y PRECISIÓN', 'Grandes producciones grupales de hasta 30 patinadoras. Impresionantes coreografías, sincronía y vestuarios temáticos.', '🏆', 5);
+
+  console.log('✅ Base de datos actualizada con catálogo completo, formato MAYÚSCULAS y CMS de la página principal.');
 }
 
 seed();
