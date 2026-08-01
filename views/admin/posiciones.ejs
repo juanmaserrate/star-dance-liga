@@ -1,0 +1,52 @@
+<%- include('../partials/header', { title: 'Puntajes de Clubes' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div style="margin-bottom: 1.5rem;">
+    <h1 style="color: var(--gold-light); font-size: 1.8rem;">🥇 Ranking Anual y Puntajes de Clubes</h1>
+    <p style="color: var(--text-muted);">Tabla acumulativa de calificaciones por institución en la Liga Star Dance.</p>
+  </div>
+
+  <%- include('admin_nav') %>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">🏆 Tabla de Posiciones Anual de Clubes</h2>
+    </div>
+
+    <% if (clubLeaderboard && clubLeaderboard.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 70px;">Posición</th>
+              <th>Club / Institución</th>
+              <th>Ciudad</th>
+              <th>Torneos Disputados</th>
+              <th>Puntaje Acumulado Anual</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% clubLeaderboard.forEach((c, idx) => { %>
+              <tr>
+                <td style="text-align: center; font-weight: 800; font-size: 1.2rem; color: var(--gold-light);">
+                  <%= idx === 0 ? '🥇 1°' : (idx === 1 ? '🥈 2°' : (idx === 2 ? '🥉 3°' : (idx + 1) + '°')) %>
+                </td>
+                <td><strong><%= c.club_name %></strong></td>
+                <td><%= c.city || 'SAN JUAN' %></td>
+                <td><span class="badge badge-violet"><%= c.tournaments_participated %> torneos</span></td>
+                <td style="color: var(--gold-primary); font-size: 1.25rem; font-weight: 800;"><%= c.total_points %> pts</td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">
+        Las posiciones y clasificaciones se irán actualizando a medida que los jueces carguen las puntuaciones de cada torneo.
+      </p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

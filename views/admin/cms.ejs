@@ -1,0 +1,218 @@
+<%- include('../partials/header', { title: 'Gestor CMS de Portada' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div style="margin-bottom: 1.5rem;">
+    <h1 style="color: var(--gold-light); font-size: 1.8rem;">🖥️ Administrador de Portada / CMS</h1>
+    <p style="color: var(--text-muted);">Administra fácilmente las secciones de la página principal: banners, propósito, jueces y disciplinas.</p>
+  </div>
+
+  <%- include('admin_nav') %>
+
+  <% if (typeof success !== 'undefined' && success) { %>
+    <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
+  <% } %>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger alert-auto-dismiss">⚠️ <%= error %></div>
+  <% } %>
+
+  <!-- 1. Banner Principal Hero -->
+  <div class="card">
+    <h2 class="card-title" style="margin-bottom: 1rem;">1. 🎯 Encabezado y Titular de la Home</h2>
+    <form action="/admin/cms/hero" method="POST">
+      <div class="form-group">
+        <label class="form-label" for="hero_title">Título Principal (Banner Hero)</label>
+        <input type="text" id="hero_title" name="hero_title" class="form-control" value="<%= cms.hero_title %>" style="text-transform: uppercase;" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="hero_subtitle">Bajada / Subtítulo Principal</label>
+        <textarea id="hero_subtitle" name="hero_subtitle" class="form-control" rows="2"><%= cms.hero_subtitle %></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-gold" style="width: 200px;">💾 Guardar Titular</button>
+    </form>
+  </div>
+
+  <!-- 2. Banners / Slides de Torneos -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">2. 🖼️ Banners y Slides Anunciando Torneos (<%= cms.slides.length %>)</h2>
+    </div>
+
+    <form action="/admin/cms/slides" method="POST" class="form-row" style="margin-bottom: 1.5rem; align-items: flex-end;">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Título del Banner</label>
+        <input type="text" name="title" class="form-control" placeholder="EJ: TORNEO APERTURA 2026" required style="text-transform: uppercase;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Descripción Breve</label>
+        <input type="text" name="subtitle" class="form-control" placeholder="Detalles de fecha y sede">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Texto Botón</label>
+        <input type="text" name="button_text" class="form-control" placeholder="EJ: VER TORNEO" value="VER TORNEO" style="text-transform: uppercase;">
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn-gold">+ Agregar Banner</button>
+      </div>
+    </form>
+
+    <% if (cms.slides && cms.slides.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Título</th>
+              <th>Bajada</th>
+              <th>Acción Botón</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% cms.slides.forEach(s => { %>
+              <tr>
+                <td><strong><%= s.title %></strong></td>
+                <td><%= s.subtitle %></td>
+                <td><span class="badge badge-violet"><%= s.button_text %></span></td>
+                <td>
+                  <form action="/admin/cms/slides/<%= s.id %>/eliminar" method="POST">
+                    <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- 3. Sobre la Liga y Propósito -->
+  <div class="card">
+    <h2 class="card-title" style="margin-bottom: 1rem;">3. 📜 Sobre la Liga y Propósito Institucional</h2>
+    <form action="/admin/cms/about" method="POST">
+      <div class="form-group">
+        <label class="form-label" for="about_title">Título de la Sección</label>
+        <input type="text" id="about_title" name="about_title" class="form-control" value="<%= cms.about_title %>" style="text-transform: uppercase;" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="about_content">Texto Explicativo de la Liga y Propósito</label>
+        <textarea id="about_content" name="about_content" class="form-control" rows="4" required><%= cms.about_content %></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-gold" style="width: 200px;">💾 Guardar Propósito</button>
+    </form>
+  </div>
+
+  <!-- 4. Datos de los Jueces -->
+  <div class="card">
+    <h2 class="card-title" style="margin-bottom: 1rem;">4. ⚖️ Fichas y Datos de los Jueces Oficiales (<%= cms.judges.length %>)</h2>
+
+    <form action="/admin/cms/jueces" method="POST" class="form-row" style="margin-bottom: 1.5rem; align-items: flex-end;">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Nombre Completo Juez</label>
+        <input type="text" name="name" class="form-control" placeholder="EJ: MARIANA SOLA" required style="text-transform: uppercase;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Título / Cargo</label>
+        <input type="text" name="title" class="form-control" placeholder="EJ: JUEZ NACIONAL" required style="text-transform: uppercase;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Especialidad</label>
+        <input type="text" name="specialty" class="form-control" placeholder="EJ: LIBRE Y PAREJAS" style="text-transform: uppercase;">
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn-gold">+ Cargar Juez</button>
+      </div>
+    </form>
+
+    <% if (cms.judges && cms.judges.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nombre Juez</th>
+              <th>Título / Acreditación</th>
+              <th>Especialidad</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% cms.judges.forEach(j => { %>
+              <tr>
+                <td><strong><%= j.name %></strong></td>
+                <td><span class="badge badge-violet"><%= j.title %></span></td>
+                <td><%= j.specialty %></td>
+                <td>
+                  <form action="/admin/cms/jueces/<%= j.id %>/eliminar" method="POST">
+                    <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- 5. Información sobre Disciplinas -->
+  <div class="card">
+    <h2 class="card-title" style="margin-bottom: 1rem;">5. ⛸️ Información de Disciplinas (<%= cms.disciplines.length %>)</h2>
+
+    <form action="/admin/cms/disciplinas" method="POST" class="form-row" style="margin-bottom: 1.5rem; align-items: flex-end;">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Nombre Disciplina</label>
+        <input type="text" name="name" class="form-control" placeholder="EJ: LIBRE / FREE DANCE" required style="text-transform: uppercase;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Ícono / Emoji</label>
+        <input type="text" name="icon" class="form-control" placeholder="EJ: ⛸️" value="⛸️" style="width: 80px;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0; flex: 2;">
+        <label class="form-label">Descripción Técnica Pública</label>
+        <input type="text" name="description" class="form-control" placeholder="Explicación de la disciplina..." required>
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn-gold">+ Agregar Disciplina</button>
+      </div>
+    </form>
+
+    <% if (cms.disciplines && cms.disciplines.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Ícono</th>
+              <th>Disciplina</th>
+              <th>Descripción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% cms.disciplines.forEach(d => { %>
+              <tr>
+                <td style="font-size: 1.5rem;"><%= d.icon %></td>
+                <td><strong><%= d.name %></strong></td>
+                <td><%= d.description %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

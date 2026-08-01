@@ -1,0 +1,142 @@
+<%- include('../partials/header', { title: 'Presupuesto y Gastos' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="main-wrapper">
+  <div style="margin-bottom: 1.5rem;">
+    <h1 style="color: var(--gold-light); font-size: 1.8rem;">💰 Presupuesto, Gastos y Forecast del Torneo</h1>
+    <p style="color: var(--text-muted);">Registro de costos operacionales (medallas, sonido, alquileres) e ingresos proyectados.</p>
+  </div>
+
+  <%- include('admin_nav') %>
+
+  <% if (typeof success !== 'undefined' && success) { %>
+    <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
+  <% } %>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger alert-auto-dismiss">⚠️ <%= error %></div>
+  <% } %>
+
+  <!-- Select Tournament -->
+  <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+    <form action="/admin/finanzas" method="GET" class="form-row">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Seleccionar Torneo a Evaluar</label>
+        <select name="tournament_id" class="form-select" onchange="this.form.submit()">
+          <% tournaments.forEach(t => { %>
+            <option value="<%= t.id %>" <%= selectedTournamentId == t.id ? 'selected' : '' %>><%= t.name %></option>
+          <% }) %>
+        </select>
+      </div>
+    </form>
+  </div>
+
+  <!-- Financial Summary Tiles -->
+  <div class="stat-grid">
+    <div class="stat-tile">
+      <div class="stat-icon" style="color: #2ec4b6;">📈</div>
+      <div>
+        <div class="stat-val" style="color: #2ec4b6;">$<%= revenueStats.total_net.toLocaleString() %></div>
+        <div class="stat-label">Ingresos Netos Inscriptos</div>
+        <small style="color: var(--text-muted);">Bruto: $<%= revenueStats.total_gross.toLocaleString() %> (-$<%= revenueStats.total_discounts.toLocaleString() %> Becas)</small>
+      </div>
+    </div>
+
+    <div class="stat-tile">
+      <div class="stat-icon" style="color: #e74c3c;">📉</div>
+      <div>
+        <div class="stat-val" style="color: #e74c3c;">$<%= totalExpenses.toLocaleString() %></div>
+        <div class="stat-label">Total Gastos Operativos</div>
+        <small style="color: var(--text-muted);"><%= expenses.length %> comprobantes/rubros</small>
+      </div>
+    </div>
+
+    <div class="stat-tile">
+      <div class="stat-icon" style="color: <%= projectedProfit >= 0 ? '#2ec4b6' : '#e74c3c' %>;">⚖️</div>
+      <div>
+        <div class="stat-val" style="color: <%= projectedProfit >= 0 ? '#2ec4b6' : '#e74c3c' %>;">
+          $<%= projectedProfit.toLocaleString() %>
+        </div>
+        <div class="stat-label">Ganancia / Resultado Proyectado</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+    <!-- Expense Registration Form -->
+    <div class="card" style="margin: 0;">
+      <h2 class="card-title" style="margin-bottom: 1rem;">➕ Cargar Nuevo Gasto de Torneo</h2>
+
+      <form action="/admin/finanzas/gastos" method="POST">
+        <input type="hidden" name="tournament_id" value="<%= selectedTournamentId %>">
+
+        <div class="form-group">
+          <label class="form-label" for="expense_category">Rubro de Gasto *</label>
+          <select id="expense_category" name="expense_category" class="form-select" required>
+            <option value="Medallas y Trofeos">Medallas y Trofeos</option>
+            <option value="Alquiler de Polideportivo">Alquiler de Polideportivo / Club</option>
+            <option value="Sonido e Iluminación">Sonido e Iluminación</option>
+            <option value="Alimentos y Catering">Alimentos y Catering</option>
+            <option value="Jueces y Personal">Jueces, Viáticos y Personal</option>
+            <option value="Otros">Otros Gastos Varios</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">Descripción del Comprobante / Proveedor *</label>
+          <input type="text" id="description" name="description" class="form-control" placeholder="Ej: Compra de 150 medallas doradas" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="amount">Monto en $ ARS *</label>
+            <input type="number" id="amount" name="amount" class="form-control" placeholder="Monto abonado" required min="1">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="expense_date">Fecha de Gasto</label>
+            <input type="date" id="expense_date" name="expense_date" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 0.5rem;">
+          💾 Registrar Gasto
+        </button>
+      </form>
+    </div>
+
+    <!-- Expenses List -->
+    <div class="card" style="margin: 0;">
+      <h2 class="card-title" style="margin-bottom: 1rem;">📋 Registro de Gastos Cargaros (<%= expenses.length %>)</h2>
+
+      <% if (expenses && expenses.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Rubro</th>
+                <th>Descripción</th>
+                <th>Fecha</th>
+                <th>Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% expenses.forEach(e => { %>
+                <tr>
+                  <td><span class="badge badge-violet"><%= e.expense_category %></span></td>
+                  <td><strong><%= e.description %></strong></td>
+                  <td><%= e.expense_date %></td>
+                  <td style="color: #e74c3c; font-weight: 700;">-$<%= e.amount.toLocaleString() %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No se han cargado gastos para este torneo aún.</p>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
