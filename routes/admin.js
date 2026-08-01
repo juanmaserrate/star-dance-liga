@@ -130,29 +130,28 @@ router.post('/inscripciones/:id/pago', (req, res) => {
   res.redirect(referer);
 });
 
-// Export CSV / Excel
+// Export CSV / Excel matching stardance.com.ar layout
 router.get('/exportar/csv', (req, res) => {
   const { tournament_id, club_id, payment_status } = req.query;
 
   let query = `
     SELECT 
-      r.id as Reg_ID,
       t.name as Torneo,
-      cl.name as Club,
-      u.full_name as Profesor,
-      s.last_name as Apellido,
       s.first_name as Nombre,
+      s.last_name as Apellido,
       s.dni as DNI,
+      COALESCE(s.cuil, '-') as CUIL,
       s.birth_date as Fecha_Nacimiento,
+      (CAST(strftime('%Y', 'now') AS INT) - CAST(strftime('%Y', s.birth_date) AS INT)) as Edad,
+      cl.name as Club,
       c.name as Categoria,
       c.discipline as Disciplina,
-      c.level as Nivel,
-      c.fee as Arancel,
-      r.payment_status as Estado_Pago,
-      s.health_insurance as Obra_Social,
-      s.policy_number as Nro_Afiliado,
-      s.emergency_contact as Contacto_Emergencia,
-      s.emergency_phone as Tel_Emergencia
+      u.full_name as Profesora_A_Cargo,
+      u.email as Email_Profesora,
+      u.phone as Celular_Profesora,
+      COALESCE(s.health_insurance, '-') as Seguro_ObraSocial,
+      COALESCE(s.policy_number, '-') as Nro_Poliza,
+      r.payment_status as Estado_Pago
     FROM registrations r
     JOIN students s ON r.student_id = s.id
     JOIN clubs cl ON r.club_id = cl.id

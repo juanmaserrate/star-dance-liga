@@ -45,6 +45,7 @@ function initDb() {
       first_name TEXT NOT NULL,
       last_name TEXT NOT NULL,
       dni TEXT UNIQUE NOT NULL,
+      cuil TEXT,
       birth_date DATE NOT NULL,
       category_default TEXT,
       health_insurance TEXT,
