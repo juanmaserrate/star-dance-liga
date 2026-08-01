@@ -493,8 +493,8 @@ router.post('/usuarios', (req, res) => {
   }
 });
 
-// Admin Quick Password Reset Link Generator
-router.post('/usuarios/:id/restablecer', (req, res) => {
+// Admin Quick Password Reset Email Sender
+router.post('/usuarios/:id/restablecer', async (req, res) => {
   const userId = req.params.id;
   const user = db.prepare(`SELECT * FROM users WHERE id = ?`).get(userId);
 
@@ -502,7 +502,13 @@ router.post('/usuarios/:id/restablecer', (req, res) => {
     return res.redirect('/admin/usuarios?error=' + encodeURIComponent('Usuario no encontrado.'));
   }
 
+  if (!user.email) {
+    return res.redirect('/admin/usuarios?error=' + encodeURIComponent(`El usuario ${user.full_name} (@${user.username}) no tiene un correo electrónico registrado. Por favor agregue su email primero.`));
+  }
+
   const crypto = require('crypto');
+  const nodemailer = require('nodemailer');
+
   db.prepare(`DELETE FROM password_resets WHERE user_id = ?`).run(user.id);
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -512,9 +518,57 @@ router.post('/usuarios/:id/restablecer', (req, res) => {
     VALUES (?, ?, ?)
   `).run(user.id, token, expiresAt);
 
-  const resetUrl = `${req.protocol}://${req.get('host')}/auth/restablecer-password?token=${token}`;
+  const resetPath = `/auth/restablecer-password?token=${token}`;
+  const host = req.get('host');
+  const fullUrl = `${req.protocol}://${host}${resetPath}`;
 
-  res.redirect('/admin/usuarios?success=' + encodeURIComponent(`Link de recuperación generado para ${user.full_name}: ${resetUrl}`));
+  // Check if SMTP is configured
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS
+        }
+      });
+
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || `"Liga Star Dance" <${process.env.SMTP_USER}>`,
+        to: user.email,
+        subject: '🔐 Restablecimiento de contraseña por Administración - Liga Star Dance',
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; color: #12061c;">
+            <h2 style="color: #3b1959;">Liga Star Dance - Recuperación de Contraseña</h2>
+            <p>Hola <strong>${user.full_name}</strong>,</p>
+            <p>La administración de la Liga Star Dance ha generado una solicitud para restablecer la contraseña de tu cuenta (@<strong>${user.username}</strong>).</p>
+            <p>Hacé clic en el siguiente botón para definir tu nueva contraseña:</p>
+            <div style="margin: 25px 0;">
+              <a href="${fullUrl}" style="background: #d4af37; color: #12061c; font-weight: bold; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                🔑 Crear Nueva Contraseña
+              </a>
+            </div>
+            <p style="font-size: 0.85rem; color: #666;">Este enlace es válido por 24 horas.</p>
+          </div>
+        `
+      });
+
+      return res.redirect('/admin/usuarios?success=' + encodeURIComponent(`✅ Correo enviado automáticamente a ${user.email} con las instrucciones.`));
+    } catch (err) {
+      console.error('Error sending email:', err);
+      return res.redirect('/admin/usuarios?error=' + encodeURIComponent(`Error de envío por SMTP: ${err.message}`));
+    }
+  }
+
+  // Fallback if local without SMTP
+  console.log(`\n======================================================`);
+  console.log(`✉️ EMAIL AUTOMÁTICO SIMULADO PARA: ${user.email}`);
+  console.log(`Link: ${fullUrl}`);
+  console.log(`======================================================\n`);
+
+  res.redirect('/admin/usuarios?success=' + encodeURIComponent(`✉️ Correo de recuperación procesado automáticamente para ${user.email} (Link activo: ${fullUrl}).`));
 });
 
 // View Student Documents (Admin Inspector)
