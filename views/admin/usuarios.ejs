@@ -4,10 +4,8 @@
 <div class="main-wrapper">
   <div style="margin-bottom: 1.5rem;">
     <h1 style="color: var(--gold-light); font-size: 1.8rem;">👥 Gestión de Usuarios y Accesos</h1>
-    <p style="color: var(--text-muted);">Administración de profesores, jueces y administradores con generador de recuperación de contraseña.</p>
+    <p style="color: var(--text-muted);">Administración de profesores, jueces y administradores con desglosado de datos en columnas separadas.</p>
   </div>
-
-  <%- include('admin_nav') %>
 
   <% if (typeof success !== 'undefined' && success) { %>
     <div class="alert alert-success" style="word-break: break-all;">✅ <%= success %></div>
@@ -72,7 +70,7 @@
       </form>
     </div>
 
-    <!-- Users List -->
+    <!-- Users List with Individual Columns -->
     <div class="card" style="margin: 0;">
       <h2 class="card-title" style="margin-bottom: 1rem;">📋 Usuarios Registrados (<%= usersList.length %>)</h2>
 
@@ -81,28 +79,28 @@
           <table class="table">
             <thead>
               <tr>
+                <th>Nombre Completo</th>
                 <th>Usuario</th>
                 <th>Rol</th>
-                <th>Club / Email</th>
+                <th>Club Principal</th>
+                <th>Correo Electrónico</th>
+                <th>Teléfono</th>
                 <th>Recuperación</th>
               </tr>
             </thead>
             <tbody>
               <% usersList.forEach(u => { %>
                 <tr>
-                  <td>
-                    <strong><%= u.full_name %></strong><br>
-                    <small style="color: var(--text-muted);">@<%= u.username %></small>
-                  </td>
+                  <td><strong><%= u.full_name %></strong></td>
+                  <td><strong style="color: var(--gold-light);">@<%= u.username %></strong></td>
                   <td>
                     <span class="badge <%= u.role === 'admin' ? 'badge-paid' : (u.role === 'juez' ? 'badge-violet' : 'badge-pending') %>">
                       <%= u.role.toUpperCase() %>
                     </span>
                   </td>
-                  <td>
-                    <%= u.club_name || '-' %><br>
-                    <small style="color: var(--gold-light);"><%= u.email || 'Sin mail' %></small>
-                  </td>
+                  <td><%= u.club_name || '-' %></td>
+                  <td><%= u.email || 'Sin mail' %></td>
+                  <td><%= u.phone || '-' %></td>
                   <td>
                     <form action="/admin/usuarios/<%= u.id %>/restablecer" method="POST">
                       <button type="submit" class="btn btn-gold btn-sm" title="Enviar automáticamente un correo con el link de restablecimiento">

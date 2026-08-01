@@ -5,7 +5,7 @@
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
     <div>
       <h1 style="color: var(--gold-light); font-size: 1.8rem;">👥 Padrón Único de Patinadoras (<%= students.length %>)</h1>
-      <p style="color: var(--text-muted);">Directorio maestro de deportistas de la liga con garantía de unicidad por DNI y edición completa.</p>
+      <p style="color: var(--text-muted);">Directorio maestro de deportistas de la liga con columnas desglosadas por cada campo y garantía de unicidad.</p>
     </div>
 
     <a href="/admin/alumnos/nuevo" class="btn btn-gold">
@@ -46,19 +46,23 @@
     </form>
   </div>
 
-  <!-- Skaters List Table -->
+  <!-- Skaters List Table with Every Column Separated -->
   <div class="card">
     <% if (students && students.length > 0) { %>
       <div class="table-responsive">
         <table class="table">
           <thead>
             <tr>
-              <th>Patinadora (Unicidad)</th>
-              <th>DNI / CUIL</th>
-              <th>Edad (Año Cal.)</th>
+              <th>Nombre</th>
+              <th>Apellido</th>
+              <th>DNI</th>
+              <th>CUIL</th>
+              <th>Fecha Nacimiento</th>
+              <th>Edad</th>
               <th>Club Afiliado</th>
               <th>Profesora a Cargo</th>
-              <th>Obra Social / Póliza</th>
+              <th>Obra Social / Seguro</th>
+              <th>N° Póliza</th>
               <th>Inscripciones</th>
               <th>Acciones</th>
             </tr>
@@ -66,26 +70,17 @@
           <tbody>
             <% students.forEach(s => { %>
               <tr>
-                <td>
-                  <strong><%= s.last_name %>, <%= s.first_name %></strong>
-                  <div style="font-size: 0.78rem; color: var(--gold-light);">Nac: <%= s.birth_date %></div>
-                </td>
-                <td>
-                  <strong><%= s.dni %></strong><br>
-                  <small style="color: var(--text-muted);"><%= s.cuil || '-' %></small>
-                </td>
-                <td>
-                  <span class="badge badge-violet"><%= s.age %> AÑOS</span>
-                </td>
+                <td><strong><%= s.first_name %></strong></td>
+                <td><strong><%= s.last_name %></strong></td>
+                <td><strong style="color: var(--gold-light);"><%= s.dni %></strong></td>
+                <td><%= s.cuil || '-' %></td>
+                <td><%= s.birth_date %></td>
+                <td><span class="badge badge-violet"><%= s.age %> AÑOS</span></td>
                 <td><strong><%= s.club_name %></strong></td>
                 <td><span style="color: var(--gold-primary); font-size: 0.88rem;"><%= s.teacher_name %></span></td>
-                <td>
-                  <strong><%= s.health_insurance %></strong><br>
-                  <small style="color: var(--text-muted);">Póliza: <%= s.policy_number %></small>
-                </td>
-                <td>
-                  <span class="badge badge-paid"><%= s.reg_count %> competencias</span>
-                </td>
+                <td><%= s.health_insurance %></td>
+                <td><%= s.policy_number %></td>
+                <td><span class="badge badge-paid"><%= s.reg_count %> torneos</span></td>
                 <td>
                   <div style="display: flex; gap: 0.4rem;">
                     <a href="/admin/alumnos/<%= s.id %>/editar" class="btn btn-gold btn-sm">✏️ Editar</a>

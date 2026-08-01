@@ -5,15 +5,13 @@
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
     <div>
       <h1 style="color: var(--gold-light); font-size: 1.8rem;">Master de Inscripciones, Bonificaciones y Control de Pagos</h1>
-      <p style="color: var(--text-muted);">Visualizador general con reasignación de categoría y descuentos de administración.</p>
+      <p style="color: var(--text-muted);">Visualizador general con desglose en columnas individuales para cada dato.</p>
     </div>
     
     <a href="/admin/exportar/csv?<%= selectedTournament ? 'tournament_id=' + selectedTournament + '&' : '' %><%= selectedClub ? 'club_id=' + selectedClub + '&' : '' %><%= selectedPayment ? 'payment_status=' + selectedPayment : '' %>" class="btn btn-gold">
       📥 Exportar a Excel / CSV (MAYÚSCULAS)
     </a>
   </div>
-
-  <%- include('admin_nav') %>
 
   <% if (typeof success !== 'undefined' && success) { %>
     <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
@@ -57,7 +55,7 @@
     </form>
   </div>
 
-  <!-- Registrations Table -->
+  <!-- Registrations Table with Every Field in a Separate Column -->
   <div class="card">
     <div class="card-header">
       <h2 class="card-title">📋 Patinadoras e Inscripciones (<%= registrations.length %>)</h2>
@@ -68,12 +66,19 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Patinadora / Grupo</th>
-              <th>DNI / CUIL</th>
-              <th>Club / Profesora</th>
-              <th>Categoría & Disciplina</th>
-              <th>Arancel Net</th>
+              <th>Nombre</th>
+              <th>Apellido</th>
+              <th>DNI</th>
+              <th>CUIL</th>
+              <th>Fecha Nac.</th>
+              <th>Edad</th>
+              <th>Club</th>
+              <th>Profesora</th>
+              <th>Categoría</th>
+              <th>Disciplina</th>
+              <th>Arancel Base</th>
               <th>Bonificación</th>
+              <th>Arancel Final</th>
               <th>Docs</th>
               <th>Estado Pago</th>
               <th>Acción Admin</th>
@@ -83,43 +88,34 @@
             <% registrations.forEach(r => { %>
               <tr>
                 <td>
-                  <strong><%= r.last_name %>, <%= r.first_name %></strong>
+                  <strong><%= r.first_name %></strong>
                   <% if (r.is_group) { %>
-                    <div style="font-size: 0.78rem; color: var(--gold-light);"><%= r.group_type %>: <%= r.group_name %></div>
-                  <% } %>
-                  <div style="font-size: 0.78rem; color: var(--text-muted);">Edad: <%= r.age || 0 %> años</div>
-                </td>
-                <td>
-                  <%= r.dni %><br>
-                  <small style="color: var(--text-muted);"><%= r.cuil || '-' %></small>
-                </td>
-                <td>
-                  <strong><%= r.club_name %></strong><br>
-                  <small style="color: var(--gold-primary);">Profe: <%= r.teacher_name %></small>
-                </td>
-                <td>
-                  <span class="badge badge-violet"><%= r.category_name %></span>
-                  <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.discipline %></div>
-                </td>
-                <td style="font-weight: 700; color: var(--gold-light);">
-                  $<%= r.final_fee %>
-                  <% if (r.discount_amount > 0) { %>
-                    <div style="font-size: 0.75rem; text-decoration: line-through; color: var(--text-muted);">$<%= r.original_fee %></div>
+                    <div style="font-size: 0.75rem; color: var(--gold-light);"><%= r.group_type %>: <%= r.group_name %></div>
                   <% } %>
                 </td>
+                <td><strong><%= r.last_name %></strong></td>
+                <td><strong style="color: var(--gold-light);"><%= r.dni %></strong></td>
+                <td><%= r.cuil || '-' %></td>
+                <td><%= r.birth_date || '-' %></td>
+                <td><span class="badge badge-violet"><%= r.age || 0 %> AÑOS</span></td>
+                <td><strong><%= r.club_name %></strong></td>
+                <td><span style="color: var(--gold-primary); font-size: 0.85rem;"><%= r.teacher_name %></span></td>
+                <td><span class="badge badge-violet"><%= r.category_name %></span></td>
+                <td><%= r.discipline %></td>
+                <td>$<%= r.original_fee %></td>
                 <td>
                   <% if (r.discount_amount > 0) { %>
                     <span class="badge badge-paid">-$<%= r.discount_amount %></span>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);"><%= r.discount_reason %></div>
                   <% } else { %>
-                    <span style="color: var(--text-muted); font-size: 0.85rem;">-</span>
+                    -
                   <% } %>
                 </td>
+                <td style="font-weight: 800; color: var(--gold-light);">$<%= r.final_fee %></td>
                 <td>
                   <% if (r.doc_count > 0) { %>
                     <a href="/admin/alumnos/<%= r.student_id %>/documentos" class="btn btn-outline-gold btn-sm">📄 Docs (<%= r.doc_count %>)</a>
                   <% } else { %>
-                    <span style="color: var(--text-muted); font-size: 0.85rem;">Sin adjuntos</span>
+                    -
                   <% } %>
                 </td>
                 <td>
@@ -133,13 +129,12 @@
                   <div style="display: flex; flex-direction: column; gap: 0.3rem;">
                     <form action="/admin/inscripciones/<%= r.id %>/pago" method="POST">
                       <button type="submit" class="btn <%= r.payment_status === 'paid' ? 'btn-secondary' : 'btn-gold' %> btn-sm" style="width: 100%;">
-                        <%= r.payment_status === 'paid' ? 'Marcar Pendiente' : 'Marcar Pagado' %>
+                        <%= r.payment_status === 'paid' ? 'Pendiente' : 'Pagado' %>
                       </button>
                     </form>
 
-                    <!-- Apply Discount Form -->
                     <button class="btn btn-outline-gold btn-sm" onclick="document.getElementById('discount_box_<%= r.id %>').style.display='block'">
-                      🎁 Bonificación
+                      🎁 Beca
                     </button>
                   </div>
 
