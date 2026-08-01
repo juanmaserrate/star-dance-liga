@@ -3,14 +3,14 @@
 
 <div class="main-wrapper">
   <div style="margin-bottom: 1.5rem;">
-    <h1 style="color: var(--gold-light); font-size: 1.8rem;">Cuentas de Usuarios y Roles</h1>
-    <p style="color: var(--text-muted);">Alta y gestión de accesos para Profesores, Jueces y Administradores de la liga.</p>
+    <h1 style="color: var(--gold-light); font-size: 1.8rem;">👥 Gestión de Usuarios y Accesos</h1>
+    <p style="color: var(--text-muted);">Administración de profesores, jueces y administradores con generador de recuperación de contraseña.</p>
   </div>
 
   <%- include('admin_nav') %>
 
   <% if (typeof success !== 'undefined' && success) { %>
-    <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
+    <div class="alert alert-success" style="word-break: break-all;">✅ <%= success %></div>
   <% } %>
 
   <% if (typeof error !== 'undefined' && error) { %>
@@ -20,18 +20,18 @@
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
     <!-- Create User Form -->
     <div class="card" style="margin: 0;">
-      <h2 class="card-title" style="margin-bottom: 1rem;">👤 Crear Nuevo Usuario</h2>
-      
+      <h2 class="card-title" style="margin-bottom: 1rem;">➕ Registrar Nuevo Usuario</h2>
+
       <form action="/admin/usuarios" method="POST">
         <div class="form-group">
-          <label class="form-label" for="full_name">Nombre y Apellido *</label>
-          <input type="text" id="full_name" name="full_name" class="form-control" placeholder="Ej: Ana Clara Gómez" required>
+          <label class="form-label" for="full_name">Nombre Completo *</label>
+          <input type="text" id="full_name" name="full_name" class="form-control" placeholder="EJ: ANA MARTÍNEZ" required style="text-transform: uppercase;">
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label class="form-label" for="username">Usuario (Login) *</label>
-            <input type="text" id="username" name="username" class="form-control" placeholder="Ej: profe.ana" required>
+            <input type="text" id="username" name="username" class="form-control" placeholder="profe.ana" required>
           </div>
 
           <div class="form-group">
@@ -40,20 +40,25 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label class="form-label" for="email">Email (Para Recuperación)</label>
+          <input type="email" id="email" name="email" class="form-control" placeholder="ana@estrellapatin.com">
+        </div>
+
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="role">Rol en la Plataforma *</label>
+            <label class="form-label" for="role">Rol en el Sistema *</label>
             <select id="role" name="role" class="form-select" required>
-              <option value="profesor">Profesor/a (Carga de alumnos e inscripción)</option>
-              <option value="juez">Juez (Módulo de jurado y planilla)</option>
-              <option value="admin">Administrador (Acceso total)</option>
+              <option value="profesor">Profesor/a</option>
+              <option value="juez">Juez / Evaluador</option>
+              <option value="admin">Administrador</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="club_id">Club Perteneciente</label>
+            <label class="form-label" for="club_id">Club Principal</label>
             <select id="club_id" name="club_id" class="form-select">
-              <option value="">-- Sin Club (Independiente / Juez) --</option>
+              <option value="">-- Sin Club --</option>
               <% clubs.forEach(c => { %>
                 <option value="<%= c.id %>"><%= c.name %></option>
               <% }) %>
@@ -61,27 +66,15 @@
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="email">Email</label>
-            <input type="email" id="email" name="email" class="form-control" placeholder="correo@ejemplo.com">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="phone">Teléfono</label>
-            <input type="text" id="phone" name="phone" class="form-control" placeholder="+54 9 ...">
-          </div>
-        </div>
-
         <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 0.5rem;">
-          ✨ Crear Cuenta
+          💾 Crear Usuario
         </button>
       </form>
     </div>
 
-    <!-- Users Table -->
+    <!-- Users List -->
     <div class="card" style="margin: 0;">
-      <h2 class="card-title" style="margin-bottom: 1rem;">📋 Usuarios Activos (<%= usersList.length %>)</h2>
+      <h2 class="card-title" style="margin-bottom: 1rem;">📋 Usuarios Registrados (<%= usersList.length %>)</h2>
 
       <% if (usersList && usersList.length > 0) { %>
         <div class="table-responsive">
@@ -89,29 +82,39 @@
             <thead>
               <tr>
                 <th>Usuario</th>
-                <th>Nombre</th>
                 <th>Rol</th>
-                <th>Club</th>
+                <th>Club / Email</th>
+                <th>Recuperación</th>
               </tr>
             </thead>
             <tbody>
               <% usersList.forEach(u => { %>
                 <tr>
-                  <td><strong><%= u.username %></strong></td>
-                  <td><%= u.full_name %></td>
                   <td>
-                    <span class="badge <%= u.role === 'admin' ? 'badge-paid' : (u.role === 'juez' ? 'badge-pending' : 'badge-violet') %>">
+                    <strong><%= u.full_name %></strong><br>
+                    <small style="color: var(--text-muted);">@<%= u.username %></small>
+                  </td>
+                  <td>
+                    <span class="badge <%= u.role === 'admin' ? 'badge-paid' : (u.role === 'juez' ? 'badge-violet' : 'badge-pending') %>">
                       <%= u.role.toUpperCase() %>
                     </span>
                   </td>
-                  <td><%= u.club_name || '-' %></td>
+                  <td>
+                    <%= u.club_name || '-' %><br>
+                    <small style="color: var(--gold-light);"><%= u.email || 'Sin mail' %></small>
+                  </td>
+                  <td>
+                    <form action="/admin/usuarios/<%= u.id %>/restablecer" method="POST">
+                      <button type="submit" class="btn btn-outline-gold btn-sm" title="Generar link para enviar por WhatsApp o Email">
+                        🔑 Generar Link
+                      </button>
+                    </form>
+                  </td>
                 </tr>
               <% }) %>
             </tbody>
           </table>
         </div>
-      <% } else { %>
-        <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No hay usuarios creados.</p>
       <% } %>
     </div>
   </div>

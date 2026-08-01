@@ -493,6 +493,30 @@ router.post('/usuarios', (req, res) => {
   }
 });
 
+// Admin Quick Password Reset Link Generator
+router.post('/usuarios/:id/restablecer', (req, res) => {
+  const userId = req.params.id;
+  const user = db.prepare(`SELECT * FROM users WHERE id = ?`).get(userId);
+
+  if (!user) {
+    return res.redirect('/admin/usuarios?error=' + encodeURIComponent('Usuario no encontrado.'));
+  }
+
+  const crypto = require('crypto');
+  db.prepare(`DELETE FROM password_resets WHERE user_id = ?`).run(user.id);
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  db.prepare(`
+    INSERT INTO password_resets (user_id, token, expires_at)
+    VALUES (?, ?, ?)
+  `).run(user.id, token, expiresAt);
+
+  const resetUrl = `${req.protocol}://${req.get('host')}/auth/restablecer-password?token=${token}`;
+
+  res.redirect('/admin/usuarios?success=' + encodeURIComponent(`Link de recuperación generado para ${user.full_name}: ${resetUrl}`));
+});
+
 // View Student Documents (Admin Inspector)
 router.get('/alumnos/:id/documentos', (req, res) => {
   const student = db.prepare(`
