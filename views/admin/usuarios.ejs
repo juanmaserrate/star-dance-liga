@@ -2,120 +2,200 @@
 <%- include('../partials/navbar') %>
 
 <div class="main-wrapper">
-  <div style="margin-bottom: 1.5rem;">
-    <h1 style="color: var(--gold-light); font-size: 1.8rem;">👥 Gestión de Usuarios y Accesos</h1>
-    <p style="color: var(--text-muted);">Administración de profesores, jueces y administradores con desglosado de datos en columnas separadas.</p>
+  <!-- Header & Actions -->
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(212,175,55,0.15); padding-bottom: 1rem;">
+    <div>
+      <h1 style="color: var(--gold-light); font-size: 1.8rem; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+        👥 Usuarios y Accesos
+      </h1>
+      <p style="color: var(--text-muted); margin: 0.25rem 0 0 0; font-size: 0.95rem;">
+        Control de cuentas para profesores, jueces y administradores con credenciales y recuperación directa.
+      </p>
+    </div>
+    
+    <button type="button" class="btn btn-gold" onclick="toggleNewUserForm()" style="display: flex; align-items: center; gap: 0.5rem;">
+      <span id="toggleBtnIcon">➕</span> <span id="toggleBtnText">Nuevo Usuario</span>
+    </button>
   </div>
 
   <% if (typeof success !== 'undefined' && success) { %>
-    <div class="alert alert-success" style="word-break: break-all;">✅ <%= success %></div>
+    <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
   <% } %>
 
   <% if (typeof error !== 'undefined' && error) { %>
     <div class="alert alert-danger alert-auto-dismiss">⚠️ <%= error %></div>
   <% } %>
 
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
-    <!-- Create User Form -->
-    <div class="card" style="margin: 0;">
-      <h2 class="card-title" style="margin-bottom: 1rem;">➕ Registrar Nuevo Usuario</h2>
+  <!-- Collapsible Register User Form -->
+  <div class="card" id="newUserFormCard" style="display: none; max-width: 600px; margin: 0 auto 2rem auto; border: 1px solid var(--gold-primary); box-shadow: 0 0 20px rgba(212,175,55,0.15); animation: slideDown 0.3s ease-out;">
+    <div class="card-header" style="border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 0.75rem;">
+      <h2 class="card-title" style="font-size: 1.2rem; color: var(--gold-light);">➕ Registrar Nuevo Integrante</h2>
+    </div>
+    
+    <form action="/admin/usuarios" method="POST" style="margin-top: 1rem;">
+      <div class="form-group">
+        <label class="form-label" for="full_name">Nombre Completo *</label>
+        <input type="text" id="full_name" name="full_name" class="form-control" placeholder="EJ: ANA MARTÍNEZ" required style="text-transform: uppercase;">
+      </div>
 
-      <form action="/admin/usuarios" method="POST">
+      <div class="form-row">
         <div class="form-group">
-          <label class="form-label" for="full_name">Nombre Completo *</label>
-          <input type="text" id="full_name" name="full_name" class="form-control" placeholder="EJ: ANA MARTÍNEZ" required style="text-transform: uppercase;">
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="username">Usuario (Login) *</label>
-            <input type="text" id="username" name="username" class="form-control" placeholder="profe.ana" required>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="password">Contraseña *</label>
-            <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
-          </div>
+          <label class="form-label" for="username">Usuario (Login) *</label>
+          <input type="text" id="username" name="username" class="form-control" placeholder="profe.ana" required>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="email">Email (Para Recuperación)</label>
-          <input type="email" id="email" name="email" class="form-control" placeholder="ana@estrellapatin.com">
+          <label class="form-label" for="password">Contraseña *</label>
+          <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Correo Electrónico (Recuperación) *</label>
+        <input type="email" id="email" name="email" class="form-control" placeholder="ana@estrellapatin.com" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="role">Rol asignado *</label>
+          <select id="role" name="role" class="form-select" required>
+            <option value="profesor">Profesor/a</option>
+            <option value="juez">Juez / Evaluador</option>
+            <option value="admin">Administrador</option>
+          </select>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="role">Rol en el Sistema *</label>
-            <select id="role" name="role" class="form-select" required>
-              <option value="profesor">Profesor/a</option>
-              <option value="juez">Juez / Evaluador</option>
-              <option value="admin">Administrador</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label" for="club_id">Club Principal</label>
+          <select id="club_id" name="club_id" class="form-select">
+            <option value="">-- Sin Club Asignado --</option>
+            <% clubs.forEach(c => { %>
+              <option value="<%= c.id %>"><%= c.name %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+        <button type="submit" class="btn btn-gold" style="flex: 1;">💾 Crear Cuenta</button>
+        <button type="button" class="btn btn-secondary" onclick="toggleNewUserForm()">Cancelar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Aesthetic User Cards Grid -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+    <% if (usersList && usersList.length > 0) { %>
+      <% usersList.forEach(u => { %>
+        <% 
+          // Generate Initials for Avatar
+          let initials = 'SD';
+          if (u.full_name) {
+            const parts = u.full_name.trim().split(' ');
+            initials = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]) : parts[0].substring(0, 2);
+          }
+          initials = initials.toUpperCase();
+
+          // Get role specific color classes
+          let roleBadgeClass = 'badge-pending'; // Profesor (violet/orange)
+          let avatarBorder = 'rgba(212,175,55,0.4)';
+          if (u.role === 'admin') {
+            roleBadgeClass = 'badge-paid'; // Green / Emerald glow
+            avatarBorder = '#2ec4b6';
+          } else if (u.role === 'juez') {
+            roleBadgeClass = 'badge-violet'; // Purple / Cyan glow
+            avatarBorder = '#9d4edf';
+          }
+        %>
+        
+        <div class="card" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid <%= u.role === 'admin' ? '#2ec4b6' : (u.role === 'juez' ? '#9d4edf' : 'var(--gold-primary)') %>; transition: transform 0.25s ease, box-shadow 0.25s ease; cursor: default;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 24px rgba(212,175,55,0.15)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+          
+          <div>
+            <!-- Top Card Stats -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+              <!-- Circle Avatar -->
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 2px solid <%= avatarBorder %>; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--gold-light); font-size: 1.1rem; letter-spacing: 1px;">
+                <%= initials %>
+              </div>
+              
+              <span class="badge <%= roleBadgeClass %>" style="text-transform: uppercase; font-size: 0.78rem; font-weight: 700; letter-spacing: 1px; padding: 0.3rem 0.65rem;">
+                <%= u.role === 'admin' ? 'ADMIN' : (u.role === 'juez' ? 'JUEZ' : 'PROFE') %>
+              </span>
+            </div>
+
+            <!-- Profile Info -->
+            <h3 style="color: #ffffff; font-size: 1.15rem; margin: 0 0 0.25rem 0; font-weight: 700;"><%= u.full_name %></h3>
+            <div style="color: var(--gold-light); font-size: 0.88rem; font-weight: 600; margin-bottom: 0.75rem;">@<%= u.username %></div>
+
+            <!-- Meta details (Club / Contact) -->
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; border-top: 1px solid rgba(255,255,255,0.07); padding-top: 0.75rem; margin-top: 0.75rem; font-size: 0.88rem;">
+              <% if (u.club_name) { %>
+                <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted);">
+                  <span>🏛️</span> <strong style="color: #eeeeee;"><%= u.club_name %></strong>
+                </div>
+              <% } %>
+              
+              <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); word-break: break-all;">
+                <span>✉️</span> <span><%= u.email || 'Sin correo registrado' %></span>
+              </div>
+
+              <% if (u.phone) { %>
+                <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted);">
+                  <span>📞</span> <span><%= u.phone %></span>
+                </div>
+              <% } %>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="club_id">Club Principal</label>
-            <select id="club_id" name="club_id" class="form-select">
-              <option value="">-- Sin Club --</option>
-              <% clubs.forEach(c => { %>
-                <option value="<%= c.id %>"><%= c.name %></option>
-              <% }) %>
-            </select>
+          <!-- Quick Action Bar -->
+          <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.07); display: flex; justify-content: flex-end;">
+            <form action="/admin/usuarios/<%= u.id %>/restablecer" method="POST" style="margin: 0; width: 100%;">
+              <button type="submit" class="btn btn-outline-gold btn-sm" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" title="Enviar mail con link de recuperación">
+                ✉️ Enviar Acceso por Mail
+              </button>
+            </form>
           </div>
+
         </div>
-
-        <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 0.5rem;">
-          💾 Crear Usuario
-        </button>
-      </form>
-    </div>
-
-    <!-- Users List with Individual Columns -->
-    <div class="card" style="margin: 0;">
-      <h2 class="card-title" style="margin-bottom: 1rem;">📋 Usuarios Registrados (<%= usersList.length %>)</h2>
-
-      <% if (usersList && usersList.length > 0) { %>
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Nombre Completo</th>
-                <th>Usuario</th>
-                <th>Rol</th>
-                <th>Club Principal</th>
-                <th>Correo Electrónico</th>
-                <th>Teléfono</th>
-                <th>Recuperación</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% usersList.forEach(u => { %>
-                <tr>
-                  <td><strong><%= u.full_name %></strong></td>
-                  <td><strong style="color: var(--gold-light);">@<%= u.username %></strong></td>
-                  <td>
-                    <span class="badge <%= u.role === 'admin' ? 'badge-paid' : (u.role === 'juez' ? 'badge-violet' : 'badge-pending') %>">
-                      <%= u.role.toUpperCase() %>
-                    </span>
-                  </td>
-                  <td><%= u.club_name || '-' %></td>
-                  <td><%= u.email || 'Sin mail' %></td>
-                  <td><%= u.phone || '-' %></td>
-                  <td>
-                    <form action="/admin/usuarios/<%= u.id %>/restablecer" method="POST">
-                      <button type="submit" class="btn btn-gold btn-sm" title="Enviar automáticamente un correo con el link de restablecimiento">
-                        ✉️ Enviar Mail
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
-      <% } %>
-    </div>
+      <% }) %>
+    <% } else { %>
+      <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+        <p style="color: var(--text-muted);">No se encontraron usuarios registrados.</p>
+      </div>
+    <% } %>
   </div>
 </div>
+
+<script>
+  function toggleNewUserForm() {
+    const card = document.getElementById('newUserFormCard');
+    const icon = document.getElementById('toggleBtnIcon');
+    const text = document.getElementById('toggleBtnText');
+    
+    if (card.style.display === 'none') {
+      card.style.display = 'block';
+      icon.innerText = '❌';
+      text.innerText = 'Cerrar Formulario';
+      document.getElementById('full_name').focus();
+    } else {
+      card.style.display = 'none';
+      icon.innerText = '➕';
+      text.innerText = 'Nuevo Usuario';
+    }
+  }
+</script>
+
+<style>
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
 
 <%- include('../partials/footer') %>
