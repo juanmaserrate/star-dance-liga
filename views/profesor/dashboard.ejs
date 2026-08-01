@@ -1,15 +1,15 @@
-<%- include('../partials/header', { title: 'Panel Profesor' }) %>
+<%- include('../partials/header', { title: 'Panel Status Profesor' }) %>
 <%- include('../partials/navbar') %>
 
 <div class="main-wrapper">
   <!-- Header Title -->
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
     <div>
-      <h1 style="color: var(--gold-light); font-size: 1.8rem;">Panel de Profesor / Club</h1>
-      <p style="color: var(--text-muted);">Gestión de atletas, fichas médicas e inscripciones a torneos.</p>
+      <h1 style="color: var(--gold-light); font-size: 1.8rem;">📊 Módulo Status - Profesor / Club</h1>
+      <p style="color: var(--text-muted);">Visualizador de patinadoras registradas, fichas técnicas e inscripciones a torneos.</p>
     </div>
     <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-      <a href="/profesor/alumnos/nuevo" class="btn btn-gold">+ Cargar Alumno</a>
+      <a href="/profesor/alumnos/nuevo" class="btn btn-gold">+ Cargar Alumna</a>
       <a href="/profesor/inscribir" class="btn btn-outline-gold">✍️ Inscribir a Torneo</a>
     </div>
   </div>
@@ -28,7 +28,7 @@
       <div class="stat-icon">👥</div>
       <div>
         <div class="stat-val"><%= stats.totalStudents %></div>
-        <div class="stat-label">Mis Alumnos Registrados</div>
+        <div class="stat-label">Patinadoras Registradas</div>
       </div>
     </div>
 
@@ -41,10 +41,72 @@
     </div>
   </div>
 
+  <!-- Loaded Students Padrón Table in Status -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <div class="card-header">
+      <h2 class="card-title">👥 Datos de Patinadoras Cargadas (<%= students.length %>)</h2>
+      <a href="/profesor/alumnos/nuevo" class="btn btn-gold btn-sm">+ Nueva Patinadora</a>
+    </div>
+
+    <% if (students && students.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Apellido</th>
+              <th>DNI</th>
+              <th>CUIL</th>
+              <th>Fecha Nacimiento</th>
+              <th>Edad</th>
+              <th>Club</th>
+              <th>Obra Social / Seguro</th>
+              <th>N° Póliza</th>
+              <th>Contacto Emergencia</th>
+              <th>Teléfono Emergencia</th>
+              <th>Documentos</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% students.forEach(s => { %>
+              <tr>
+                <td><strong><%= s.first_name %></strong></td>
+                <td><strong><%= s.last_name %></strong></td>
+                <td><strong style="color: var(--gold-light);"><%= s.dni %></strong></td>
+                <td><%= s.cuil || '-' %></td>
+                <td><%= s.birth_date %></td>
+                <td><span class="badge badge-violet"><%= s.age %> AÑOS</span></td>
+                <td><strong><%= s.club_name %></strong></td>
+                <td><%= s.health_insurance || '-' %></td>
+                <td><%= s.policy_number || '-' %></td>
+                <td><%= s.emergency_contact || '-' %></td>
+                <td><span style="color: var(--gold-primary); font-size: 0.88rem;"><%= s.emergency_phone || '-' %></span></td>
+                <td><span class="badge badge-violet">📄 <%= s.doc_count %></span></td>
+                <td>
+                  <div style="display: flex; gap: 0.4rem;">
+                    <a href="/profesor/alumnos/<%= s.id %>/ver" class="btn btn-outline-gold btn-sm" title="Ver ficha técnica completa">🔍 Ver Datos</a>
+                    <a href="/profesor/alumnos/<%= s.id %>/editar" class="btn btn-secondary btn-sm" title="Editar datos">✏️ Editar</a>
+                    <a href="/profesor/inscribir?student_id=<%= s.id %>" class="btn btn-gold btn-sm" title="Inscribir a torneo">✍️ Inscribir</a>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">
+        Aún no has registrado patinadoras en tu padrón de club.<br>
+        <a href="/profesor/alumnos/nuevo" class="btn btn-gold" style="margin-top: 1rem;">+ Cargar Primer Alumna</a>
+      </p>
+    <% } %>
+  </div>
+
   <!-- Recent Registrations Table -->
   <div class="card">
     <div class="card-header">
-      <h2 class="card-title">📜 Mis Inscripciones Realizadas</h2>
+      <h2 class="card-title">📜 Mis Inscripciones Realizadas en Torneos</h2>
       <a href="/profesor/inscribir" class="btn btn-gold btn-sm">+ Nueva Inscripción</a>
     </div>
 
@@ -53,7 +115,8 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Patinador/a</th>
+              <th>Nombre</th>
+              <th>Apellido</th>
               <th>DNI</th>
               <th>Torneo</th>
               <th>Categoría</th>
@@ -65,7 +128,8 @@
           <tbody>
             <% myRegistrations.forEach(r => { %>
               <tr>
-                <td><strong><%= r.last_name %>, <%= r.first_name %></strong></td>
+                <td><strong><%= r.first_name %></strong></td>
+                <td><strong><%= r.last_name %></strong></td>
                 <td><%= r.dni %></td>
                 <td><%= r.tournament_name %></td>
                 <td>
@@ -90,7 +154,7 @@
       </div>
     <% } else { %>
       <p style="color: var(--text-muted); text-align: center; padding: 2rem;">
-        No has inscripto alumnos en torneos recientemente.<br>
+        No has inscripto alumnas en torneos recientemente.<br>
         <a href="/profesor/inscribir" class="btn btn-gold btn-sm" style="margin-top: 0.75rem;">Ir al Formulario de Inscripción</a>
       </p>
     <% } %>

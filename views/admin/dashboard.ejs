@@ -1,13 +1,11 @@
-<%- include('../partials/header', { title: 'Dashboard Administrador' }) %>
+<%- include('../partials/header', { title: 'Dashboard Status Administrador' }) %>
 <%- include('../partials/navbar') %>
 
 <div class="main-wrapper">
   <div style="margin-bottom: 1.5rem;">
-    <h1 style="color: var(--gold-light); font-size: 1.8rem;">Módulo de Administración Star Dance</h1>
-    <p style="color: var(--text-muted);">Control general de la liga, acreditaciones, finanzas y padrón.</p>
+    <h1 style="color: var(--gold-light); font-size: 1.8rem;">📊 Módulo Status - Administración Star Dance</h1>
+    <p style="color: var(--text-muted);">Control general de estadísticas, padrón maestro de deportistas cargadas y finanzas.</p>
   </div>
-
-  <%- include('admin_nav') %>
 
   <!-- Summary Stat Tiles -->
   <div class="stat-grid">
@@ -15,7 +13,7 @@
       <div class="stat-icon">⛸️</div>
       <div>
         <div class="stat-val"><%= stats.totalSkaters %></div>
-        <div class="stat-label">Total Patinadores</div>
+        <div class="stat-label">Total Patinadoras Cargadas</div>
       </div>
     </div>
 
@@ -44,16 +42,17 @@
     </div>
   </div>
 
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+  <!-- Summary Cards Grid -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
     <!-- Inscriptos por Club -->
     <div class="card" style="margin: 0;">
-      <h2 class="card-title" style="margin-bottom: 1rem;">🏛️ Inscriptos por Club</h2>
+      <h2 class="card-title" style="margin-bottom: 1rem;">🏛️ Patinadoras por Club</h2>
       <% if (registrationsByClub && registrationsByClub.length > 0) { %>
         <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.75rem;">
           <% registrationsByClub.forEach(c => { %>
             <li style="display: flex; justify-content: space-between; align-items: center; background: rgba(18,6,28,0.6); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-gold);">
               <span><strong><%= c.club_name %></strong></span>
-              <span class="badge badge-violet" style="font-size: 0.9rem;"><%= c.count %> patinadores</span>
+              <span class="badge badge-violet" style="font-size: 0.9rem;"><%= c.count %> inscripciones</span>
             </li>
           <% }) %>
         </ul>
@@ -64,27 +63,29 @@
 
     <!-- Últimas Inscripciones -->
     <div class="card" style="margin: 0;">
-      <h2 class="card-title" style="margin-bottom: 1rem;">⚡ Últimas Inscripciones</h2>
+      <h2 class="card-title" style="margin-bottom: 1rem;">⚡ Últimas Inscripciones Activas</h2>
       <% if (recentRegistrations && recentRegistrations.length > 0) { %>
         <div class="table-responsive">
           <table class="table">
             <thead>
               <tr>
-                <th>Patinador/a</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
                 <th>Club</th>
-                <th>Pago</th>
+                <th>Estado Pago</th>
               </tr>
             </thead>
             <tbody>
               <% recentRegistrations.forEach(r => { %>
                 <tr>
-                  <td><strong><%= r.last_name %>, <%= r.first_name %></strong></td>
+                  <td><strong><%= r.first_name %></strong></td>
+                  <td><strong><%= r.last_name %></strong></td>
                   <td><%= r.club_name %></td>
                   <td>
                     <% if (r.payment_status === 'paid') { %>
-                      <span class="badge badge-paid">PAGADO</span>
+                      <span class="badge badge-paid">✅ PAGADO</span>
                     <% } else { %>
-                      <span class="badge badge-pending">PENDIENTE</span>
+                      <span class="badge badge-pending">⏳ PENDIENTE</span>
                     <% } %>
                   </td>
                 </tr>
@@ -96,6 +97,62 @@
         <p style="color: var(--text-muted);">Sin inscripciones recientes.</p>
       <% } %>
     </div>
+  </div>
+
+  <!-- Master Skaters Table in Status Module -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">👥 Datos de Patinadoras Cargadas en el Sistema (<%= studentsList.length %>)</h2>
+      <a href="/admin/alumnos/nuevo" class="btn btn-gold btn-sm">+ Nueva Patinadora</a>
+    </div>
+
+    <% if (studentsList && studentsList.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Apellido</th>
+              <th>DNI</th>
+              <th>CUIL</th>
+              <th>Fecha Nacimiento</th>
+              <th>Edad</th>
+              <th>Club Afiliado</th>
+              <th>Profesora a Cargo</th>
+              <th>Obra Social / Seguro</th>
+              <th>N° Póliza</th>
+              <th>Inscripciones</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% studentsList.forEach(s => { %>
+              <tr>
+                <td><strong><%= s.first_name %></strong></td>
+                <td><strong><%= s.last_name %></strong></td>
+                <td><strong style="color: var(--gold-light);"><%= s.dni %></strong></td>
+                <td><%= s.cuil || '-' %></td>
+                <td><%= s.birth_date %></td>
+                <td><span class="badge badge-violet"><%= s.age %> AÑOS</span></td>
+                <td><strong><%= s.club_name %></strong></td>
+                <td><span style="color: var(--gold-primary); font-size: 0.88rem;"><%= s.teacher_name %></span></td>
+                <td><%= s.health_insurance %></td>
+                <td><%= s.policy_number %></td>
+                <td><span class="badge badge-paid"><%= s.reg_count %> torneos</span></td>
+                <td>
+                  <div style="display: flex; gap: 0.4rem;">
+                    <a href="/admin/alumnos/<%= s.id %>/editar" class="btn btn-gold btn-sm">✏️ Editar</a>
+                    <a href="/admin/alumnos/<%= s.id %>/documentos" class="btn btn-outline-gold btn-sm">📄 Docs (<%= s.doc_count %>)</a>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">No hay patinadoras registradas en el sistema aún.</p>
+    <% } %>
   </div>
 </div>
 

@@ -55,6 +55,19 @@ router.get('/dashboard', (req, res) => {
     ORDER BY r.created_at DESC LIMIT 10
   `).all();
 
+  const studentsList = db.prepare(`
+    SELECT s.*, 
+    c.name as club_name,
+    u.full_name as teacher_name,
+    (SELECT COUNT(*) FROM student_documents d WHERE d.student_id = s.id) as doc_count,
+    (SELECT COUNT(*) FROM registrations r WHERE r.student_id = s.id) as reg_count
+    FROM students s
+    JOIN clubs c ON s.club_id = c.id
+    JOIN users u ON s.teacher_id = u.id
+    ORDER BY s.last_name ASC, s.first_name ASC
+  `).all();
+  studentsList.forEach(s => { s.age = getCalendarAge(s.birth_date); });
+
   res.render('admin/dashboard', {
     user: req.session.user,
     stats: {
@@ -69,6 +82,7 @@ router.get('/dashboard', (req, res) => {
     },
     registrationsByClub,
     recentRegistrations,
+    studentsList,
     success: req.query.success || null,
     error: req.query.error || null
   });
