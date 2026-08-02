@@ -67,7 +67,7 @@ app.use((err, req, res, next) => {
 });
 
 db.initPromise.then(async () => {
-  const row = await db.prepare('SELECT COUNT(*) as count FROM users').get();
+  const row = await db.prepare('SELECT COUNT(*) as count FROM registrations').get();
   if (!row || Number(row.count) === 0) {
     console.log('🌱 Base de datos vacía, ejecutando seed automático...');
     const seed = require('./seed');

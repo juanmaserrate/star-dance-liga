@@ -144,9 +144,9 @@ async function seed() {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING
   `);
 
-  await insertReg.run(1, 1, 9, 1, 1, 2, false, null, 'Individual', 'registered', 'paid', 15000, 0, null, 15000, '2026-07-30 14:20:00', 'MÚSICA OK');
-  await insertReg.run(2, 1, 3, 2, 1, 2, false, null, 'Individual', 'registered', 'pending', 15000, 3000, 'BECA PROMOCIONAL PROFE', 12000, null, 'PENDIENTE PAGO');
-  await insertReg.run(3, 1, 14, 3, 1, 2, false, null, 'Individual', 'registered', 'paid', 18000, 0, null, 18000, '2026-07-31 09:10:00', 'PAGO TRANSFERENCIA');
+  await insertReg.run(1, 1, 9, 101, 1, 3, false, null, 'Individual', 'registered', 'paid', 15000, 0, null, 15000, '2026-07-30 14:20:00', 'MÚSICA OK');
+  await insertReg.run(2, 1, 3, 102, 1, 3, false, null, 'Individual', 'registered', 'pending', 15000, 3000, 'BECA PROMOCIONAL PROFE', 12000, null, 'PENDIENTE PAGO');
+  await insertReg.run(3, 1, 14, 103, 1, 3, false, null, 'Individual', 'registered', 'paid', 18000, 0, null, 18000, '2026-07-31 09:10:00', 'PAGO TRANSFERENCIA');
 
   // 7. Initial Tournament Expenses
   const insertExpense = db.prepare(`
