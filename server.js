@@ -66,7 +66,13 @@ app.use((err, req, res, next) => {
   });
 });
 
-db.initPromise.then(() => {
+db.initPromise.then(async () => {
+  const row = await db.prepare('SELECT COUNT(*) as count FROM users').get();
+  if (!row || row.count === 0) {
+    console.log('🌱 Base de datos vacía, ejecutando seed automático...');
+    const seed = require('./seed');
+    await seed();
+  }
   app.listen(PORT, () => {
     console.log(`✨ Plataforma Liga Star Dance ejecutándose en puerto ${PORT}`);
   });
