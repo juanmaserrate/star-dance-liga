@@ -34,14 +34,14 @@ function getCalendarAge(birthDateStr) {
 }
 
 // Dashboard Profesor
-router.get('/dashboard', (req, res) => {
+router.get('/dashboard', async (req, res) => {
   const teacherId = req.session.user.id;
 
-  const totalStudents = db.prepare(`SELECT COUNT(*) as count FROM students WHERE teacher_id = ?`).get(teacherId).count;
-  const activeRegistrations = db.prepare(`SELECT COUNT(*) as count FROM registrations WHERE teacher_id = ?`).get(teacherId).count;
+  const totalStudents = (await db.prepare(`SELECT COUNT(*) as count FROM students WHERE teacher_id = ?`).get(teacherId)).count;
+  const activeRegistrations = (await db.prepare(`SELECT COUNT(*) as count FROM registrations WHERE teacher_id = ?`).get(teacherId)).count;
 
   // Teacher's assigned clubs
-  const myClubs = db.prepare(`
+  const myClubs = await db.prepare(`
     SELECT c.* FROM clubs c
     JOIN user_clubs uc ON c.id = uc.club_id
     WHERE uc.user_id = ?
@@ -51,7 +51,7 @@ router.get('/dashboard', (req, res) => {
   const selectedClubId = req.query.club_id || (myClubs.length > 0 ? myClubs[0].id : null);
 
   let studentQuery = `
-    SELECT s.*, 
+    SELECT s.*,
     c.name as club_name,
     (SELECT COUNT(*) FROM student_documents d WHERE d.student_id = s.id) as doc_count,
     (SELECT COUNT(*) FROM registrations r WHERE r.student_id = s.id) as reg_count
@@ -66,13 +66,13 @@ router.get('/dashboard', (req, res) => {
   }
   studentQuery += ` ORDER BY s.last_name ASC, s.first_name ASC`;
 
-  const students = db.prepare(studentQuery).all(...studentParams);
+  const students = await db.prepare(studentQuery).all(...studentParams);
 
   // Add calculated age to students
   students.forEach(s => { s.age = getCalendarAge(s.birth_date); });
 
-  const myRegistrations = db.prepare(`
-    SELECT r.*, 
+  const myRegistrations = await db.prepare(`
+    SELECT r.*,
     s.first_name, s.last_name, s.dni,
     t.name as tournament_name, t.event_date,
     c.name as category_name, c.discipline, c.fee,
@@ -99,7 +99,7 @@ router.get('/dashboard', (req, res) => {
 });
 
 // Create New Club by Teacher
-router.post('/clubes/nuevo', (req, res) => {
+router.post('/clubes/nuevo', async (req, res) => {
   const teacherId = req.session.user.id;
   const { name, city, contact_phone } = req.body;
 
@@ -108,13 +108,13 @@ router.post('/clubes/nuevo', (req, res) => {
   const uppercaseName = name.trim().toUpperCase();
 
   try {
-    const info = db.prepare(`
+    const info = await db.prepare(`
       INSERT INTO clubs (name, representative, contact_phone, city)
-      VALUES (?, ?, ?, ?)
+      VALUES (?, ?, ?, ?) RETURNING id
     `).run(uppercaseName, req.session.user.full_name.toUpperCase(), contact_phone || '', (city || '').toUpperCase());
 
     const newClubId = info.lastInsertRowid;
-    db.prepare(`INSERT OR IGNORE INTO user_clubs (user_id, club_id) VALUES (?, ?)`).run(teacherId, newClubId);
+    await db.prepare(`INSERT INTO user_clubs (user_id, club_id) VALUES (?, ?) ON CONFLICT DO NOTHING`).run(teacherId, newClubId);
 
     res.redirect('/profesor/dashboard?club_id=' + newClubId + '&success=' + encodeURIComponent(`Club ${uppercaseName} creado correctamente.`));
   } catch (err) {
@@ -124,9 +124,9 @@ router.post('/clubes/nuevo', (req, res) => {
 });
 
 // Students Roster Page
-router.get('/alumnos', (req, res) => {
+router.get('/alumnos', async (req, res) => {
   const teacherId = req.session.user.id;
-  const students = db.prepare(`
+  const students = await db.prepare(`
     SELECT s.*, c.name as club_name,
     (SELECT COUNT(*) FROM student_documents d WHERE d.student_id = s.id) as doc_count
     FROM students s
@@ -146,9 +146,9 @@ router.get('/alumnos', (req, res) => {
 });
 
 // Form: New Student
-router.get('/alumnos/nuevo', (req, res) => {
+router.get('/alumnos/nuevo', async (req, res) => {
   const teacherId = req.session.user.id;
-  const myClubs = db.prepare(`
+  const myClubs = await db.prepare(`
     SELECT c.* FROM clubs c
     JOIN user_clubs uc ON c.id = uc.club_id
     WHERE uc.user_id = ?
@@ -164,7 +164,7 @@ router.get('/alumnos/nuevo', (req, res) => {
 });
 
 // Save New Student (All Text UPPERCASE)
-router.post('/alumnos/nuevo', upload.single('documento'), (req, res) => {
+router.post('/alumnos/nuevo', upload.single('documento'), async (req, res) => {
   const teacherId = req.session.user.id;
 
   const {
@@ -173,7 +173,7 @@ router.post('/alumnos/nuevo', upload.single('documento'), (req, res) => {
   } = req.body;
 
   if (!first_name || !last_name || !dni || !birth_date || !health_insurance || !policy_number) {
-    const myClubs = db.prepare(`
+    const myClubs = await db.prepare(`
       SELECT c.* FROM clubs c JOIN user_clubs uc ON c.id = uc.club_id WHERE uc.user_id = ? ORDER BY c.name ASC
     `).all(teacherId);
 
@@ -191,10 +191,10 @@ router.post('/alumnos/nuevo', upload.single('documento'), (req, res) => {
         teacher_id, club_id, first_name, last_name, dni, cuil, birth_date,
         category_default, health_insurance, policy_number, medical_notes,
         emergency_contact, emergency_phone
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
     `);
 
-    const info = stmt.run(
+    const info = await stmt.run(
       teacherId,
       parseInt(club_id) || req.session.user.club_id || 1,
       first_name.trim().toUpperCase(),
@@ -214,7 +214,7 @@ router.post('/alumnos/nuevo', upload.single('documento'), (req, res) => {
 
     if (req.file) {
       const docTitle = (req.body.doc_title || 'APTO MÉDICO / SEGURO').toUpperCase();
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO student_documents (student_id, title, doc_type, file_path)
         VALUES (?, ?, ?, ?)
       `).run(studentId, docTitle, 'apto_medico', '/uploads/' + req.file.filename);
@@ -228,7 +228,7 @@ router.post('/alumnos/nuevo', upload.single('documento'), (req, res) => {
       errMsg = 'Ya existe una patinadora registrada con ese DNI.';
     }
 
-    const myClubs = db.prepare(`
+    const myClubs = await db.prepare(`
       SELECT c.* FROM clubs c JOIN user_clubs uc ON c.id = uc.club_id WHERE uc.user_id = ? ORDER BY c.name ASC
     `).all(teacherId);
 
@@ -242,9 +242,9 @@ router.post('/alumnos/nuevo', upload.single('documento'), (req, res) => {
 });
 
 // View Student Profile / Details
-router.get('/alumnos/:id/ver', (req, res) => {
+router.get('/alumnos/:id/ver', async (req, res) => {
   const teacherId = req.session.user.id;
-  const student = db.prepare(`
+  const student = await db.prepare(`
     SELECT s.*, c.name as club_name, u.full_name as teacher_name
     FROM students s
     JOIN clubs c ON s.club_id = c.id
@@ -256,10 +256,10 @@ router.get('/alumnos/:id/ver', (req, res) => {
 
   student.age = getCalendarAge(student.birth_date);
 
-  const documents = db.prepare(`SELECT * FROM student_documents WHERE student_id = ?`).all(student.id);
+  const documents = await db.prepare(`SELECT * FROM student_documents WHERE student_id = ?`).all(student.id);
 
-  const registrations = db.prepare(`
-    SELECT r.*, 
+  const registrations = await db.prepare(`
+    SELECT r.*,
     t.name as tournament_name, t.event_date, t.venue,
     c.name as category_name, c.discipline
     FROM registrations r
@@ -278,16 +278,16 @@ router.get('/alumnos/:id/ver', (req, res) => {
 });
 
 // Edit Student Form
-router.get('/alumnos/:id/editar', (req, res) => {
+router.get('/alumnos/:id/editar', async (req, res) => {
   const teacherId = req.session.user.id;
-  const student = db.prepare(`SELECT * FROM students WHERE id = ? AND teacher_id = ?`).get(req.params.id, teacherId);
+  const student = await db.prepare(`SELECT * FROM students WHERE id = ? AND teacher_id = ?`).get(req.params.id, teacherId);
 
   if (!student) return res.status(404).render('error', { title: 'Patinadora no encontrada' });
 
-  const myClubs = db.prepare(`
+  const myClubs = await db.prepare(`
     SELECT c.* FROM clubs c JOIN user_clubs uc ON c.id = uc.club_id WHERE uc.user_id = ? ORDER BY c.name ASC
   `).all(teacherId);
-  const documents = db.prepare(`SELECT * FROM student_documents WHERE student_id = ?`).all(student.id);
+  const documents = await db.prepare(`SELECT * FROM student_documents WHERE student_id = ?`).all(student.id);
 
   res.render('profesor/alumno_form', {
     user: req.session.user,
@@ -299,7 +299,7 @@ router.get('/alumnos/:id/editar', (req, res) => {
 });
 
 // Update Student Form
-router.post('/alumnos/:id/editar', upload.single('documento'), (req, res) => {
+router.post('/alumnos/:id/editar', upload.single('documento'), async (req, res) => {
   const teacherId = req.session.user.id;
   const studentId = req.params.id;
 
@@ -309,7 +309,7 @@ router.post('/alumnos/:id/editar', upload.single('documento'), (req, res) => {
   } = req.body;
 
   try {
-    db.prepare(`
+    await db.prepare(`
       UPDATE students SET
         first_name = ?, last_name = ?, dni = ?, cuil = ?, birth_date = ?, club_id = ?,
         category_default = ?, health_insurance = ?, policy_number = ?, medical_notes = ?,
@@ -333,7 +333,7 @@ router.post('/alumnos/:id/editar', upload.single('documento'), (req, res) => {
 
     if (req.file) {
       const docTitle = (req.body.doc_title || 'APTO MÉDICO / FICHA').toUpperCase();
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO student_documents (student_id, title, doc_type, file_path)
         VALUES (?, ?, ?, ?)
       `).run(studentId, docTitle, 'apto_medico', '/uploads/' + req.file.filename);
@@ -347,18 +347,18 @@ router.post('/alumnos/:id/editar', upload.single('documento'), (req, res) => {
 });
 
 // Form: Enrollment Wizard (Individual & Group Registrations)
-router.get('/inscribir', (req, res) => {
+router.get('/inscribir', async (req, res) => {
   const teacherId = req.session.user.id;
 
-  const students = db.prepare(`SELECT * FROM students WHERE teacher_id = ? ORDER BY last_name ASC`).all(teacherId);
+  const students = await db.prepare(`SELECT * FROM students WHERE teacher_id = ? ORDER BY last_name ASC`).all(teacherId);
   students.forEach(s => { s.age = getCalendarAge(s.birth_date); });
 
-  const activeTournaments = db.prepare(`SELECT * FROM tournaments WHERE status != 'finished' ORDER BY event_date ASC`).all();
+  const activeTournaments = await db.prepare(`SELECT * FROM tournaments WHERE status != 'finished' ORDER BY event_date ASC`).all();
   const selectedTournamentId = req.query.tournament_id || (activeTournaments.length > 0 ? activeTournaments[0].id : null);
-  
+
   let categories = [];
   if (selectedTournamentId) {
-    categories = db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY discipline ASC, min_age ASC, name ASC`).all(selectedTournamentId);
+    categories = await db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY discipline ASC, min_age ASC, name ASC`).all(selectedTournamentId);
   }
 
   res.render('profesor/inscribir', {
@@ -373,7 +373,7 @@ router.get('/inscribir', (req, res) => {
 });
 
 // Submit Enrollment (Supports Individual & Group Highest Category Rule)
-router.post('/inscribir', (req, res) => {
+router.post('/inscribir', async (req, res) => {
   const teacherId = req.session.user.id;
   const { tournament_id, category_id, is_group, group_name, group_type, student_ids, notes } = req.body;
 
@@ -381,7 +381,7 @@ router.post('/inscribir', (req, res) => {
     return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('Debe seleccionar torneo y categoría.'));
   }
 
-  const category = db.prepare(`SELECT * FROM categories WHERE id = ?`).get(category_id);
+  const category = await db.prepare(`SELECT * FROM categories WHERE id = ?`).get(category_id);
   if (!category) return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('Categoría inválida.'));
 
   // Get student IDs list
@@ -405,18 +405,18 @@ router.post('/inscribir', (req, res) => {
   }
 
   // Get main student and primary club
-  const primaryStudent = db.prepare(`SELECT * FROM students WHERE id = ?`).get(selectedStudentIds[0]);
+  const primaryStudent = await db.prepare(`SELECT * FROM students WHERE id = ?`).get(selectedStudentIds[0]);
   const clubId = primaryStudent ? primaryStudent.club_id : (req.session.user.club_id || 1);
 
-  const isGroupReg = (is_group === '1' || selectedStudentIds.length > 1) ? 1 : 0;
+  const isGroupReg = (is_group === '1' || selectedStudentIds.length > 1);
   const fee = category.fee || 0;
 
   try {
-    const info = db.prepare(`
+    const info = await db.prepare(`
       INSERT INTO registrations (
         tournament_id, category_id, student_id, club_id, teacher_id, is_group, group_name, group_type,
         status, payment_status, original_fee, discount_amount, final_fee, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'registered', 'pending', ?, 0, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'registered', 'pending', ?, 0, ?, ?) RETURNING id
     `).run(
       tournament_id,
       category_id,
@@ -435,9 +435,9 @@ router.post('/inscribir', (req, res) => {
 
     // Insert all group members
     const insertMember = db.prepare(`INSERT INTO registration_members (registration_id, student_id) VALUES (?, ?)`);
-    selectedStudentIds.forEach(stId => {
-      insertMember.run(regId, parseInt(stId));
-    });
+    for (const stId of selectedStudentIds) {
+      await insertMember.run(regId, parseInt(stId));
+    }
 
     res.redirect('/profesor/dashboard?success=' + encodeURIComponent(`Inscripción realizada en la categoría ${category.name}.`));
   } catch (err) {
@@ -451,12 +451,12 @@ router.post('/inscribir', (req, res) => {
 });
 
 // Printable Enrollment Certificate
-router.get('/certificado/:id', (req, res) => {
+router.get('/certificado/:id', async (req, res) => {
   const teacherId = req.session.user.id;
   const regId = req.params.id;
 
-  const registration = db.prepare(`
-    SELECT r.*, 
+  const registration = await db.prepare(`
+    SELECT r.*,
     s.first_name, s.last_name, s.dni, s.birth_date, s.health_insurance, s.policy_number,
     t.name as tournament_name, t.venue, t.event_date,
     c.name as category_name, c.discipline, c.division as level, c.fee,
@@ -474,7 +474,7 @@ router.get('/certificado/:id', (req, res) => {
   }
 
   // Get members if group
-  const members = db.prepare(`
+  const members = await db.prepare(`
     SELECT s.* FROM students s
     JOIN registration_members rm ON s.id = rm.student_id
     WHERE rm.registration_id = ?

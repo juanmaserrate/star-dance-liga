@@ -7,18 +7,18 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 router.use(requireAuth, requireRole('juez', 'admin'));
 
 // Planilla de Competencia para Jueces
-router.get('/planilla', (req, res) => {
-  const tournaments = db.prepare(`SELECT * FROM tournaments ORDER BY event_date DESC`).all();
+router.get('/planilla', async (req, res) => {
+  const tournaments = await db.prepare(`SELECT * FROM tournaments ORDER BY event_date DESC`).all();
   const selectedTournamentId = req.query.tournament_id || (tournaments.length > 0 ? tournaments[0].id : null);
   const selectedCategoryId = req.query.category_id || null;
 
   let categories = [];
   if (selectedTournamentId) {
-    categories = db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY min_age ASC, division ASC`).all(selectedTournamentId);
+    categories = await db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY min_age ASC, division ASC`).all(selectedTournamentId);
   }
 
   let query = `
-    SELECT r.*, 
+    SELECT r.*,
     COALESCE(s.first_name, r.group_name) as first_name,
     COALESCE(s.last_name, 'GRUPO') as last_name,
     s.birth_date,
@@ -39,7 +39,7 @@ router.get('/planilla', (req, res) => {
 
   query += ` ORDER BY c.min_age ASC, c.name ASC, s.last_name ASC`;
 
-  const competitors = db.prepare(query).all(...params);
+  const competitors = await db.prepare(query).all(...params);
 
   // Group competitors by category
   const groupedCategories = {};

@@ -16,23 +16,23 @@ function getCalendarAge(birthDateStr) {
 }
 
 // Admin Dashboard
-router.get('/dashboard', (req, res) => {
-  const totalSkaters = db.prepare(`SELECT COUNT(*) as count FROM students`).get().count;
-  const totalRegistrations = db.prepare(`SELECT COUNT(*) as count FROM registrations`).get().count;
-  const totalClubs = db.prepare(`SELECT COUNT(*) as count FROM clubs`).get().count;
-  const totalTournaments = db.prepare(`SELECT COUNT(*) as count FROM tournaments`).get().count;
+router.get('/dashboard', async (req, res) => {
+  const totalSkaters = (await db.prepare(`SELECT COUNT(*) as count FROM students`).get()).count;
+  const totalRegistrations = (await db.prepare(`SELECT COUNT(*) as count FROM registrations`).get()).count;
+  const totalClubs = (await db.prepare(`SELECT COUNT(*) as count FROM clubs`).get()).count;
+  const totalTournaments = (await db.prepare(`SELECT COUNT(*) as count FROM tournaments`).get()).count;
 
-  const paidStats = db.prepare(`
-    SELECT 
+  const paidStats = await db.prepare(`
+    SELECT
       SUM(CASE WHEN payment_status = 'paid' THEN final_fee ELSE 0 END) as total_paid,
       SUM(CASE WHEN payment_status = 'pending' THEN final_fee ELSE 0 END) as total_pending,
       SUM(discount_amount) as total_discounts
     FROM registrations
   `).get();
 
-  const totalExpenses = db.prepare(`SELECT SUM(amount) as sum FROM tournament_expenses`).get().sum || 0;
+  const totalExpenses = (await db.prepare(`SELECT SUM(amount) as sum FROM tournament_expenses`).get()).sum || 0;
 
-  const registrationsByClub = db.prepare(`
+  const registrationsByClub = await db.prepare(`
     SELECT cl.name as club_name, COUNT(r.id) as count
     FROM registrations r
     JOIN clubs cl ON r.club_id = cl.id
@@ -40,8 +40,8 @@ router.get('/dashboard', (req, res) => {
     ORDER BY count DESC
   `).all();
 
-  const recentRegistrations = db.prepare(`
-    SELECT r.*, 
+  const recentRegistrations = await db.prepare(`
+    SELECT r.*,
     COALESCE(s.first_name, r.group_name) as first_name,
     COALESCE(s.last_name, '') as last_name,
     cl.name as club_name,
@@ -55,8 +55,8 @@ router.get('/dashboard', (req, res) => {
     ORDER BY r.created_at DESC LIMIT 10
   `).all();
 
-  const studentsList = db.prepare(`
-    SELECT s.*, 
+  const studentsList = await db.prepare(`
+    SELECT s.*,
     c.name as club_name,
     u.full_name as teacher_name,
     (SELECT COUNT(*) FROM student_documents d WHERE d.student_id = s.id) as doc_count,
@@ -89,11 +89,11 @@ router.get('/dashboard', (req, res) => {
 });
 
 // Master Registrations Table (With Filters, Payment Toggle & Discount Manager)
-router.get('/inscripciones', (req, res) => {
+router.get('/inscripciones', async (req, res) => {
   const { tournament_id, club_id, payment_status } = req.query;
 
   let query = `
-    SELECT r.*, 
+    SELECT r.*,
     s.first_name, s.last_name, s.dni, s.birth_date, s.health_insurance, s.policy_number, s.emergency_contact, s.emergency_phone,
     cl.name as club_name,
     t.name as tournament_name,
@@ -116,13 +116,13 @@ router.get('/inscripciones', (req, res) => {
 
   query += ` ORDER BY r.created_at DESC`;
 
-  const registrations = db.prepare(query).all(...params);
+  const registrations = await db.prepare(query).all(...params);
   registrations.forEach(r => {
     if (r.birth_date) r.age = getCalendarAge(r.birth_date);
   });
 
-  const tournaments = db.prepare(`SELECT * FROM tournaments ORDER BY event_date DESC`).all();
-  const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
+  const tournaments = await db.prepare(`SELECT * FROM tournaments ORDER BY event_date DESC`).all();
+  const clubs = await db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
 
   res.render('admin/inscripciones', {
     user: req.session.user,
@@ -138,14 +138,14 @@ router.get('/inscripciones', (req, res) => {
 });
 
 // Toggle Payment Status
-router.post('/inscripciones/:id/pago', (req, res) => {
+router.post('/inscripciones/:id/pago', async (req, res) => {
   const regId = req.params.id;
-  const reg = db.prepare(`SELECT payment_status FROM registrations WHERE id = ?`).get(regId);
+  const reg = await db.prepare(`SELECT payment_status FROM registrations WHERE id = ?`).get(regId);
 
   if (reg) {
     const newStatus = reg.payment_status === 'paid' ? 'pending' : 'paid';
     const paymentDate = newStatus === 'paid' ? new Date().toISOString() : null;
-    db.prepare(`UPDATE registrations SET payment_status = ?, payment_date = ? WHERE id = ?`).run(newStatus, paymentDate, regId);
+    await db.prepare(`UPDATE registrations SET payment_status = ?, payment_date = ? WHERE id = ?`).run(newStatus, paymentDate, regId);
   }
 
   const referer = req.header('Referer') || '/admin/inscripciones';
@@ -153,16 +153,16 @@ router.post('/inscripciones/:id/pago', (req, res) => {
 });
 
 // Apply Discount / Bonificación
-router.post('/inscripciones/:id/descuento', (req, res) => {
+router.post('/inscripciones/:id/descuento', async (req, res) => {
   const regId = req.params.id;
   const { discount_amount, discount_reason } = req.body;
 
-  const reg = db.prepare(`SELECT original_fee FROM registrations WHERE id = ?`).get(regId);
+  const reg = await db.prepare(`SELECT original_fee FROM registrations WHERE id = ?`).get(regId);
   if (reg) {
     const disc = parseFloat(discount_amount) || 0;
     const finalFee = Math.max(0, reg.original_fee - disc);
 
-    db.prepare(`
+    await db.prepare(`
       UPDATE registrations SET discount_amount = ?, discount_reason = ?, final_fee = ?
       WHERE id = ?
     `).run(disc, (discount_reason || '').toUpperCase(), finalFee, regId);
@@ -172,20 +172,20 @@ router.post('/inscripciones/:id/descuento', (req, res) => {
 });
 
 // Export CSV / Excel (UPPERCASE Headers & Fields matching production)
-router.get('/exportar/csv', (req, res) => {
+router.get('/exportar/csv', async (req, res) => {
   const { tournament_id, club_id, payment_status } = req.query;
 
   let query = `
-    SELECT 
+    SELECT
       t.name as TORNEO,
       COALESCE(s.first_name, r.group_name) as NOMBRE,
       COALESCE(s.last_name, 'GRUPO') as APELLIDO,
       COALESCE(s.dni, '-') as DNI,
       COALESCE(s.cuil, '-') as CUIL,
       COALESCE(s.birth_date, '-') as FECHA_NACIMIENTO,
-      CASE WHEN s.birth_date IS NOT NULL THEN (CAST(strftime('%Y', 'now') AS INT) - CAST(strftime('%Y', s.birth_date) AS INT)) ELSE 0 END as EDAD,
+      CASE WHEN s.birth_date IS NOT NULL THEN (EXTRACT(YEAR FROM CURRENT_DATE)::int - EXTRACT(YEAR FROM s.birth_date::date)::int) ELSE 0 END as EDAD,
       cl.name as CLUB,
-      c.name as CATEGORÍA,
+      c.name as "CATEGORÍA",
       c.discipline as DISCIPLINA,
       u.full_name as PROFESORA_A_CARGO,
       u.email as EMAIL_PROFESORA,
@@ -212,10 +212,10 @@ router.get('/exportar/csv', (req, res) => {
 
   query += ` ORDER BY t.name, cl.name, s.last_name`;
 
-  const rows = db.prepare(query).all(...params);
+  const rows = await db.prepare(query).all(...params);
 
   // Generate CSV with UTF-8 BOM so Excel opens Spanish accents cleanly in UPPERCASE
-  let csv = '\uFEFF';
+  let csv = '﻿';
   if (rows.length > 0) {
     const headers = Object.keys(rows[0]);
     csv += headers.join(';') + '\n';
@@ -233,18 +233,18 @@ router.get('/exportar/csv', (req, res) => {
 });
 
 // Admin Financial Forecast & Expense Tracker Module
-router.get('/finanzas', (req, res) => {
-  const tournaments = db.prepare(`SELECT * FROM tournaments ORDER BY event_date DESC`).all();
+router.get('/finanzas', async (req, res) => {
+  const tournaments = await db.prepare(`SELECT * FROM tournaments ORDER BY event_date DESC`).all();
   const selectedTournamentId = req.query.tournament_id || (tournaments.length > 0 ? tournaments[0].id : null);
 
   let expenses = [];
   let revenueStats = { total_gross: 0, total_discounts: 0, total_net: 0, total_paid: 0, total_pending: 0 };
 
   if (selectedTournamentId) {
-    expenses = db.prepare(`SELECT * FROM tournament_expenses WHERE tournament_id = ? ORDER BY expense_date DESC`).all(selectedTournamentId);
+    expenses = await db.prepare(`SELECT * FROM tournament_expenses WHERE tournament_id = ? ORDER BY expense_date DESC`).all(selectedTournamentId);
 
-    revenueStats = db.prepare(`
-      SELECT 
+    revenueStats = await db.prepare(`
+      SELECT
         SUM(original_fee) as total_gross,
         SUM(discount_amount) as total_discounts,
         SUM(final_fee) as total_net,
@@ -272,7 +272,7 @@ router.get('/finanzas', (req, res) => {
 });
 
 // Add Tournament Expense
-router.post('/finanzas/gastos', (req, res) => {
+router.post('/finanzas/gastos', async (req, res) => {
   const { tournament_id, expense_category, description, amount, expense_date } = req.body;
 
   if (!tournament_id || !expense_category || !description || !amount) {
@@ -280,7 +280,7 @@ router.post('/finanzas/gastos', (req, res) => {
   }
 
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO tournament_expenses (tournament_id, expense_category, description, amount, expense_date)
       VALUES (?, ?, ?, ?, ?)
     `).run(
@@ -299,8 +299,8 @@ router.post('/finanzas/gastos', (req, res) => {
 });
 
 // Annual Leaderboards & Scores Overview
-router.get('/posiciones', (req, res) => {
-  const clubLeaderboard = db.prepare(`
+router.get('/posiciones', async (req, res) => {
+  const clubLeaderboard = await db.prepare(`
     SELECT cl.name as club_name, cl.city,
     SUM(cs.points) as total_points,
     COUNT(DISTINCT cs.tournament_id) as tournaments_participated
@@ -317,9 +317,9 @@ router.get('/posiciones', (req, res) => {
 });
 
 // Manage Tournaments List
-router.get('/torneos', (req, res) => {
-  const tournaments = db.prepare(`
-    SELECT t.*, 
+router.get('/torneos', async (req, res) => {
+  const tournaments = await db.prepare(`
+    SELECT t.*,
     (SELECT COUNT(*) FROM categories c WHERE c.tournament_id = t.id) as category_count,
     (SELECT COUNT(*) FROM registrations r WHERE r.tournament_id = t.id) as reg_count
     FROM tournaments t
@@ -344,7 +344,7 @@ router.get('/torneos/nuevo', (req, res) => {
 });
 
 // Save Tournament
-router.post('/torneos/nuevo', (req, res) => {
+router.post('/torneos/nuevo', async (req, res) => {
   const { name, description, venue, event_date, registration_deadline, status } = req.body;
 
   if (!name || !venue || !event_date || !registration_deadline) {
@@ -356,9 +356,9 @@ router.post('/torneos/nuevo', (req, res) => {
   }
 
   try {
-    const info = db.prepare(`
+    const info = await db.prepare(`
       INSERT INTO tournaments (name, description, venue, event_date, registration_deadline, status)
-      VALUES (?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?) RETURNING id
     `).run(name.trim().toUpperCase(), (description || '').toUpperCase(), venue.trim().toUpperCase(), event_date, registration_deadline, status || 'upcoming');
 
     res.redirect(`/admin/torneos/${info.lastInsertRowid}/categorias?success=` + encodeURIComponent('Torneo creado. Configure las categorías.'));
@@ -373,11 +373,11 @@ router.post('/torneos/nuevo', (req, res) => {
 });
 
 // Category Builder for a Tournament
-router.get('/torneos/:id/categorias', (req, res) => {
-  const tournament = db.prepare(`SELECT * FROM tournaments WHERE id = ?`).get(req.params.id);
+router.get('/torneos/:id/categorias', async (req, res) => {
+  const tournament = await db.prepare(`SELECT * FROM tournaments WHERE id = ?`).get(req.params.id);
   if (!tournament) return res.status(404).render('error', { title: 'Torneo No Encontrado' });
 
-  const categories = db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY discipline ASC, min_age ASC, division ASC`).all(tournament.id);
+  const categories = await db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY discipline ASC, min_age ASC, division ASC`).all(tournament.id);
 
   res.render('admin/categorias', {
     user: req.session.user,
@@ -389,7 +389,7 @@ router.get('/torneos/:id/categorias', (req, res) => {
 });
 
 // Save Category
-router.post('/torneos/:id/categorias', (req, res) => {
+router.post('/torneos/:id/categorias', async (req, res) => {
   const tournamentId = req.params.id;
   const { name, discipline, division, level, min_age, max_age, gender, schedule, fee } = req.body;
 
@@ -398,7 +398,7 @@ router.post('/torneos/:id/categorias', (req, res) => {
   }
 
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO categories (tournament_id, name, discipline, division, level, min_age, max_age, gender, schedule, fee)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
@@ -422,9 +422,9 @@ router.post('/torneos/:id/categorias', (req, res) => {
 });
 
 // Manage Clubs
-router.get('/clubes', (req, res) => {
-  const clubs = db.prepare(`
-    SELECT c.*, 
+router.get('/clubes', async (req, res) => {
+  const clubs = await db.prepare(`
+    SELECT c.*,
     (SELECT COUNT(*) FROM students s WHERE s.club_id = c.id) as student_count,
     (SELECT COUNT(*) FROM user_clubs uc WHERE uc.club_id = c.id) as teacher_count
     FROM clubs c
@@ -440,12 +440,12 @@ router.get('/clubes', (req, res) => {
 });
 
 // Save Club
-router.post('/clubes', (req, res) => {
+router.post('/clubes', async (req, res) => {
   const { name, representative, contact_phone, city } = req.body;
   if (!name) return res.redirect('/admin/clubes?error=' + encodeURIComponent('El nombre del club es obligatorio.'));
 
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO clubs (name, representative, contact_phone, city)
       VALUES (?, ?, ?, ?)
     `).run(name.trim().toUpperCase(), (representative || '').toUpperCase(), contact_phone || '', (city || '').toUpperCase());
@@ -458,15 +458,15 @@ router.post('/clubes', (req, res) => {
 });
 
 // Manage Users (Admins, Teachers, Judges)
-router.get('/usuarios', (req, res) => {
-  const usersList = db.prepare(`
+router.get('/usuarios', async (req, res) => {
+  const usersList = await db.prepare(`
     SELECT u.*, c.name as club_name
     FROM users u
     LEFT JOIN clubs c ON u.club_id = c.id
     ORDER BY u.role ASC, u.full_name ASC
   `).all();
 
-  const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
+  const clubs = await db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
 
   res.render('admin/usuarios', {
     user: req.session.user,
@@ -478,7 +478,7 @@ router.get('/usuarios', (req, res) => {
 });
 
 // Create New User
-router.post('/usuarios', (req, res) => {
+router.post('/usuarios', async (req, res) => {
   const { username, password, full_name, role, club_id, email, phone } = req.body;
 
   if (!username || !password || !full_name || !role) {
@@ -487,13 +487,13 @@ router.post('/usuarios', (req, res) => {
 
   try {
     const password_hash = bcrypt.hashSync(password, 10);
-    const info = db.prepare(`
+    const info = await db.prepare(`
       INSERT INTO users (username, password_hash, full_name, role, club_id, email, phone)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
     `).run(username.trim().toLowerCase(), password_hash, full_name.trim().toUpperCase(), role, club_id || null, (email || '').toUpperCase(), phone || '');
 
     if (club_id) {
-      db.prepare(`INSERT OR IGNORE INTO user_clubs (user_id, club_id) VALUES (?, ?)`).run(info.lastInsertRowid, club_id);
+      await db.prepare(`INSERT INTO user_clubs (user_id, club_id) VALUES (?, ?) ON CONFLICT DO NOTHING`).run(info.lastInsertRowid, club_id);
     }
 
     res.redirect('/admin/usuarios?success=' + encodeURIComponent(`Usuario ${username} creado correctamente.`));
@@ -508,11 +508,11 @@ router.post('/usuarios', (req, res) => {
 });
 
 // Master Skaters Directory for Admin (Padrón Único de Patinadoras)
-router.get('/alumnos', (req, res) => {
+router.get('/alumnos', async (req, res) => {
   const { buscar, club_id } = req.query;
 
   let query = `
-    SELECT s.*, 
+    SELECT s.*,
     c.name as club_name,
     u.full_name as teacher_name,
     (SELECT COUNT(*) FROM student_documents d WHERE d.student_id = s.id) as doc_count,
@@ -537,10 +537,10 @@ router.get('/alumnos', (req, res) => {
 
   query += ` ORDER BY s.last_name ASC, s.first_name ASC`;
 
-  const students = db.prepare(query).all(...params);
+  const students = await db.prepare(query).all(...params);
   students.forEach(s => { s.age = getCalendarAge(s.birth_date); });
 
-  const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
+  const clubs = await db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
 
   res.render('admin/alumnos', {
     user: req.session.user,
@@ -554,9 +554,9 @@ router.get('/alumnos', (req, res) => {
 });
 
 // Form: New Skater by Admin
-router.get('/alumnos/nuevo', (req, res) => {
-  const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
-  const teachers = db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();
+router.get('/alumnos/nuevo', async (req, res) => {
+  const clubs = await db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
+  const teachers = await db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();
 
   res.render('admin/alumno_form', {
     user: req.session.user,
@@ -568,15 +568,15 @@ router.get('/alumnos/nuevo', (req, res) => {
 });
 
 // Save New Skater by Admin
-router.post('/alumnos/nuevo', (req, res) => {
+router.post('/alumnos/nuevo', async (req, res) => {
   const {
     first_name, last_name, dni, cuil, birth_date, club_id, teacher_id,
     health_insurance, policy_number, medical_notes, emergency_contact, emergency_phone
   } = req.body;
 
   if (!first_name || !last_name || !dni || !birth_date || !health_insurance || !policy_number) {
-    const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
-    const teachers = db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();
+    const clubs = await db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
+    const teachers = await db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();
     return res.render('admin/alumno_form', {
       user: req.session.user,
       student: req.body,
@@ -587,7 +587,7 @@ router.post('/alumnos/nuevo', (req, res) => {
   }
 
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO students (
         teacher_id, club_id, first_name, last_name, dni, cuil, birth_date,
         category_default, health_insurance, policy_number, medical_notes,
@@ -616,8 +616,8 @@ router.post('/alumnos/nuevo', (req, res) => {
     if (err.message && err.message.includes('UNIQUE constraint failed')) {
       msg = 'Ya existe una patinadora registrada en el padrón con ese DNI (Unicidad activa).';
     }
-    const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
-    const teachers = db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();
+    const clubs = await db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
+    const teachers = await db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();
     res.render('admin/alumno_form', {
       user: req.session.user,
       student: req.body,
@@ -629,12 +629,12 @@ router.post('/alumnos/nuevo', (req, res) => {
 });
 
 // Form: Edit Skater by Admin
-router.get('/alumnos/:id/editar', (req, res) => {
-  const student = db.prepare(`SELECT * FROM students WHERE id = ?`).get(req.params.id);
+router.get('/alumnos/:id/editar', async (req, res) => {
+  const student = await db.prepare(`SELECT * FROM students WHERE id = ?`).get(req.params.id);
   if (!student) return res.status(404).render('error', { title: 'Patinadora no encontrada' });
 
-  const clubs = db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
-  const teachers = db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();
+  const clubs = await db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
+  const teachers = await db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();
 
   res.render('admin/alumno_form', {
     user: req.session.user,
@@ -646,7 +646,7 @@ router.get('/alumnos/:id/editar', (req, res) => {
 });
 
 // Save Edited Skater Data by Admin
-router.post('/alumnos/:id/editar', (req, res) => {
+router.post('/alumnos/:id/editar', async (req, res) => {
   const studentId = req.params.id;
   const {
     first_name, last_name, dni, cuil, birth_date, club_id, teacher_id,
@@ -654,7 +654,7 @@ router.post('/alumnos/:id/editar', (req, res) => {
   } = req.body;
 
   try {
-    db.prepare(`
+    await db.prepare(`
       UPDATE students SET
         first_name = ?, last_name = ?, dni = ?, cuil = ?, birth_date = ?, club_id = ?, teacher_id = ?,
         health_insurance = ?, policy_number = ?, medical_notes = ?, emergency_contact = ?, emergency_phone = ?
@@ -685,7 +685,7 @@ router.post('/alumnos/:id/editar', (req, res) => {
 // Admin Quick Password Reset Email Sender
 router.post('/usuarios/:id/restablecer', async (req, res) => {
   const userId = req.params.id;
-  const user = db.prepare(`SELECT * FROM users WHERE id = ?`).get(userId);
+  const user = await db.prepare(`SELECT * FROM users WHERE id = ?`).get(userId);
 
   if (!user) {
     return res.redirect('/admin/usuarios?error=' + encodeURIComponent('Usuario no encontrado.'));
@@ -698,11 +698,11 @@ router.post('/usuarios/:id/restablecer', async (req, res) => {
   const crypto = require('crypto');
   const nodemailer = require('nodemailer');
 
-  db.prepare(`DELETE FROM password_resets WHERE user_id = ?`).run(user.id);
+  await db.prepare(`DELETE FROM password_resets WHERE user_id = ?`).run(user.id);
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO password_resets (user_id, token, expires_at)
     VALUES (?, ?, ?)
   `).run(user.id, token, expiresAt);
@@ -761,8 +761,8 @@ router.post('/usuarios/:id/restablecer', async (req, res) => {
 });
 
 // View Student Documents (Admin Inspector)
-router.get('/alumnos/:id/documentos', (req, res) => {
-  const student = db.prepare(`
+router.get('/alumnos/:id/documentos', async (req, res) => {
+  const student = await db.prepare(`
     SELECT s.*, c.name as club_name, u.full_name as teacher_name
     FROM students s
     JOIN clubs c ON s.club_id = c.id
@@ -772,7 +772,7 @@ router.get('/alumnos/:id/documentos', (req, res) => {
 
   if (!student) return res.status(404).render('error', { title: 'Alumno no encontrado' });
 
-  const documents = db.prepare(`SELECT * FROM student_documents WHERE student_id = ?`).all(student.id);
+  const documents = await db.prepare(`SELECT * FROM student_documents WHERE student_id = ?`).all(student.id);
 
   res.render('admin/alumno_docs', {
     user: req.session.user,
@@ -782,20 +782,20 @@ router.get('/alumnos/:id/documentos', (req, res) => {
 });
 
 // CMS Admin Control Panel for Public Home Page
-router.get('/cms', (req, res) => {
-  const getSetting = (key) => {
-    const row = db.prepare(`SELECT value FROM site_settings WHERE key = ?`).get(key);
+router.get('/cms', async (req, res) => {
+  const getSetting = async (key) => {
+    const row = await db.prepare(`SELECT value FROM site_settings WHERE key = ?`).get(key);
     return row ? row.value : '';
   };
 
-  const hero_title = getSetting('hero_title') || 'LIGA DE PATINAJE ARTÍSTICO STAR DANCE';
-  const hero_subtitle = getSetting('hero_subtitle') || 'Plataforma oficial de gestión de torneos, cuerpo de jueces e inscripciones.';
-  const about_title = getSetting('about_title') || 'SOBRE LA LIGA STAR DANCE Y NUESTRO PROPÓSITO';
-  const about_content = getSetting('about_content') || 'La Liga Star Dance nace con la misión de impulsar y promover el Patinaje Artístico sobre ruedas...';
+  const hero_title = (await getSetting('hero_title')) || 'LIGA DE PATINAJE ARTÍSTICO STAR DANCE';
+  const hero_subtitle = (await getSetting('hero_subtitle')) || 'Plataforma oficial de gestión de torneos, cuerpo de jueces e inscripciones.';
+  const about_title = (await getSetting('about_title')) || 'SOBRE LA LIGA STAR DANCE Y NUESTRO PROPÓSITO';
+  const about_content = (await getSetting('about_content')) || 'La Liga Star Dance nace con la misión de impulsar y promover el Patinaje Artístico sobre ruedas...';
 
-  const slides = db.prepare(`SELECT * FROM home_slides ORDER BY order_index ASC`).all();
-  const judges = db.prepare(`SELECT * FROM judge_profiles ORDER BY order_index ASC`).all();
-  const disciplines = db.prepare(`SELECT * FROM discipline_info ORDER BY order_index ASC`).all();
+  const slides = await db.prepare(`SELECT * FROM home_slides ORDER BY order_index ASC`).all();
+  const judges = await db.prepare(`SELECT * FROM judge_profiles ORDER BY order_index ASC`).all();
+  const disciplines = await db.prepare(`SELECT * FROM discipline_info ORDER BY order_index ASC`).all();
 
   res.render('admin/cms', {
     user: req.session.user,
@@ -814,32 +814,32 @@ router.get('/cms', (req, res) => {
 });
 
 // Update Hero Title & Subtitle
-router.post('/cms/hero', (req, res) => {
+router.post('/cms/hero', async (req, res) => {
   const { hero_title, hero_subtitle } = req.body;
-  const setSetting = db.prepare(`INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)`);
-  setSetting.run('hero_title', (hero_title || '').toUpperCase());
-  setSetting.run('hero_subtitle', hero_subtitle || '');
+  const setSetting = db.prepare(`INSERT INTO site_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`);
+  await setSetting.run('hero_title', (hero_title || '').toUpperCase());
+  await setSetting.run('hero_subtitle', hero_subtitle || '');
 
   res.redirect('/admin/cms?success=' + encodeURIComponent('Banner principal de la Home actualizado.'));
 });
 
 // Update About Us / Purpose
-router.post('/cms/about', (req, res) => {
+router.post('/cms/about', async (req, res) => {
   const { about_title, about_content } = req.body;
-  const setSetting = db.prepare(`INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)`);
-  setSetting.run('about_title', (about_title || '').toUpperCase());
-  setSetting.run('about_content', about_content || '');
+  const setSetting = db.prepare(`INSERT INTO site_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`);
+  await setSetting.run('about_title', (about_title || '').toUpperCase());
+  await setSetting.run('about_content', about_content || '');
 
   res.redirect('/admin/cms?success=' + encodeURIComponent('Sección Sobre la Liga y Propósito actualizada.'));
 });
 
 // Add New Slide Banner
-router.post('/cms/slides', (req, res) => {
+router.post('/cms/slides', async (req, res) => {
   const { title, subtitle, image_url, button_text, button_link } = req.body;
   if (!title) return res.redirect('/admin/cms?error=' + encodeURIComponent('El título del slide es requerido.'));
 
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO home_slides (title, subtitle, image_url, button_text, button_link)
       VALUES (?, ?, ?, ?, ?)
     `).run(
@@ -857,18 +857,18 @@ router.post('/cms/slides', (req, res) => {
 });
 
 // Delete Slide Banner
-router.post('/cms/slides/:id/eliminar', (req, res) => {
-  db.prepare(`DELETE FROM home_slides WHERE id = ?`).run(req.params.id);
+router.post('/cms/slides/:id/eliminar', async (req, res) => {
+  await db.prepare(`DELETE FROM home_slides WHERE id = ?`).run(req.params.id);
   res.redirect('/admin/cms?success=' + encodeURIComponent('Slide eliminado de la portada.'));
 });
 
 // Add Judge Profile with Photo & Info
-router.post('/cms/jueces', (req, res) => {
+router.post('/cms/jueces', async (req, res) => {
   const { name, title, photo_url, bio, specialty } = req.body;
   if (!name || !title) return res.redirect('/admin/cms?error=' + encodeURIComponent('Nombre y título del juez son requeridos.'));
 
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO judge_profiles (name, title, photo_url, bio, specialty)
       VALUES (?, ?, ?, ?, ?)
     `).run(
@@ -886,18 +886,18 @@ router.post('/cms/jueces', (req, res) => {
 });
 
 // Delete Judge Profile
-router.post('/cms/jueces/:id/eliminar', (req, res) => {
-  db.prepare(`DELETE FROM judge_profiles WHERE id = ?`).run(req.params.id);
+router.post('/cms/jueces/:id/eliminar', async (req, res) => {
+  await db.prepare(`DELETE FROM judge_profiles WHERE id = ?`).run(req.params.id);
   res.redirect('/admin/cms?success=' + encodeURIComponent('Perfil de juez eliminado.'));
 });
 
 // Add Discipline Public Info Card
-router.post('/cms/disciplinas', (req, res) => {
+router.post('/cms/disciplinas', async (req, res) => {
   const { name, description, icon } = req.body;
   if (!name || !description) return res.redirect('/admin/cms?error=' + encodeURIComponent('Nombre y descripción son requeridos.'));
 
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO discipline_info (name, description, icon)
       VALUES (?, ?, ?)
     `).run(name.toUpperCase(), description, icon || '⛸️');

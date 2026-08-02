@@ -72,7 +72,7 @@ router.get('/login', (req, res) => {
 });
 
 // Login POST
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -84,7 +84,7 @@ router.post('/login', (req, res) => {
   }
 
   try {
-    const user = db.prepare(`SELECT * FROM users WHERE username = ?`).get(username.trim().toLowerCase());
+    const user = await db.prepare(`SELECT * FROM users WHERE username = ?`).get(username.trim().toLowerCase());
 
     if (!user) {
       return res.render('auth/login', {
@@ -105,7 +105,7 @@ router.post('/login', (req, res) => {
 
     let clubName = '';
     if (user.club_id) {
-      const club = db.prepare(`SELECT name FROM clubs WHERE id = ?`).get(user.club_id);
+      const club = await db.prepare(`SELECT name FROM clubs WHERE id = ?`).get(user.club_id);
       if (club) clubName = club.name;
     }
 
@@ -154,8 +154,8 @@ router.post('/olvide-password', async (req, res) => {
   }
 
   const queryTerm = email_or_username.trim().toLowerCase();
-  const user = db.prepare(`
-    SELECT * FROM users 
+  const user = await db.prepare(`
+    SELECT * FROM users
     WHERE LOWER(username) = ? OR LOWER(email) = ?
   `).get(queryTerm, queryTerm);
 
@@ -170,20 +170,20 @@ router.post('/olvide-password', async (req, res) => {
   }
 
   // Delete previous tokens for this user
-  db.prepare(`DELETE FROM password_resets WHERE user_id = ?`).run(user.id);
+  await db.prepare(`DELETE FROM password_resets WHERE user_id = ?`).run(user.id);
 
   // Generate random token valid for 1 hour
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO password_resets (user_id, token, expires_at)
     VALUES (?, ?, ?)
   `).run(user.id, token, expiresAt);
 
   const resetPath = `/auth/restablecer-password?token=${token}`;
   const emailTarget = user.email || `${user.username}@stardance.com.ar`;
-  
+
   const { sent, fullUrl } = await sendResetEmail(emailTarget, resetPath, req);
 
   let successMsg = `Se ha generado el enlace de restablecimiento para el usuario ${user.username}.`;
@@ -200,20 +200,20 @@ router.post('/olvide-password', async (req, res) => {
 });
 
 // GET: Reset Password Form with Token
-router.get('/restablecer-password', (req, res) => {
+router.get('/restablecer-password', async (req, res) => {
   const { token } = req.query;
 
   if (!token) {
     return res.redirect('/auth/login?error=' + encodeURIComponent('Enlace de restablecimiento inválido.'));
   }
 
-  const resetRecord = db.prepare(`SELECT * FROM password_resets WHERE token = ?`).get(token);
+  const resetRecord = await db.prepare(`SELECT * FROM password_resets WHERE token = ?`).get(token);
   if (!resetRecord) {
     return res.redirect('/auth/login?error=' + encodeURIComponent('El enlace de restablecimiento es inválido o ya fue utilizado.'));
   }
 
   if (new Date(resetRecord.expires_at) < new Date()) {
-    db.prepare(`DELETE FROM password_resets WHERE token = ?`).run(token);
+    await db.prepare(`DELETE FROM password_resets WHERE token = ?`).run(token);
     return res.redirect('/auth/olvide-password?error=' + encodeURIComponent('El enlace ha expirado. Por favor solicite uno nuevo.'));
   }
 
@@ -225,7 +225,7 @@ router.get('/restablecer-password', (req, res) => {
 });
 
 // POST: Save New Password
-router.post('/restablecer-password', (req, res) => {
+router.post('/restablecer-password', async (req, res) => {
   const { token, password, confirm_password } = req.body;
 
   if (!token || !password || !confirm_password) {
@@ -252,14 +252,14 @@ router.post('/restablecer-password', (req, res) => {
     });
   }
 
-  const resetRecord = db.prepare(`SELECT * FROM password_resets WHERE token = ?`).get(token);
+  const resetRecord = await db.prepare(`SELECT * FROM password_resets WHERE token = ?`).get(token);
   if (!resetRecord || new Date(resetRecord.expires_at) < new Date()) {
     return res.redirect('/auth/login?error=' + encodeURIComponent('El enlace expiró o es inválido.'));
   }
 
   const passwordHash = bcrypt.hashSync(password, 10);
-  db.prepare(`UPDATE users SET password_hash = ? WHERE id = ?`).run(passwordHash, resetRecord.user_id);
-  db.prepare(`DELETE FROM password_resets WHERE user_id = ?`).run(resetRecord.user_id);
+  await db.prepare(`UPDATE users SET password_hash = ? WHERE id = ?`).run(passwordHash, resetRecord.user_id);
+  await db.prepare(`DELETE FROM password_resets WHERE user_id = ?`).run(resetRecord.user_id);
 
   res.redirect('/auth/login?success=' + encodeURIComponent('✅ Contraseña restablecida con éxito. Ya podés ingresar con tu nueva clave.'));
 });

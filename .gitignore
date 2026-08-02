@@ -1,7 +1,11 @@
 node_modules/
-data/*.db
+data/
 .env
 public/uploads/*
 !public/uploads/.gitkeep
 .DS_Store
 Thumbs.db
+cookie.txt
+cookies.txt
+scratch/
+*.db

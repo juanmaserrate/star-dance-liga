@@ -66,6 +66,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`✨ Plataforma Liga Star Dance ejecutándose en puerto ${PORT}`);
+db.initPromise.then(() => {
+  app.listen(PORT, () => {
+    console.log(`✨ Plataforma Liga Star Dance ejecutándose en puerto ${PORT}`);
+  });
+}).catch(err => {
+  console.error('Error inicializando base de datos:', err);
+  process.exit(1);
 });
