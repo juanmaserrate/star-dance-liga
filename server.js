@@ -73,6 +73,14 @@ db.initPromise.then(async () => {
     const seed = require('./seed');
     await seed();
   }
+
+  // Habilitar categorías/disciplinas en todos los torneos (idempotente)
+  const ensureAllTournamentsHaveCategories = require('./lib/ensure_categories');
+  const catReport = await ensureAllTournamentsHaveCategories();
+  if (catReport.copied.length > 0) {
+    console.log(`🏷️ Categorías copiadas a ${catReport.copied.length} torneo(s) sin categorías: ${catReport.copied.map(t => `#${t.id} (${t.categories})`).join(', ')}`);
+  }
+
   app.listen(PORT, () => {
     console.log(`✨ Plataforma Liga Star Dance ejecutándose en puerto ${PORT}`);
   });
