@@ -295,19 +295,21 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="in_category">2. Seleccionar Disciplina y Categoría *</label>
-          <select id="in_category" name="category_id" class="form-select" required>
+          <label class="form-label" for="in_discipline">2. Seleccionar Disciplina *</label>
+          <select id="in_discipline" name="discipline" class="form-select" required>
             <option value="">-- Primero elegí un torneo --</option>
-            <% (allCategories || []).forEach(c => { %>
-              <option value="<%= c.id %>" data-tournament="<%= c.tournament_id %>" data-discipline="<%= c.discipline %>">
-                [<%= c.discipline %>] <%= c.name %> (<%= c.min_age %>-<%= c.max_age %> años) - Arancel: $<%= c.fee %>
-              </option>
-            <% }) %>
           </select>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="in_group_type">3. Tipo de Inscripción</label>
+          <label class="form-label" for="in_category">3. Seleccionar Categoría *</label>
+          <select id="in_category" name="category_id" class="form-select" required disabled>
+            <option value="">-- Primero elegí una disciplina --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="in_group_type">4. Tipo de Inscripción</label>
           <select id="in_group_type" name="group_type" class="form-select">
             <option value="Individual">Individual (1 Patinadora)</option>
             <option value="Dúo">Dúo (2 Patinadoras)</option>
@@ -321,7 +323,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">4. Seleccionar Patinadoras *</label>
+          <label class="form-label">5. Seleccionar Patinadoras *</label>
           <small style="color: var(--gold-light); display: block; margin-bottom: 0.5rem;">
             ℹ️ En disciplinas grupales, la categoría se evalúa según la participante de mayor categoría o edad.
           </small>

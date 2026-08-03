@@ -102,26 +102,57 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---- Wizard: Inscribir a Torneo ----
   const data = window.WIZARDS_DATA || { tournaments: [], categories: [] };
   const tournamentSel = document.getElementById('in_tournament');
+  const disciplineSel = document.getElementById('in_discipline');
   const categorySel = document.getElementById('in_category');
   const groupTypeSel = document.getElementById('in_group_type');
   const groupNameBox = document.getElementById('in_group_name_box');
   const studentChecks = () => Array.from(document.querySelectorAll('#in_students input[name="student_ids"]'));
 
+  function filterDisciplines() {
+    const tid = tournamentSel ? tournamentSel.value : '';
+    if (!disciplineSel) return;
+    disciplineSel.innerHTML = '<option value="">-- Seleccionar Disciplina --</option>';
+    if (!tid) {
+      disciplineSel.disabled = true;
+      if (categorySel) {
+        categorySel.innerHTML = '<option value="">-- Primero elegí un torneo --</option>';
+        categorySel.disabled = true;
+      }
+      return;
+    }
+    const disciplines = [...new Set(
+      data.categories
+        .filter(c => String(c.tournament_id) === String(tid))
+        .map(c => c.discipline)
+        .filter(Boolean)
+    )].sort();
+    disciplines.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = d;
+      disciplineSel.appendChild(opt);
+    });
+    disciplineSel.disabled = false;
+    if (disciplines.length === 1) disciplineSel.value = disciplines[0];
+    filterCategories();
+  }
+
   function filterCategories() {
     const tid = tournamentSel ? tournamentSel.value : '';
+    const disc = disciplineSel ? disciplineSel.value : '';
     if (!categorySel) return;
     categorySel.innerHTML = '<option value="">-- Seleccionar Categoría --</option>';
-    if (!tid) {
+    if (!tid || !disc) {
       categorySel.disabled = true;
       return;
     }
     data.categories
-      .filter(c => String(c.tournament_id) === String(tid))
+      .filter(c => String(c.tournament_id) === String(tid) && c.discipline === disc)
       .forEach(c => {
         const opt = document.createElement('option');
         opt.value = c.id;
         opt.setAttribute('data-discipline', c.discipline || '');
-        opt.textContent = `[${c.discipline}] ${c.name} (${c.min_age}-${c.max_age} años) - Arancel: $${c.fee}`;
+        opt.textContent = `${c.name} (${c.min_age}-${c.max_age} años) - Arancel: $${c.fee}`;
         categorySel.appendChild(opt);
       });
     categorySel.disabled = false;
@@ -135,7 +166,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (tournamentSel) {
-    tournamentSel.addEventListener('change', filterCategories);
+    tournamentSel.addEventListener('change', filterDisciplines);
+  }
+  if (disciplineSel) {
+    disciplineSel.addEventListener('change', filterCategories);
   }
   if (categorySel) {
     categorySel.addEventListener('change', () => {
@@ -161,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function preSelectStudent(id) {
     if (tournamentSel && data.tournaments.length > 0) {
       tournamentSel.value = data.tournaments[0].id;
-      filterCategories();
+      filterDisciplines();
     }
     const checks = studentChecks();
     checks.forEach(c => { c.checked = (String(c.value) === String(id)); });
