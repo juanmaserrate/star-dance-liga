@@ -6,6 +6,9 @@ const multer = require('multer');
 const db = require('../database');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
+// True cuando la petición viene de un fetch del frontend (wizards) y espera JSON.
+const isAjax = (req) => req.xhr || (req.get('accept') || '').includes('application/json');
+
 // Setup multer for document uploads
 const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -33,14 +36,14 @@ function getCalendarAge(birthDateStr) {
   return Math.max(0, currentYear - birthYear);
 }
 
-// Dashboard Profesor
+// Dashboard Profesor → Módulo único "Mis alumnas" con wizards minimizables
 router.get('/dashboard', async (req, res) => {
   const teacherId = req.session.user.id;
 
   const totalStudents = (await db.prepare(`SELECT COUNT(*) as count FROM students WHERE teacher_id = ?`).get(teacherId)).count;
   const activeRegistrations = (await db.prepare(`SELECT COUNT(*) as count FROM registrations WHERE teacher_id = ?`).get(teacherId)).count;
 
-  // Teacher's assigned clubs
+  // Teacher's assigned clubs (para el select de club en el alta)
   const myClubs = await db.prepare(`
     SELECT c.* FROM clubs c
     JOIN user_clubs uc ON c.id = uc.club_id
@@ -48,9 +51,7 @@ router.get('/dashboard', async (req, res) => {
     ORDER BY c.name ASC
   `).all(teacherId);
 
-  const selectedClubId = req.query.club_id || (myClubs.length > 0 ? myClubs[0].id : null);
-
-  let studentQuery = `
+  const students = await db.prepare(`
     SELECT s.*,
     c.name as club_name,
     (SELECT COUNT(*) FROM student_documents d WHERE d.student_id = s.id) as doc_count,
@@ -58,15 +59,8 @@ router.get('/dashboard', async (req, res) => {
     FROM students s
     JOIN clubs c ON s.club_id = c.id
     WHERE s.teacher_id = ?
-  `;
-  const studentParams = [teacherId];
-  if (selectedClubId) {
-    studentQuery += ` AND s.club_id = ?`;
-    studentParams.push(selectedClubId);
-  }
-  studentQuery += ` ORDER BY s.last_name ASC, s.first_name ASC`;
-
-  const students = await db.prepare(studentQuery).all(...studentParams);
+    ORDER BY s.last_name ASC, s.first_name ASC
+  `).all(teacherId);
 
   // Add calculated age to students
   students.forEach(s => { s.age = getCalendarAge(s.birth_date); });
@@ -86,13 +80,20 @@ router.get('/dashboard', async (req, res) => {
     ORDER BY r.created_at DESC
   `).all(teacherId);
 
-  res.render('profesor/dashboard', {
+  // Datos para los wizards del módulo "Mis alumnas"
+  const activeTournaments = await db.prepare(`SELECT * FROM tournaments WHERE status != 'finished' ORDER BY event_date ASC`).all();
+  const allCategories = activeTournaments.length > 0
+    ? await db.prepare(`SELECT * FROM categories ORDER BY discipline ASC, min_age ASC, name ASC`).all()
+    : [];
+
+  res.render('profesor/mis_alumnas', {
     user: req.session.user,
     stats: { totalStudents, activeRegistrations },
     myClubs,
-    selectedClubId,
     students,
     myRegistrations,
+    activeTournaments,
+    allCategories,
     success: req.query.success || null,
     error: req.query.error || null
   });
@@ -166,6 +167,7 @@ router.get('/alumnos/nuevo', async (req, res) => {
 // Save New Student (All Text UPPERCASE)
 router.post('/alumnos/nuevo', upload.single('documento'), async (req, res) => {
   const teacherId = req.session.user.id;
+  const ajax = isAjax(req);
 
   const {
     first_name, last_name, dni, cuil, birth_date, club_id, category_default,
@@ -173,6 +175,8 @@ router.post('/alumnos/nuevo', upload.single('documento'), async (req, res) => {
   } = req.body;
 
   if (!first_name || !last_name || !dni || !birth_date || !health_insurance || !policy_number) {
+    if (ajax) return res.status(400).json({ ok: false, message: 'Nombre, Apellido, DNI, Fecha Nacimiento, Seguro y N° Póliza son obligatorios.' });
+
     const myClubs = await db.prepare(`
       SELECT c.* FROM clubs c JOIN user_clubs uc ON c.id = uc.club_id WHERE uc.user_id = ? ORDER BY c.name ASC
     `).all(teacherId);
@@ -220,6 +224,7 @@ router.post('/alumnos/nuevo', upload.single('documento'), async (req, res) => {
       `).run(studentId, docTitle, 'apto_medico', '/uploads/' + req.file.filename);
     }
 
+    if (ajax) return res.json({ ok: true, message: 'Patinadora cargada. Ya aparece en tu padrón.' });
     res.redirect('/profesor/alumnos?success=' + encodeURIComponent('Patinadora registrada en el padrón en MAYÚSCULAS.'));
   } catch (err) {
     console.error('Error saving student:', err);
@@ -227,6 +232,7 @@ router.post('/alumnos/nuevo', upload.single('documento'), async (req, res) => {
     if (err.message && err.message.includes('UNIQUE constraint failed: students.dni')) {
       errMsg = 'Ya existe una patinadora registrada con ese DNI.';
     }
+    if (ajax) return res.status(400).json({ ok: false, message: errMsg });
 
     const myClubs = await db.prepare(`
       SELECT c.* FROM clubs c JOIN user_clubs uc ON c.id = uc.club_id WHERE uc.user_id = ? ORDER BY c.name ASC
@@ -375,14 +381,19 @@ router.get('/inscribir', async (req, res) => {
 // Submit Enrollment (Supports Individual & Group Highest Category Rule)
 router.post('/inscribir', async (req, res) => {
   const teacherId = req.session.user.id;
+  const ajax = isAjax(req);
   const { tournament_id, category_id, is_group, group_name, group_type, student_ids, notes } = req.body;
 
   if (!tournament_id || !category_id) {
+    if (ajax) return res.status(400).json({ ok: false, message: 'Debe seleccionar torneo y categoría.' });
     return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('Debe seleccionar torneo y categoría.'));
   }
 
   const category = await db.prepare(`SELECT * FROM categories WHERE id = ?`).get(category_id);
-  if (!category) return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('Categoría inválida.'));
+  if (!category) {
+    if (ajax) return res.status(400).json({ ok: false, message: 'Categoría inválida.' });
+    return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('Categoría inválida.'));
+  }
 
   // Get student IDs list
   let selectedStudentIds = [];
@@ -395,12 +406,14 @@ router.post('/inscribir', async (req, res) => {
   }
 
   if (selectedStudentIds.length === 0) {
+    if (ajax) return res.status(400).json({ ok: false, message: 'Debe seleccionar al menos una patinadora.' });
     return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('Debe seleccionar al menos una patinadora.'));
   }
 
   // Check for duplicate student IDs
   const uniqueStudentIds = [...new Set(selectedStudentIds)];
   if (uniqueStudentIds.length !== selectedStudentIds.length) {
+    if (ajax) return res.status(400).json({ ok: false, message: 'No podés seleccionar a la misma patinadora más de una vez en la misma inscripción.' });
     return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('No podés seleccionar a la misma patinadora más de una vez en la misma inscripción.'));
   }
 
@@ -439,6 +452,7 @@ router.post('/inscribir', async (req, res) => {
       await insertMember.run(regId, parseInt(stId));
     }
 
+    if (ajax) return res.json({ ok: true, message: `Inscripción realizada en la categoría ${category.name}.` });
     res.redirect('/profesor/dashboard?success=' + encodeURIComponent(`Inscripción realizada en la categoría ${category.name}.`));
   } catch (err) {
     console.error('Error in registration:', err);
@@ -446,6 +460,7 @@ router.post('/inscribir', async (req, res) => {
     if (err.message && err.message.includes('UNIQUE constraint failed')) {
       errorMsg = 'Una de las patinadoras ya se encuentra inscripta en esa categoría.';
     }
+    if (ajax) return res.status(400).json({ ok: false, message: errorMsg });
     res.redirect('/profesor/inscribir?error=' + encodeURIComponent(errorMsg));
   }
 });

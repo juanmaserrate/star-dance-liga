@@ -40,9 +40,7 @@
           <a href="/admin/clubes" class="role-subnav-btn">🏛️ Clubes</a>
           <a href="/admin/usuarios" class="role-subnav-btn">👥 Usuarios (Profes/Jueces)</a>
         <% } else if (user.role === 'profesor') { %>
-          <a href="/profesor/dashboard" class="role-subnav-btn">📊 Status / Padrón</a>
-          <a href="/profesor/alumnos/nuevo" class="role-subnav-btn">👤 Nueva Patinadora</a>
-          <a href="/profesor/inscribir" class="role-subnav-btn">✍️ Inscribir Alumna / Grupo</a>
+          <a href="/profesor/dashboard" class="role-subnav-btn">👩‍🎓 Mis Alumnas</a>
         <% } else if (user.role === 'juez') { %>
           <a href="/juez/planilla" class="role-subnav-btn">📋 Planilla de Juzgamiento</a>
           <a href="/admin/posiciones" class="role-subnav-btn">🥇 Puntajes de Clubes</a>
