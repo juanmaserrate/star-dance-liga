@@ -121,6 +121,17 @@ async function seed() {
     await insertCategory.run(catId++, 1, `PRECISIÓN (HASTA 30) - ${age.name}`, 'PRECISIÓN', 'GRUPO', age.min, age.max, 'MIXTO', 'DOMINGO NOCHE', 60000);
   }
 
+  // Habilitar el catálogo completo de categorías/disciplinas en TODOS los torneos
+  await db.exec(`SELECT setval('categories_id_seq', (SELECT COALESCE(MAX(id), 1) FROM categories))`);
+  const otherTournaments = await db.prepare(`SELECT id FROM tournaments WHERE id <> 1`).all();
+  for (const t of otherTournaments) {
+    await db.prepare(`
+      INSERT INTO categories (tournament_id, name, discipline, division, level, min_age, max_age, gender, schedule, fee)
+      SELECT ?, name, discipline, division, level, min_age, max_age, gender, schedule, fee
+      FROM categories WHERE tournament_id = 1
+    `).run(t.id);
+  }
+
   // 5. Insert Students
   const insertStudent = db.prepare(`
     INSERT INTO students (

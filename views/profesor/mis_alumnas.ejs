@@ -205,6 +205,24 @@
             <% } %>
           </select>
         </div>
+        <div class="form-group">
+          <label class="form-label" for="al_category">Categoría de la Alumna</label>
+          <select id="al_category" name="category_default" class="form-select">
+            <option value="">-- Seleccionar categoría --</option>
+            <%
+              let prevDisc = null;
+              (categoryOptions || []).forEach(c => {
+                if (c.discipline !== prevDisc) {
+                  if (prevDisc !== null) { %></optgroup><% }
+                  prevDisc = c.discipline;
+                  %><optgroup label="<%= c.discipline %>"><%
+                }
+                %><option value="<%= c.name %>"><%= c.name %></option><%
+              });
+              if (prevDisc !== null) { %></optgroup><% }
+            %>
+          </select>
+        </div>
 
         <h3 class="wizard-section">2. Cobertura Médica y Emergencia</h3>
         <div class="form-row">

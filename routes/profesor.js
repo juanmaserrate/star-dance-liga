@@ -36,6 +36,21 @@ function getCalendarAge(birthDateStr) {
   return Math.max(0, currentYear - birthYear);
 }
 
+// Helper: Lista única de categorías/disciplinas (para elegir la categoría de la alumna)
+async function getCategoryOptions() {
+  const cats = await db.prepare(`SELECT * FROM categories ORDER BY discipline ASC, min_age ASC, name ASC`).all();
+  const seen = new Set();
+  const opts = [];
+  for (const c of cats) {
+    if (!seen.has(c.name)) {
+      seen.add(c.name);
+      opts.push({ discipline: c.discipline, name: c.name });
+    }
+  }
+  opts.sort((a, b) => a.discipline.localeCompare(b.discipline) || a.name.localeCompare(b.name));
+  return opts;
+}
+
 // Dashboard Profesor → Módulo único "Mis alumnas" con wizards minimizables
 router.get('/dashboard', async (req, res) => {
   const teacherId = req.session.user.id;
@@ -86,6 +101,9 @@ router.get('/dashboard', async (req, res) => {
     ? await db.prepare(`SELECT * FROM categories ORDER BY discipline ASC, min_age ASC, name ASC`).all()
     : [];
 
+  // Opciones únicas de categoría/disciplina para el wizard de carga de alumna
+  const categoryOptions = await getCategoryOptions();
+
   res.render('profesor/mis_alumnas', {
     user: req.session.user,
     stats: { totalStudents, activeRegistrations },
@@ -94,6 +112,7 @@ router.get('/dashboard', async (req, res) => {
     myRegistrations,
     activeTournaments,
     allCategories,
+    categoryOptions,
     success: req.query.success || null,
     error: req.query.error || null
   });
@@ -160,6 +179,7 @@ router.get('/alumnos/nuevo', async (req, res) => {
     user: req.session.user,
     student: null,
     myClubs,
+    categoryOptions: await getCategoryOptions(),
     error: null
   });
 });
@@ -299,6 +319,7 @@ router.get('/alumnos/:id/editar', async (req, res) => {
     user: req.session.user,
     student,
     myClubs,
+    categoryOptions: await getCategoryOptions(),
     documents,
     error: null
   });

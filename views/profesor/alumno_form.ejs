@@ -62,6 +62,25 @@
         </select>
       </div>
 
+      <div class="form-group">
+        <label class="form-label" for="category_default">Categoría de la Alumna</label>
+        <select id="category_default" name="category_default" class="form-select">
+          <option value="">-- Seleccionar categoría --</option>
+          <%
+            let prevDisc = null;
+            (typeof categoryOptions !== 'undefined' ? categoryOptions : []).forEach(c => {
+              if (c.discipline !== prevDisc) {
+                if (prevDisc !== null) { %></optgroup><% }
+                prevDisc = c.discipline;
+                %><optgroup label="<%= c.discipline %>"><%
+              }
+              %><option value="<%= c.name %>" <%= student && student.category_default === c.name ? 'selected' : '' %>><%= c.name %></option><%
+            });
+            if (prevDisc !== null) { %></optgroup><% }
+          %>
+        </select>
+      </div>
+
       <h3 style="color: var(--gold-light); margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.1rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.4rem;">
         2. Cobertura Médica y Contacto de Emergencia (Obligatorios)
       </h3>
