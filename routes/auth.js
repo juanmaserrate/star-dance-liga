@@ -2,111 +2,61 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 const db = require('../database');
+const { sendMail, logFallback, buildUrl } = require('../lib/mailer');
 
-// Helper to send email or log link
+// Helper to send reset-password email or log link
 async function sendResetEmail(email, resetUrl, req) {
-  const host = req.get('host');
-  const fullUrl = `${req.protocol}://${host}${resetUrl}`;
+  const fullUrl = buildUrl(req, resetUrl);
 
-  // Check if SMTP environment variables are configured
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
-      });
+  const sent = await sendMail({
+    to: email,
+    subject: '🔐 Restablecer contraseña - Liga Star Dance',
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #12061c;">
+        <h2 style="color: #3b1959;">Restablecimiento de Contraseña - Liga Star Dance</h2>
+        <p>Hemos recibido una solicitud para cambiar la contraseña de tu cuenta registrada con el email: <strong>${email}</strong>.</p>
+        <p>Hacé clic en el siguiente botón para ingresar tu nueva contraseña (válido por 1 hora):</p>
+        <div style="margin: 25px 0;">
+          <a href="${fullUrl}" style="background: #d4af37; color: #12061c; font-weight: bold; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            🔑 Restablecer mi Contraseña
+          </a>
+        </div>
+        <p style="font-size: 0.85rem; color: #666;">Si no solicitaste este cambio, podés ignorar este correo de forma segura.</p>
+      </div>
+    `
+  });
 
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM || '"Liga Star Dance" <no-reply@stardance.com.ar>',
-        to: email,
-        subject: '🔐 Restablecer contraseña - Liga Star Dance',
-        html: `
-          <div style="font-family: Arial, sans-serif; padding: 20px; color: #12061c;">
-            <h2 style="color: #3b1959;">Restablecimiento de Contraseña - Liga Star Dance</h2>
-            <p>Hemos recibido una solicitud para cambiar la contraseña de tu cuenta registrada con el email: <strong>${email}</strong>.</p>
-            <p>Hacé clic en el siguiente botón para ingresar tu nueva contraseña (válido por 1 hora):</p>
-            <div style="margin: 25px 0;">
-              <a href="${fullUrl}" style="background: #d4af37; color: #12061c; font-weight: bold; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                🔑 Restablecer mi Contraseña
-              </a>
-            </div>
-            <p style="font-size: 0.85rem; color: #666;">Si no solicitaste este cambio, podés ignorar este correo de forma segura.</p>
-          </div>
-        `
-      });
-      return { sent: true, fullUrl };
-    } catch (err) {
-      console.error('Error sending email via SMTP:', err);
-      return { sent: false, fullUrl };
-    }
-  }
+  if (!sent) logFallback('🔑 LINK DE RECUPERACIÓN DE CONTRASEÑA GENERADO', email, fullUrl);
 
-  // Fallback if no SMTP configured: log link to console
-  console.log(`\n======================================================`);
-  console.log(`🔑 LINK DE RECUPERACIÓN DE CONTRASEÑA GENERADO:`);
-  console.log(`Para: ${email}`);
-  console.log(`Link: ${fullUrl}`);
-  console.log(`======================================================\n`);
-
-  return { sent: false, fullUrl };
+  return { sent, fullUrl };
 }
 
 // Helper to send verification email or log link
 async function sendVerificationEmail(email, verifyUrl, req) {
-  const host = req.get('host');
-  const fullUrl = `${req.protocol}://${host}${verifyUrl}`;
+  const fullUrl = buildUrl(req, verifyUrl);
 
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
-      });
+  const sent = await sendMail({
+    to: email,
+    subject: '✅ Confirma tu registro - Liga Star Dance',
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #12061c;">
+        <h2 style="color: #3b1959;">Bienvenido/a a la Liga Star Dance</h2>
+        <p>Para poder ingresar a la plataforma necesitás <strong>verificar tu correo electrónico</strong>.</p>
+        <p>Hacé clic en el siguiente botón para confirmar tu email (válido por 24 horas):</p>
+        <div style="margin: 25px 0;">
+          <a href="${fullUrl}" style="background: #d4af37; color: #12061c; font-weight: bold; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            ✅ Verificar mi Email
+          </a>
+        </div>
+        <p style="font-size: 0.85rem; color: #666;">Si no creaste una cuenta en la Liga Star Dance, podés ignorar este correo de forma segura.</p>
+      </div>
+    `
+  });
 
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM || '"Liga Star Dance" <no-reply@stardance.com.ar>',
-        to: email,
-        subject: '✅ Confirma tu registro - Liga Star Dance',
-        html: `
-          <div style="font-family: Arial, sans-serif; padding: 20px; color: #12061c;">
-            <h2 style="color: #3b1959;">Bienvenido/a a la Liga Star Dance</h2>
-            <p>Para poder ingresar a la plataforma necesitás <strong>verificar tu correo electrónico</strong>.</p>
-            <p>Hacé clic en el siguiente botón para confirmar tu email (válido por 24 horas):</p>
-            <div style="margin: 25px 0;">
-              <a href="${fullUrl}" style="background: #d4af37; color: #12061c; font-weight: bold; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                ✅ Verificar mi Email
-              </a>
-            </div>
-            <p style="font-size: 0.85rem; color: #666;">Si no creaste una cuenta en la Liga Star Dance, podés ignorar este correo de forma segura.</p>
-          </div>
-        `
-      });
-      return { sent: true, fullUrl };
-    } catch (err) {
-      console.error('Error sending verification email:', err);
-      return { sent: false, fullUrl };
-    }
-  }
+  if (!sent) logFallback('✅ ENLACE DE VERIFICACIÓN DE EMAIL GENERADO', email, fullUrl);
 
-  console.log(`\n======================================================`);
-  console.log(`✅ ENLACE DE VERIFICACIÓN DE EMAIL GENERADO:`);
-  console.log(`Para: ${email}`);
-  console.log(`Link: ${fullUrl}`);
-  console.log(`======================================================\n`);
-
-  return { sent: false, fullUrl };
+  return { sent, fullUrl };
 }
 
 // Login GET
