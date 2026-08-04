@@ -7,6 +7,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'star-dance-secret-key-2026-liga-patin';
 
+// Trust Railway/Heroku-style proxy headers so req.protocol is https behind TLS
+app.set('trust proxy', 1);
+
 // View engine setup
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
