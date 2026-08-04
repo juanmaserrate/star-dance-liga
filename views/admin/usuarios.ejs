@@ -135,8 +135,11 @@
                 </div>
               <% } %>
               
-              <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); word-break: break-all;">
+              <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); word-break: break-all; flex-wrap: wrap;">
                 <span>✉️</span> <span><%= u.email || 'Sin correo registrado' %></span>
+                <span class="badge <%= u.email_verified ? 'badge-paid' : 'badge-pending' %>" style="font-size: 0.68rem; padding: 0.2rem 0.5rem;">
+                  <%= u.email_verified ? '✓ VERIFICADO' : '⏳ PENDIENTE' %>
+                </span>
               </div>
 
               <% if (u.phone) { %>
@@ -148,12 +151,26 @@
           </div>
 
           <!-- Quick Action Bar -->
-          <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.07); display: flex; justify-content: flex-end;">
+          <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; gap: 0.5rem;">
             <form action="/admin/usuarios/<%= u.id %>/restablecer" method="POST" style="margin: 0; width: 100%;">
               <button type="submit" class="btn btn-outline-gold btn-sm" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" title="Enviar mail con link de recuperación">
                 ✉️ Enviar Acceso por Mail
               </button>
             </form>
+            <% if (!u.email_verified) { %>
+              <div style="display: flex; gap: 0.5rem; width: 100%;">
+                <form action="/admin/usuarios/<%= u.id %>/verificar" method="POST" style="margin: 0; flex: 1;">
+                  <button type="submit" class="btn btn-gold btn-sm" style="width: 100%;" title="Confirmar email manualmente">
+                    ✅ Verificar Email
+                  </button>
+                </form>
+                <form action="/admin/usuarios/<%= u.id %>/reenviar-verificacion" method="POST" style="margin: 0; flex: 1;">
+                  <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%;" title="Reenviar enlace de verificación">
+                    🔁 Reenviar
+                  </button>
+                </form>
+              </div>
+            <% } %>
           </div>
 
         </div>

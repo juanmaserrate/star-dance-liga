@@ -682,6 +682,39 @@ router.post('/alumnos/:id/editar', async (req, res) => {
   }
 });
 
+// Mark User as Verified Manually
+router.post('/usuarios/:id/verificar', async (req, res) => {
+  await db.prepare(`UPDATE users SET email_verified = true WHERE id = ?`).run(req.params.id);
+  res.redirect('/admin/usuarios?success=' + encodeURIComponent('✅ Usuario marcado como email verificado.'));
+});
+
+// Resend Verification Email from Admin
+router.post('/usuarios/:id/reenviar-verificacion', async (req, res) => {
+  const { sendVerificationEmail } = require('./auth');
+  const user = await db.prepare(`SELECT * FROM users WHERE id = ?`).get(req.params.id);
+
+  if (!user) return res.redirect('/admin/usuarios?error=' + encodeURIComponent('Usuario no encontrado.'));
+  if (!user.email) return res.redirect('/admin/usuarios?error=' + encodeURIComponent('El usuario no tiene correo electrónico registrado.'));
+  if (user.email_verified) return res.redirect('/admin/usuarios?error=' + encodeURIComponent('El usuario ya tiene el email verificado.'));
+
+  const crypto = require('crypto');
+  await db.prepare(`DELETE FROM email_verifications WHERE user_id = ?`).run(user.id);
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  await db.prepare(`
+    INSERT INTO email_verifications (user_id, token, expires_at)
+    VALUES (?, ?, ?)
+  `).run(user.id, token, expiresAt);
+
+  const { sent, fullUrl } = await sendVerificationEmail(user.email, `/auth/verificar-email?token=${token}`, req);
+
+  res.redirect('/admin/usuarios?success=' + encodeURIComponent(
+    sent
+      ? `✉️ Email de verificación reenviado a ${user.email}.`
+      : `🔗 Enlace de verificación regenerado (SMTP no configurado): ${fullUrl}`
+  ));
+});
+
 // Admin Quick Password Reset Email Sender
 router.post('/usuarios/:id/restablecer', async (req, res) => {
   const userId = req.params.id;

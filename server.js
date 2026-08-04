@@ -81,6 +81,15 @@ db.initPromise.then(async () => {
     console.log(`🏷️ Categorías copiadas a ${catReport.copied.length} torneo(s) sin categorías: ${catReport.copied.map(t => `#${t.id} (${t.categories})`).join(', ')}`);
   }
 
+  // Alinear catálogo de categorías/disciplinas con el Excel oficial (idempotente)
+  const ensureCategoriesCatalog = require('./lib/ensure_categories_catalog');
+  const catalogReport = await ensureCategoriesCatalog();
+  const totalAdded = catalogReport.aligned.reduce((s, t) => s + t.added, 0);
+  const totalRemoved = catalogReport.aligned.reduce((s, t) => s + t.removed, 0);
+  if (totalAdded > 0 || totalRemoved > 0) {
+    console.log(`📊 Catálogo alineado: +${totalAdded} / -${totalRemoved} categorías en ${catalogReport.tournaments} torneo(s).`);
+  }
+
   app.listen(PORT, () => {
     console.log(`✨ Plataforma Liga Star Dance ejecutándose en puerto ${PORT}`);
   });

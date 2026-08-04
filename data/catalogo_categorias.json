@@ -1,0 +1,132 @@
+[
+  {
+    "discipline": "CUARTETO",
+    "fee": 34000,
+    "categories": [
+      "AMARILLO",
+      "NARANJA",
+      "ROSA",
+      "TURQUESA",
+      "VERDE",
+      "VIOLETA"
+    ]
+  },
+  {
+    "discipline": "DÚO",
+    "fee": 22000,
+    "categories": [
+      "AMARILLO",
+      "NARANJA",
+      "ROSA",
+      "TURQUESA",
+      "VERDE",
+      "VIOLETA"
+    ]
+  },
+  {
+    "discipline": "FREE DANCE",
+    "fee": 16000,
+    "categories": [
+      "AVANZADO C",
+      "STYLE",
+      "NACIONAL BÁSICO",
+      "NACIONAL INTERMEDIO"
+    ]
+  },
+  {
+    "discipline": "INLINE",
+    "fee": 16000,
+    "categories": [
+      "INLINE ARTÍSTICO 2C",
+      "ROLLER ARTÍSTICO 3C"
+    ]
+  },
+  {
+    "discipline": "LIBRE",
+    "fee": 15000,
+    "categories": [
+      "1B",
+      "1C",
+      "2B",
+      "2C",
+      "3B",
+      "3C",
+      "4C",
+      "5C",
+      "ADULTOS",
+      "ESCUELA FORMATIVA",
+      "EXHIBICIÓN",
+      "INICIACIÓN A",
+      "INICIACIÓN B",
+      "PRE 3C",
+      "PRE 5C",
+      "PROMO B"
+    ]
+  },
+  {
+    "discipline": "PAREJAS MIXTAS",
+    "fee": 20000,
+    "categories": [
+      "PAREJA MIXTAS"
+    ]
+  },
+  {
+    "discipline": "SHOW",
+    "fee": 60000,
+    "categories": [
+      "ADULTOS",
+      "INFANTIL",
+      "JUVENIL",
+      "MAYORES",
+      "MINI INFANTIL",
+      "MINI TOTS",
+      "TOTS"
+    ]
+  },
+  {
+    "discipline": "SMALL",
+    "fee": 40000,
+    "categories": [
+      "ADULTOS",
+      "INFANTIL",
+      "JUVENIL",
+      "MAYORES",
+      "MINI INFANTIL",
+      "MINI TOTS",
+      "TOTS"
+    ]
+  },
+  {
+    "discipline": "SOLO DANCE",
+    "fee": 16000,
+    "categories": [
+      "AVANZADO C",
+      "BÁSICO C",
+      "DIVISIONAL INTERNACIONAL WS",
+      "EFICIENCIA BÁSICO"
+    ]
+  },
+  {
+    "discipline": "STAR DANCE FREE",
+    "fee": 16000,
+    "categories": [
+      "AVANZADO- PRE 3C- 3C",
+      "BASICO- 5C- 4C",
+      "DEBUTANTE- EXHIBICIÓN- INICIACIÓN",
+      "INICIAL- ESCUELA FORMATIVA- PRE 5C",
+      "STAR DANCE- 2C EN ADELANTE"
+    ]
+  },
+  {
+    "discipline": "TRÍO",
+    "fee": 28000,
+    "categories": [
+      "AMARILLO",
+      "NARANJA",
+      "ROSA",
+      "TURQUESA",
+      "VERDE",
+      "VIOLETA"
+    ]
+  }
+]
