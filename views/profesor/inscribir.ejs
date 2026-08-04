@@ -127,6 +127,21 @@
         <% } %>
       </div>
 
+      <!-- Club de la Inscripción -->
+      <div class="form-group">
+        <label class="form-label" for="club_id">5. Club de la Inscripción *</label>
+        <select id="club_id" name="club_id" class="form-select">
+          <% if (typeof myClubs !== 'undefined' && myClubs && myClubs.length > 0) { %>
+            <% myClubs.forEach(c => { %>
+              <option value="<%= c.id %>"><%= c.name %></option>
+            <% }) %>
+          <% } else { %>
+            <option value="">-- No tenés clubes asignados --</option>
+          <% } %>
+        </select>
+        <small style="color: var(--text-muted);">Se usa el club de la patinadora seleccionada si no lo cambiás.</small>
+      </div>
+
       <!-- Group Fantasy Name (Hidden when Individual) -->
       <div class="form-group" id="group_name_box" style="display: none;">
         <label class="form-label" for="group_name">Nombre de Fantasía del Grupo / Pareja *</label>

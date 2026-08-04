@@ -165,6 +165,17 @@ document.addEventListener('DOMContentLoaded', () => {
     groupNameBox.style.display = (isGroup || checked > 1) ? 'block' : 'none';
   }
 
+  function updateClubFromStudents() {
+    const clubSel = document.getElementById('in_club');
+    if (!clubSel) return;
+    const checked = studentChecks().filter(c => c.checked);
+    if (checked.length === 0) return;
+    const clubId = checked[0].getAttribute('data-club-id');
+    if (clubId && Array.from(clubSel.options).some(o => o.value === clubId)) {
+      clubSel.value = clubId;
+    }
+  }
+
   if (tournamentSel) {
     tournamentSel.addEventListener('change', filterDisciplines);
   }
@@ -190,7 +201,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (groupTypeSel) {
     groupTypeSel.addEventListener('change', updateGroupUI);
   }
-  studentChecks().forEach(c => c.addEventListener('change', updateGroupUI));
+  studentChecks().forEach(c => c.addEventListener('change', () => {
+    updateGroupUI();
+    updateClubFromStudents();
+  }));
 
   function preSelectStudent(id) {
     if (tournamentSel && data.tournaments.length > 0) {
@@ -200,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const checks = studentChecks();
     checks.forEach(c => { c.checked = (String(c.value) === String(id)); });
     updateGroupUI();
+    updateClubFromStudents();
   }
 
   const formInscribir = document.getElementById('formInscribir');
@@ -220,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         is_group: (groupTypeSel.value !== 'Individual' || selected.length > 1) ? '1' : '0',
         group_name: document.getElementById('in_group_name') ? document.getElementById('in_group_name').value : '',
         notes: document.getElementById('in_notes') ? document.getElementById('in_notes').value : '',
+        club_id: document.getElementById('in_club') ? document.getElementById('in_club').value : '',
         student_ids: selected
       };
 

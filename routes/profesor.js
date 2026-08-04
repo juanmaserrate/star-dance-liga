@@ -143,6 +143,16 @@ router.post('/clubes/nuevo', async (req, res) => {
   }
 });
 
+// Remove a Club from the teacher's list (does not delete the club itself)
+router.post('/clubes/quitar', async (req, res) => {
+  const teacherId = req.session.user.id;
+  const clubId = parseInt(req.body.club_id) || 0;
+
+  await db.prepare(`DELETE FROM user_clubs WHERE user_id = ? AND club_id = ?`).run(teacherId, clubId);
+
+  res.redirect('/profesor/dashboard?success=' + encodeURIComponent('Club eliminado de tu lista. Las alumnas ya cargadas conservan su club.'));
+});
+
 // Students Roster Page
 router.get('/alumnos', async (req, res) => {
   const teacherId = req.session.user.id;
@@ -383,6 +393,10 @@ router.get('/inscribir', async (req, res) => {
   const activeTournaments = await db.prepare(`SELECT * FROM tournaments WHERE status != 'finished' ORDER BY event_date ASC`).all();
   const selectedTournamentId = req.query.tournament_id || (activeTournaments.length > 0 ? activeTournaments[0].id : null);
 
+  const myClubs = await db.prepare(`
+    SELECT c.* FROM clubs c JOIN user_clubs uc ON c.id = uc.club_id WHERE uc.user_id = ? ORDER BY c.name ASC
+  `).all(teacherId);
+
   let categories = [];
   if (selectedTournamentId) {
     categories = await db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY discipline ASC, min_age ASC, name ASC`).all(selectedTournamentId);
@@ -391,6 +405,7 @@ router.get('/inscribir', async (req, res) => {
   res.render('profesor/inscribir', {
     user: req.session.user,
     students,
+    myClubs,
     activeTournaments,
     selectedTournamentId,
     categories,
@@ -403,7 +418,7 @@ router.get('/inscribir', async (req, res) => {
 router.post('/inscribir', async (req, res) => {
   const teacherId = req.session.user.id;
   const ajax = isAjax(req);
-  const { tournament_id, category_id, is_group, group_name, group_type, student_ids, notes } = req.body;
+  const { tournament_id, category_id, is_group, group_name, group_type, student_ids, notes, club_id } = req.body;
 
   if (!tournament_id || !category_id) {
     if (ajax) return res.status(400).json({ ok: false, message: 'Debe seleccionar torneo y categoría.' });
@@ -440,7 +455,14 @@ router.post('/inscribir', async (req, res) => {
 
   // Get main student and primary club
   const primaryStudent = await db.prepare(`SELECT * FROM students WHERE id = ?`).get(selectedStudentIds[0]);
-  const clubId = primaryStudent ? primaryStudent.club_id : (req.session.user.club_id || 1);
+
+  // Club de la inscripción: el profesor puede elegirlo manualmente (club_id);
+  // si no lo manda o no es uno de sus clubes, se usa el club de la primera patinadora.
+  const teacherClubs = await db.prepare(`SELECT club_id FROM user_clubs WHERE user_id = ?`).all(teacherId);
+  const teacherClubIds = teacherClubs.map(c => c.club_id);
+  let clubId = parseInt(club_id) || null;
+  if (clubId && !teacherClubIds.includes(clubId)) clubId = null;
+  if (!clubId) clubId = primaryStudent ? primaryStudent.club_id : (teacherClubIds[0] || req.session.user.club_id || 1);
 
   const isGroupReg = (is_group === '1' || selectedStudentIds.length > 1);
   const fee = category.fee || 0;

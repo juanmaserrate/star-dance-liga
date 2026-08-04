@@ -157,7 +157,7 @@ router.get('/registro', (req, res) => {
 
 // POST: Public Registration with Email Verification
 router.post('/registro', async (req, res) => {
-  const { full_name, email, username, password, confirm_password, phone, club_id } = req.body;
+  const { full_name, email, username, password, confirm_password, phone } = req.body;
 
   if (!full_name || !email || !username || !password || !confirm_password) {
     return res.render('auth/registro', {
@@ -183,6 +183,32 @@ router.post('/registro', async (req, res) => {
     return res.render('auth/registro', {
       user: null,
       error: 'La contraseña debe tener al menos 6 caracteres.',
+      success: null,
+      verificationLink: null,
+      form: req.body
+    });
+  }
+
+  // Parsear los clubes que el profesor crea en el registro (puede crear uno o más)
+  const rawNames = req.body.club_names;
+  const rawCities = req.body.club_cities;
+  const clubNamesArr = Array.isArray(rawNames) ? rawNames : (rawNames ? [rawNames] : []);
+  const clubCitiesArr = Array.isArray(rawCities) ? rawCities : (rawCities ? [rawCities] : []);
+
+  const cleanClubs = [];
+  clubNamesArr.forEach((n, i) => {
+    const name = (n || '').trim().toUpperCase();
+    if (!name) return;
+    cleanClubs.push({
+      name,
+      city: ((clubCitiesArr[i] || '') || '').trim().toUpperCase()
+    });
+  });
+
+  if (cleanClubs.length === 0) {
+    return res.render('auth/registro', {
+      user: null,
+      error: 'Debes crear al menos un club / escuela para tu cuenta.',
       success: null,
       verificationLink: null,
       form: req.body
@@ -218,11 +244,36 @@ router.post('/registro', async (req, res) => {
     const passwordHash = bcrypt.hashSync(password, 10);
     const info = await db.prepare(`
       INSERT INTO users (username, password_hash, full_name, role, club_id, email, phone, email_verified)
-      VALUES (?, ?, ?, 'profesor', ?, ?, ?, false) RETURNING id
-    `).run(normalizedUsername, passwordHash, full_name.trim().toUpperCase(), club_id || null, normalizedEmail, phone || '');
+      VALUES (?, ?, ?, 'profesor', NULL, ?, ?, false) RETURNING id
+    `).run(normalizedUsername, passwordHash, full_name.trim().toUpperCase(), normalizedEmail, phone || '');
 
-    if (club_id) {
-      await db.prepare(`INSERT INTO user_clubs (user_id, club_id) VALUES (?, ?) ON CONFLICT DO NOTHING`).run(info.lastInsertRowid, club_id);
+    const userId = info.lastInsertRowid;
+    const repName = full_name.trim().toUpperCase();
+    let primaryClubId = null;
+
+    // Crear (o vincular) cada club creado por el profesor en el registro
+    for (const cl of cleanClubs) {
+      let clubId;
+      try {
+        const ci = await db.prepare(`
+          INSERT INTO clubs (name, representative, contact_phone, city)
+          VALUES (?, ?, ?, ?) RETURNING id
+        `).run(cl.name, repName, phone || '', cl.city);
+        clubId = ci.lastInsertRowid;
+      } catch (e) {
+        const existing = await db.prepare(`SELECT id FROM clubs WHERE name = ?`).get(cl.name);
+        if (existing) {
+          clubId = existing.id;
+        } else {
+          throw e;
+        }
+      }
+      await db.prepare(`INSERT INTO user_clubs (user_id, club_id) VALUES (?, ?) ON CONFLICT DO NOTHING`).run(userId, clubId);
+      if (!primaryClubId) primaryClubId = clubId;
+    }
+
+    if (primaryClubId) {
+      await db.prepare(`UPDATE users SET club_id = ? WHERE id = ?`).run(primaryClubId, userId);
     }
 
     // Generate verification token (24h)
