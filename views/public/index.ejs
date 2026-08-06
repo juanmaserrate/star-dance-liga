@@ -1,14 +1,13 @@
 <%- include('../partials/header', { title: 'Inicio' }) %>
 <%- include('../partials/navbar') %>
 
-<div class="main-wrapper">
-  <!-- Hero Section (Dynamic CMS) -->
-  <div class="hero-banner">
-    <img src="/img/logo.svg" alt="Liga Star Dance" class="hero-logo">
+<div class="main-wrapper" style="max-width: 1280px; margin: 0 auto; padding: 3rem 2rem;">
+
+  <!-- Hero Section -->
+  <section style="text-align: center; padding: 4rem 1.5rem 2rem;">
+    <img src="/img/logo.svg" alt="Liga Star Dance" class="hero-logo" style="width: 150px; height: 150px;">
     <h1 class="hero-title"><%= cms.hero_title %></h1>
-    <p class="hero-subtitle">
-      <%= cms.hero_subtitle %>
-    </p>
+    <p class="hero-subtitle"><%= cms.hero_subtitle %></p>
 
     <% if (user && user.role === 'admin') { %>
       <div style="margin-bottom: 1rem;">
@@ -17,32 +16,51 @@
     <% } %>
 
     <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-      <a href="/torneos" class="btn btn-gold">Ver Próximos Torneos</a>
+      <a href="/torneos" class="btn btn-gold gold-glow" style="padding: 0.85rem 2rem;">Ver Próximos Torneos</a>
       <% if (!user) { %>
-        <a href="/auth/login" class="btn btn-outline-gold">Ingreso Profesores / Jueces</a>
+        <a href="/auth/login" class="btn btn-secondary" style="padding: 0.85rem 2rem;">Ingreso Profesores / Jueces</a>
       <% } else if (user.role === 'profesor') { %>
         <a href="/profesor/alumnos/nuevo" class="btn btn-gold">+ Cargar Alumna</a>
       <% } else if (user.role === 'admin') { %>
         <a href="/admin/torneos/nuevo" class="btn btn-gold">+ Crear Torneo</a>
       <% } %>
     </div>
-  </div>
+  </section>
 
-  <!-- Announcement Slides / Banners Carousel -->
+  <!-- Featured Actions Bento -->
   <% if (cms.slides && cms.slides.length > 0) { %>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; margin-bottom: 2.5rem;">
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
       <% cms.slides.forEach(s => { %>
-        <div class="card" style="margin: 0; background: linear-gradient(135deg, rgba(61,25,91,0.9) 0%, rgba(36,13,56,0.9) 100%); border-left: 4px solid var(--gold-primary);">
-          <h3 style="color: var(--gold-light); font-size: 1.2rem; margin-bottom: 0.5rem;"><%= s.title %></h3>
-          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;"><%= s.subtitle %></p>
-          <a href="<%= s.button_link %>" class="btn btn-gold btn-sm"><%= s.button_text %> &rarr;</a>
+        <div class="card glass-panel gold-glow" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h3 style="color: var(--gold-light); font-size: 1.25rem; margin-bottom: 0.6rem;"><%= s.title %></h3>
+            <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.25rem;"><%= s.subtitle %></p>
+          </div>
+          <a href="<%= s.button_link %>" class="btn btn-outline-gold btn-sm" style="align-self: flex-start;"><%= s.button_text %> &rarr;</a>
         </div>
       <% }) %>
-    </div>
+    </section>
+  <% } else { %>
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+      <div class="card glass-panel gold-glow" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between; border-left: 4px solid var(--gold-primary);">
+        <div>
+          <h3 style="color: var(--gold-light); font-size: 1.25rem; margin-bottom: 0.6rem;">GRAN TORNEO APERTURA 2026</h3>
+          <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.25rem;">Competencia clasificatoria en el Estadio Aldo Cantoni con todas las disciplinas.</p>
+        </div>
+        <a href="/torneos" class="btn btn-outline-gold btn-sm" style="align-self: flex-start;">VER PRÓXIMOS TORNEOS &rarr;</a>
+      </div>
+      <div class="card glass-panel" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <h3 style="color: var(--gold-light); font-size: 1.25rem; margin-bottom: 0.6rem;">CUERPO DE JUECES OFICIALES</h3>
+          <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.25rem;">Conoce a nuestro distinguido jurado acreditado para evaluaciones individuales y grupales.</p>
+        </div>
+        <a href="/jueces" class="btn btn-outline-gold btn-sm" style="align-self: flex-start;">CONOCER JURADO &rarr;</a>
+      </div>
+    </section>
   <% } %>
 
   <!-- Stats Bar -->
-  <div class="stat-grid">
+  <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin: 2.5rem 0;">
     <div class="stat-tile">
       <div class="stat-icon">🏆</div>
       <div>
@@ -50,7 +68,6 @@
         <div class="stat-label">Torneos Realizados</div>
       </div>
     </div>
-
     <div class="stat-tile">
       <div class="stat-icon">⛸️</div>
       <div>
@@ -58,7 +75,6 @@
         <div class="stat-label">Patinadoras Registradas</div>
       </div>
     </div>
-
     <div class="stat-tile">
       <div class="stat-icon">🏛️</div>
       <div>
@@ -66,56 +82,53 @@
         <div class="stat-label">Clubes Afiliados</div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- About Us & Purpose Section (Dynamic CMS) -->
-  <div class="card" style="background: rgba(30, 10, 46, 0.7); margin-bottom: 2.5rem; text-align: center; padding: 2.5rem 1.5rem;">
-    <span class="badge badge-violet" style="margin-bottom: 0.75rem;">PROPÓSITO INSTITUCIONAL</span>
-    <h2 style="color: var(--gold-light); font-size: 1.8rem; margin-bottom: 1rem;"><%= cms.about_title %></h2>
-    <p style="color: var(--text-muted); font-size: 1.05rem; max-width: 850px; margin: 0 auto; line-height: 1.8;">
-      <%= cms.about_content %>
-    </p>
-  </div>
+  <!-- About Us & Purpose Section -->
+  <section style="margin: 2.5rem 0; text-align: center; padding: 3rem 2rem; background: rgba(61, 25, 91, 0.3); border: 1px solid var(--border-gold); border-radius: var(--radius-lg);">
+    <span class="badge badge-violet" style="margin-bottom: 1rem;"><%= cms.about_title ? 'PROPÓSITO INSTITUCIONAL' : '' %></span>
+    <h2 class="hero-title" style="font-size: 1.9rem; margin-bottom: 1rem;"><%= cms.about_title %></h2>
+    <p style="color: var(--text-muted); font-size: 1.05rem; max-width: 850px; margin: 0 auto; line-height: 1.8;"><%= cms.about_content %></p>
+  </section>
 
-  <!-- Disciplines Showcase (Dynamic CMS) -->
-  <div class="card" style="margin-bottom: 2.5rem;">
-    <div class="card-header">
-      <h2 class="card-title">⛸️ Disciplinas Oficiales de la Liga Star Dance</h2>
-    </div>
-
+  <!-- Disciplines Showcase -->
+  <section style="margin: 2.5rem 0;">
+    <h2 style="color: var(--gold-light); font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.75rem;">⛸️ Disciplinas Oficiales de la Liga Star Dance</h2>
     <% if (cms.disciplines && cms.disciplines.length > 0) { %>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem;">
         <% cms.disciplines.forEach(d => { %>
-          <div style="background: rgba(18, 6, 28, 0.6); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-gold);">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;"><%= d.icon %></div>
-            <h3 style="color: var(--gold-light); font-size: 1.15rem; margin-bottom: 0.4rem;"><%= d.name %></h3>
+          <div class="card glass-panel" style="margin: 0; background: rgba(61, 25, 91, 0.35);">
+            <div style="font-size: 2rem; margin-bottom: 0.6rem;"><%= d.icon %></div>
+            <h3 style="color: var(--gold-light); font-size: 1.1rem; margin-bottom: 0.4rem;"><%= d.name %></h3>
             <p style="color: var(--text-muted); font-size: 0.88rem;"><%= d.description %></p>
           </div>
         <% }) %>
       </div>
     <% } %>
-  </div>
+  </section>
 
   <!-- Next Tournaments Preview -->
-  <div class="card">
-    <div class="card-header">
-      <h2 class="card-title">✨ Próximos Torneos y Competencias</h2>
+  <section style="margin: 2.5rem 0;">
+    <div style="display: flex; justify-content: space-between; align-items: end; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
+      <h2 style="color: var(--gold-light); font-size: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">✨ Próximos Torneos y Competencias</h2>
       <a href="/torneos" class="btn btn-outline-gold btn-sm">Ver Todos</a>
     </div>
 
     <% if (tournaments && tournaments.length > 0) { %>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
         <% tournaments.forEach(t => { %>
-          <div class="card" style="background: rgba(30, 10, 46, 0.6); margin-bottom: 0;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-              <span class="badge badge-violet"><%= t.status === 'upcoming' ? 'PRÓXIMAMENTE' : (t.status === 'active' ? 'EN CURSO' : 'FINALIZADO') %></span>
-              <small style="color: var(--gold-primary); font-weight: 700;">📅 <%= t.event_date %></small>
+          <div class="card glass-panel gold-glow" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid var(--gold-primary);">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                <span class="badge badge-violet"><%= t.status === 'upcoming' ? 'PRÓXIMAMENTE' : (t.status === 'active' ? 'EN CURSO' : 'FINALIZADO') %></span>
+                <small style="color: var(--gold-primary); font-weight: 700;">📅 <%= t.event_date %></small>
+              </div>
+              <h3 style="color: var(--gold-light); margin-bottom: 0.6rem; font-size: 1.15rem;"><%= t.name %></h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                📍 <strong>Sede:</strong> <%= t.venue %><br>
+                📝 <strong>Cierre inscripción:</strong> <%= t.registration_deadline %>
+              </p>
             </div>
-            <h3 style="color: var(--gold-light); margin-bottom: 0.5rem;"><%= t.name %></h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-              📍 <strong>Sede:</strong> <%= t.venue %><br>
-              📝 <strong>Cierre inscripción:</strong> <%= t.registration_deadline %>
-            </p>
             <a href="/torneos/<%= t.id %>" class="btn btn-outline-gold btn-sm" style="width: 100%;">Detalles y Categorías &rarr;</a>
           </div>
         <% }) %>
@@ -123,7 +136,7 @@
     <% } else { %>
       <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No hay torneos activos en este momento.</p>
     <% } %>
-  </div>
+  </section>
 </div>
 
 <%- include('../partials/footer') %>

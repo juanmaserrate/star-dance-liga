@@ -1,42 +1,43 @@
 <%- include('../partials/header', { title: 'Cuerpo de Jueces' }) %>
 <%- include('../partials/navbar') %>
 
-<div class="main-wrapper">
-  <div class="card">
-    <div class="card-header">
-      <h1 class="card-title">⚖️ Jurado Oficial de la Liga Star Dance</h1>
-      <% if (user && user.role === 'admin') { %>
-        <a href="/admin/cms" class="btn btn-outline-gold btn-sm">⚙️ Gestionar Jueces en CMS</a>
-      <% } %>
-    </div>
-    <p style="color: var(--text-muted); margin-bottom: 2rem;">
-      Nuestro distinguido panel de jueces oficiales cuenta con certificación nacional e internacional para evaluar las disciplinas de Patinaje Artístico: Libre, Escuela, Dance, Show, Precisión y Parejas.
-    </p>
+<div class="main-wrapper" style="max-width: 1280px; margin: 0 auto; padding: 3rem 2rem;">
 
-    <% if (judges && judges.length > 0) { %>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
-        <% judges.forEach(j => { %>
-          <div class="card" style="background: rgba(30, 10, 46, 0.7); text-align: center; margin: 0; border-top: 4px solid var(--gold-primary);">
-            <div style="width: 85px; height: 85px; margin: 0 auto 1rem; border-radius: 50%; background: rgba(212, 175, 55, 0.15); border: 2px solid var(--gold-primary); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; overflow: hidden;">
-              <% if (j.photo_url && j.photo_url !== '/img/logo.svg') { %>
-                <img src="<%= j.photo_url %>" alt="<%= j.name %>" style="width: 100%; height: 100%; object-fit: cover;">
-              <% } else { %>
-                ⭐
-              <% } %>
-            </div>
-            <h2 style="color: var(--gold-light); font-size: 1.3rem; margin-bottom: 0.3rem;"><%= j.name %></h2>
-            <span class="badge badge-violet" style="margin-bottom: 0.8rem;"><%= j.title %></span>
-            <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 0.5rem;">
-              <strong>Especialidad:</strong> <%= j.specialty || 'Juzgamiento General' %><br>
-              <%= j.bio || 'Certificación oficial de arbitraje técnico.' %>
-            </p>
-          </div>
-        <% }) %>
-      </div>
-    <% } else { %>
-      <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No hay jueces cargados en el sistema en este momento.</p>
+  <!-- Hero Section -->
+  <section style="text-align: center; padding: 2rem 1.5rem 3rem;">
+    <img src="/img/logo.svg" alt="Star Dance Logo" class="hero-logo" style="width: 130px; height: 130px;">
+    <h1 class="hero-title">Jurado Oficial de la Liga Star Dance</h1>
+    <p class="hero-subtitle">Nuestro distinguido panel de jueces oficiales cuenta con certificación nacional e internacional para evaluar las disciplinas de Patinaje Artístico: Libre, Escuela, Dance, Show, Precisión y Parejas.</p>
+    <% if (user && user.role === 'admin') { %>
+      <a href="/admin/cms" class="btn btn-outline-gold btn-sm">⚙️ Gestionar Jueces en CMS</a>
     <% } %>
-  </div>
+  </section>
+
+  <!-- Judges Grid -->
+  <% if (judges && judges.length > 0) { %>
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+      <% judges.forEach(j => { %>
+        <article class="card glass-panel gold-glow-hover" style="margin: 0; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--gold-primary); opacity: 0.5;"></div>
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem;">
+            <div>
+              <h2 style="color: var(--gold-light); font-size: 1.35rem; margin-bottom: 0.4rem;"><%= j.name %></h2>
+              <span class="badge badge-violet"><%= j.title %></span>
+            </div>
+            <span style="font-size: 2.4rem; opacity: 0.8; filter: drop-shadow(0 0 8px rgba(212,175,55,0.4));">⭐</span>
+          </div>
+          <div style="margin-bottom: 1rem;">
+            <h3 class="label-caps" style="color: var(--text-muted); margin-bottom: 0.3rem;">Especialidad</h3>
+            <p style="color: var(--text-main); font-weight: 700;"><%= j.specialty || 'JUZGAMIENTO GENERAL' %></p>
+          </div>
+          <div style="height: 1px; width: 100%; background: var(--border-gold); margin-bottom: 1rem;"></div>
+          <p style="color: var(--text-muted); font-size: 0.92rem;"><%= j.bio || 'Certificación oficial de arbitraje técnico.' %></p>
+        </article>
+      <% }) %>
+    </section>
+  <% } else { %>
+    <p style="color: var(--text-muted); text-align: center; padding: 3rem;">No hay jueces cargados en el sistema en este momento.</p>
+  <% } %>
 </div>
 
 <%- include('../partials/footer') %>

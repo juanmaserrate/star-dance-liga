@@ -1,41 +1,47 @@
 <%- include('../partials/header', { title: 'Torneos' }) %>
 <%- include('../partials/navbar') %>
 
-<div class="main-wrapper">
-  <div class="card">
-    <div class="card-header">
-      <h1 class="card-title">🏆 Torneos de la Liga Star Dance</h1>
-    </div>
-    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
-      Calendario oficial de competencias, torneos provinciales e interclubes de patinaje artístico.
-    </p>
+<div class="main-wrapper" style="max-width: 1280px; margin: 0 auto; padding: 3rem 2rem;">
 
-    <% if (tournaments && tournaments.length > 0) { %>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
-        <% tournaments.forEach(t => { %>
-          <div class="card" style="background: rgba(30, 10, 46, 0.7); margin: 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
-              <span class="badge badge-violet"><%= t.status === 'upcoming' ? 'PRÓXIMO' : (t.status === 'active' ? 'EN CURSO' : 'FINALIZADO') %></span>
-              <span style="color: var(--gold-light); font-size: 0.85rem; font-weight: 700;">Inscriptos: <%= t.total_registered %></span>
-            </div>
-            <h2 style="color: var(--gold-primary); font-size: 1.35rem; margin-bottom: 0.6rem;"><%= t.name %></h2>
-            <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1rem;">
-              <%= t.description %>
-            </p>
-            <div style="background: rgba(18, 6, 28, 0.6); padding: 0.85rem; border-radius: var(--radius-sm); margin-bottom: 1.25rem; font-size: 0.88rem; border-left: 3px solid var(--gold-primary);">
-              📍 <strong>Lugar/Sede:</strong> <%= t.venue %><br>
-              📅 <strong>Fecha del Evento:</strong> <%= t.event_date %><br>
-              ⏳ <strong>Cierre de Inscripción:</strong> <%= t.registration_deadline %><br>
-              📊 <strong>Categorías:</strong> <%= t.total_categories %> niveles
-            </div>
-            <a href="/torneos/<%= t.id %>" class="btn btn-gold" style="width: 100%;">Ver Categorías e Inscribir</a>
+  <!-- Hero Section -->
+  <section style="text-align: center; padding: 2rem 1.5rem 3rem;">
+    <img src="/img/logo.svg" alt="Star Dance Logo" class="hero-logo" style="width: 130px; height: 130px;">
+    <h1 class="hero-title">Torneos de la Liga Star Dance</h1>
+    <p class="hero-subtitle">Calendario oficial de competencias, torneos provinciales e interclubes de patinaje artístico.</p>
+  </section>
+
+  <!-- Tournaments Grid -->
+  <% if (tournaments && tournaments.length > 0) { %>
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+      <% tournaments.forEach(t => { %>
+        <article class="card glass-panel gold-glow" style="margin: 0; display: flex; flex-direction: column; gap: 1.25rem; border-top: 4px solid var(--gold-primary);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="badge badge-violet"><%= t.status === 'upcoming' ? 'PRÓXIMO' : (t.status === 'active' ? 'EN CURSO' : 'FINALIZADO') %></span>
+            <span class="label-caps" style="color: var(--gold-primary); display: flex; align-items: center; gap: 0.4rem;">👥 Inscriptos: <%= t.total_registered %></span>
           </div>
-        <% }) %>
-      </div>
-    <% } else { %>
-      <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No hay torneos registrados actualmente.</p>
-    <% } %>
-  </div>
+          <h2 style="color: var(--gold-light); font-size: 1.3rem;"><%= t.name %></h2>
+          <p style="color: var(--text-muted); font-size: 0.92rem;"><%= t.description %></p>
+          <div style="background: rgba(18, 6, 28, 0.55); padding: 1rem; border-radius: var(--radius-sm); border-top: 1px solid var(--border-gold); font-size: 0.9rem; margin-top: auto;">
+            <div style="display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.5rem;">
+              <span style="color: var(--gold-primary);">📍</span><span><strong style="color: var(--text-main);">Lugar:</strong> <span style="color: var(--text-muted);"><%= t.venue %></span></span>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.5rem;">
+              <span style="color: var(--gold-primary);">📅</span><span><strong style="color: var(--text-main);">Fecha:</strong> <span style="color: var(--text-muted);"><%= t.event_date %></span></span>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.5rem;">
+              <span style="color: var(--gold-primary);">⏳</span><span><strong style="color: var(--text-main);">Cierre:</strong> <span style="color: var(--text-muted);"><%= t.registration_deadline %></span></span>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 0.6rem;">
+              <span style="color: var(--gold-primary);">📊</span><span><strong style="color: var(--text-main);">Categorías:</strong> <span style="color: var(--text-muted);"><%= t.total_categories %> niveles</span></span>
+            </div>
+          </div>
+          <a href="/torneos/<%= t.id %>" class="btn btn-gold gold-glow" style="width: 100%; text-transform: uppercase;">Ver Categorías e Inscribir</a>
+        </article>
+      <% }) %>
+    </section>
+  <% } else { %>
+    <p style="color: var(--text-muted); text-align: center; padding: 3rem;">No hay torneos registrados actualmente.</p>
+  <% } %>
 </div>
 
 <%- include('../partials/footer') %>
