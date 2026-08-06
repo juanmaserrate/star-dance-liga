@@ -15,16 +15,6 @@
       </div>
     <% } %>
 
-    <% if (typeof unverifiedUsername !== 'undefined' && unverifiedUsername) { %>
-      <div class="card" style="margin: 0.5rem 0 1rem 0; padding: 0.75rem; border: 1px solid var(--gold-primary); background: rgba(212,175,55,0.05);">
-        <form action="/auth/reenviar-verificacion" method="POST" style="margin: 0;">
-          <input type="hidden" name="email_or_username" value="<%= unverifiedUsername %>">
-          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">¿No recibiste el correo de verificación?</div>
-          <button type="submit" class="btn btn-outline-gold btn-sm" style="width: 100%;">✉️ Reenviar Enlace de Verificación</button>
-        </form>
-      </div>
-    <% } %>
-
     <% if (typeof success !== 'undefined' && success) { %>
       <div class="alert alert-success alert-auto-dismiss">
         ✅ <%= success %>
@@ -33,8 +23,8 @@
 
     <form action="/auth/login" method="POST">
       <div class="form-group">
-        <label class="form-label" for="username">Usuario / Identificador</label>
-        <input type="text" id="username" name="username" class="form-control" placeholder="Ej: admin / profe / juez" required autofocus>
+        <label class="form-label" for="email">Email</label>
+        <input type="email" id="email" name="email" class="form-control" placeholder="tu@email.com" required autofocus>
       </div>
 
       <div class="form-group">
@@ -55,9 +45,9 @@
       <p>💡 <strong>¿Sos nuevo/a?</strong> <a href="/auth/registro" style="color: var(--gold-light);">Creá tu cuenta aquí &rarr;</a></p>
       <p style="margin-top: 1rem;"><strong>Cuentas de demostración predeterminadas:</strong></p>
       <div style="display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.5rem; text-align: left; background: rgba(18,6,28,0.6); padding: 0.65rem; border-radius: var(--radius-sm);">
-        <div>&bull; <strong>Administrador/a:</strong> <code>admin</code> / <code>admin</code> (o <code>sandra</code> / <code>Sandra2026</code>)</div>
-        <div>&bull; <strong>Profesor/a:</strong> <code>profe</code> / <code>profe</code></div>
-        <div>&bull; <strong>Juez:</strong> <code>juez</code> / <code>juez</code></div>
+        <div>&bull; <strong>Administrador/a:</strong> <code>admin@stardance.com.ar</code> / <code>admin</code> (o <code>sandra@stardance.com.ar</code> / <code>Sandra2026</code>)</div>
+        <div>&bull; <strong>Profesor/a:</strong> <code>ana@estrellapatin.com</code> / <code>profe</code></div>
+        <div>&bull; <strong>Juez:</strong> <code>juez.mariana@stardance.com.ar</code> / <code>juez</code></div>
       </div>
     </div>
   </div>

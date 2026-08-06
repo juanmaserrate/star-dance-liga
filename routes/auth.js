@@ -5,31 +5,27 @@ const crypto = require('crypto');
 const db = require('../database');
 const { sendMail, logFallback, buildUrl } = require('../lib/mailer');
 
-// Helper to send reset-password email or log link
-async function sendResetEmail(email, resetUrl, req) {
-  const fullUrl = buildUrl(req, resetUrl);
-
+// Helper to send reset code email or log it
+async function sendResetCode(email, code, req) {
   const sent = await sendMail({
     to: email,
-    subject: '🔐 Restablecer contraseña - Liga Star Dance',
+    subject: '🔐 Código para restablecer contraseña - Liga Star Dance',
     html: `
       <div style="font-family: Arial, sans-serif; padding: 20px; color: #12061c;">
-        <h2 style="color: #3b1959;">Restablecimiento de Contraseña - Liga Star Dance</h2>
-        <p>Hemos recibido una solicitud para cambiar la contraseña de tu cuenta registrada con el email: <strong>${email}</strong>.</p>
-        <p>Hacé clic en el siguiente botón para ingresar tu nueva contraseña (válido por 1 hora):</p>
-        <div style="margin: 25px 0;">
-          <a href="${fullUrl}" style="background: #d4af37; color: #12061c; font-weight: bold; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-            🔑 Restablecer mi Contraseña
-          </a>
+        <h2 style="color: #3b1959;">Liga Star Dance - Código de Verificación</h2>
+        <p>Recibimos una solicitud para restablecer la contraseña de la cuenta registrada con el email: <strong>${email}</strong>.</p>
+        <p>Usá el siguiente código para definir tu nueva contraseña (válido por 30 minutos):</p>
+        <div style="margin: 25px 0; text-align: center;">
+          <span style="background: #12061c; color: #d4af37; font-weight: bold; font-size: 1.8rem; letter-spacing: 6px; padding: 14px 24px; border-radius: 8px; display: inline-block;">${code}</span>
         </div>
         <p style="font-size: 0.85rem; color: #666;">Si no solicitaste este cambio, podés ignorar este correo de forma segura.</p>
       </div>
     `
   });
 
-  if (!sent) logFallback('🔑 LINK DE RECUPERACIÓN DE CONTRASEÑA GENERADO', email, fullUrl);
+  if (!sent) logFallback('🔑 CÓDIGO DE RECUPERACIÓN GENERADO', email, `Código: ${code}`);
 
-  return { sent, fullUrl };
+  return sent;
 }
 
 // Helper to send verification email or log link
@@ -72,25 +68,25 @@ router.get('/login', (req, res) => {
   });
 });
 
-// Login POST
+// Login POST (con email y contraseña)
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
 
-  if (!username || !password) {
+  if (!email || !password) {
     return res.render('auth/login', {
       user: null,
-      error: 'Por favor complete el usuario y la contraseña.',
+      error: 'Por favor complete el email y la contraseña.',
       success: null
     });
   }
 
   try {
-    const user = await db.prepare(`SELECT * FROM users WHERE username = ?`).get(username.trim().toLowerCase());
+    const user = await db.prepare(`SELECT * FROM users WHERE LOWER(email) = ?`).get(email.trim().toLowerCase());
 
     if (!user) {
       return res.render('auth/login', {
         user: null,
-        error: 'Usuario o contraseña incorrectos.',
+        error: 'Email o contraseña incorrectos.',
         success: null
       });
     }
@@ -99,17 +95,8 @@ router.post('/login', async (req, res) => {
     if (!isValid) {
       return res.render('auth/login', {
         user: null,
-        error: 'Usuario o contraseña incorrectos.',
+        error: 'Email o contraseña incorrectos.',
         success: null
-      });
-    }
-
-    if (!user.email_verified) {
-      return res.render('auth/login', {
-        user: null,
-        error: 'Tu cuenta todavía no está verificada. Revisá tu correo y confirmá tu email para poder ingresar, o reenviá el enlace de verificación.',
-        success: null,
-        unverifiedUsername: user.username
       });
     }
 
@@ -155,11 +142,11 @@ router.get('/registro', (req, res) => {
   });
 });
 
-// POST: Public Registration with Email Verification
+// POST: Public Registration (login automático, sin verificación de email)
 router.post('/registro', async (req, res) => {
-  const { full_name, email, username, password, confirm_password, phone } = req.body;
+  const { full_name, email, password, confirm_password, phone } = req.body;
 
-  if (!full_name || !email || !username || !password || !confirm_password) {
+  if (!full_name || !email || !password || !confirm_password) {
     return res.render('auth/registro', {
       user: null,
       error: 'Complete todos los campos obligatorios.',
@@ -173,16 +160,6 @@ router.post('/registro', async (req, res) => {
     return res.render('auth/registro', {
       user: null,
       error: 'Las contraseñas no coinciden.',
-      success: null,
-      verificationLink: null,
-      form: req.body
-    });
-  }
-
-  if (password.length < 6) {
-    return res.render('auth/registro', {
-      user: null,
-      error: 'La contraseña debe tener al menos 6 caracteres.',
       success: null,
       verificationLink: null,
       form: req.body
@@ -215,21 +192,9 @@ router.post('/registro', async (req, res) => {
     });
   }
 
-  const normalizedUsername = username.trim().toLowerCase();
   const normalizedEmail = email.trim().toLowerCase();
 
   try {
-    const existingUser = await db.prepare(`SELECT id FROM users WHERE username = ?`).get(normalizedUsername);
-    if (existingUser) {
-      return res.render('auth/registro', {
-        user: null,
-        error: 'El nombre de usuario ya está en uso. Elegí otro.',
-        success: null,
-        verificationLink: null,
-        form: req.body
-      });
-    }
-
     const existingEmail = await db.prepare(`SELECT id FROM users WHERE LOWER(email) = ?`).get(normalizedEmail);
     if (existingEmail) {
       return res.render('auth/registro', {
@@ -244,8 +209,8 @@ router.post('/registro', async (req, res) => {
     const passwordHash = bcrypt.hashSync(password, 10);
     const info = await db.prepare(`
       INSERT INTO users (username, password_hash, full_name, role, club_id, email, phone, email_verified)
-      VALUES (?, ?, ?, 'profesor', NULL, ?, ?, false) RETURNING id
-    `).run(normalizedUsername, passwordHash, full_name.trim().toUpperCase(), normalizedEmail, phone || '');
+      VALUES (?, ?, ?, 'profesor', NULL, ?, ?, true) RETURNING id
+    `).run(normalizedEmail, passwordHash, full_name.trim().toUpperCase(), normalizedEmail, phone || '');
 
     const userId = info.lastInsertRowid;
     const repName = full_name.trim().toUpperCase();
@@ -276,31 +241,26 @@ router.post('/registro', async (req, res) => {
       await db.prepare(`UPDATE users SET club_id = ? WHERE id = ?`).run(primaryClubId, userId);
     }
 
-    // Generate verification token (24h)
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-    await db.prepare(`
-      INSERT INTO email_verifications (user_id, token, expires_at)
-      VALUES (?, ?, ?)
-    `).run(info.lastInsertRowid, token, expiresAt);
-
-    const verifyPath = `/auth/verificar-email?token=${token}`;
-    const { sent, fullUrl } = await sendVerificationEmail(normalizedEmail, verifyPath, req);
-
-    let successMsg = `¡Registro exitoso, ${full_name.trim()}! Tu cuenta está creada pero necesita verificación.`;
-    if (sent) {
-      successMsg += ` Enviamos un correo a ${normalizedEmail}. Abrí el enlace para confirmar tu email y poder ingresar.`;
-    } else {
-      successMsg += ` Como el servidor de correo no está configurado todavía, este es tu enlace de verificación:`;
+    // Login automático: crear la sesión del nuevo usuario
+    let clubName = '';
+    if (primaryClubId) {
+      const club = await db.prepare(`SELECT name FROM clubs WHERE id = ?`).get(primaryClubId);
+      if (club) clubName = club.name;
     }
 
-    res.render('auth/registro', {
-      user: null,
-      error: null,
-      success: successMsg,
-      verificationLink: sent ? null : fullUrl,
-      form: null
-    });
+    req.session.user = {
+      id: userId,
+      username: normalizedEmail,
+      full_name: repName,
+      role: 'profesor',
+      club_id: primaryClubId,
+      club_name: clubName,
+      email: normalizedEmail
+    };
+
+    res.redirect('/profesor/dashboard?success=' + encodeURIComponent(
+      `¡Bienvenido/a ${full_name.trim()}! Tu cuenta fue creada con éxito y ya iniciaste sesión.`
+    ));
   } catch (err) {
     console.error('Registration error:', err);
     res.render('auth/registro', {
@@ -385,102 +345,99 @@ router.get('/olvide-password', (req, res) => {
     user: null,
     error: req.query.error || null,
     success: req.query.success || null,
-    resetLink: req.query.resetLink || null
+    resetCode: null
   });
 });
 
-// POST: Process Forgot Password Request
+// POST: Process Forgot Password Request (envía código por email)
 router.post('/olvide-password', async (req, res) => {
-  const { email_or_username } = req.body;
+  const { email } = req.body;
 
-  if (!email_or_username) {
+  if (!email) {
     return res.render('auth/olvide_password', {
       user: null,
-      error: 'Ingrese su email o nombre de usuario.',
+      error: 'Ingresá tu email registrado.',
       success: null,
-      resetLink: null
+      resetCode: null
     });
   }
 
-  const queryTerm = email_or_username.trim().toLowerCase();
-  const user = await db.prepare(`
-    SELECT * FROM users
-    WHERE LOWER(username) = ? OR LOWER(email) = ?
-  `).get(queryTerm, queryTerm);
+  const user = await db.prepare(`SELECT * FROM users WHERE LOWER(email) = ?`).get(email.trim().toLowerCase());
 
   if (!user) {
     // For security, show generic friendly response
     return res.render('auth/olvide_password', {
       user: null,
       error: null,
-      success: 'Si el usuario o correo existe en nuestro sistema, se ha generado el enlace de restablecimiento.',
-      resetLink: null
+      success: 'Si el email existe en nuestro sistema, te enviamos un código para restablecer tu contraseña.',
+      resetCode: null
     });
   }
 
   // Delete previous tokens for this user
   await db.prepare(`DELETE FROM password_resets WHERE user_id = ?`).run(user.id);
 
-  // Generate random token valid for 1 hour
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  // Generate 6-digit code valid for 30 minutes
+  const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
   await db.prepare(`
     INSERT INTO password_resets (user_id, token, expires_at)
     VALUES (?, ?, ?)
-  `).run(user.id, token, expiresAt);
+  `).run(user.id, code, expiresAt);
 
-  const resetPath = `/auth/restablecer-password?token=${token}`;
   const emailTarget = user.email || `${user.username}@stardance.com.ar`;
+  const sent = await sendResetCode(emailTarget, code, req);
 
-  const { sent, fullUrl } = await sendResetEmail(emailTarget, resetPath, req);
-
-  let successMsg = `Se ha generado el enlace de restablecimiento para el usuario ${user.username}.`;
+  let successMsg = `Se generó un código para ${user.email}.`;
   if (sent) {
-    successMsg += ` Se envió un correo a ${user.email}.`;
+    successMsg += ' Revisá tu correo e ingresalo en el siguiente paso.';
+  } else {
+    successMsg += ' Copialo a continuación e ingresalo en el siguiente paso:';
   }
 
   res.render('auth/olvide_password', {
     user: null,
     error: null,
     success: successMsg,
-    resetLink: fullUrl
+    resetCode: sent ? null : code
   });
 });
 
-// GET: Reset Password Form with Token
+// GET: Reset Password Form (con código; admite token legacy del admin)
 router.get('/restablecer-password', async (req, res) => {
   const { token } = req.query;
+  let email = '';
+  let code = '';
 
-  if (!token) {
-    return res.redirect('/auth/login?error=' + encodeURIComponent('Enlace de restablecimiento inválido.'));
-  }
-
-  const resetRecord = await db.prepare(`SELECT * FROM password_resets WHERE token = ?`).get(token);
-  if (!resetRecord) {
-    return res.redirect('/auth/login?error=' + encodeURIComponent('El enlace de restablecimiento es inválido o ya fue utilizado.'));
-  }
-
-  if (new Date(resetRecord.expires_at) < new Date()) {
-    await db.prepare(`DELETE FROM password_resets WHERE token = ?`).run(token);
-    return res.redirect('/auth/olvide-password?error=' + encodeURIComponent('El enlace ha expirado. Por favor solicite uno nuevo.'));
+  if (token) {
+    const resetRecord = await db.prepare(`SELECT * FROM password_resets WHERE token = ?`).get(token);
+    if (!resetRecord || new Date(resetRecord.expires_at) < new Date()) {
+      await db.prepare(`DELETE FROM password_resets WHERE token = ?`).run(token);
+      return res.redirect('/auth/olvide-password?error=' + encodeURIComponent('El código o enlace expiró o es inválido. Solicitalo de nuevo.'));
+    }
+    const u = await db.prepare(`SELECT email FROM users WHERE id = ?`).get(resetRecord.user_id);
+    email = (u && u.email) || '';
+    code = token;
   }
 
   res.render('auth/restablecer_password', {
     user: null,
-    token,
+    email,
+    code,
     error: null
   });
 });
 
-// POST: Save New Password
+// POST: Save New Password (valida email + código)
 router.post('/restablecer-password', async (req, res) => {
-  const { token, password, confirm_password } = req.body;
+  const { email, code, password, confirm_password } = req.body;
 
-  if (!token || !password || !confirm_password) {
+  if (!email || !code || !password || !confirm_password) {
     return res.render('auth/restablecer_password', {
       user: null,
-      token,
+      email: email || '',
+      code: code || '',
       error: 'Por favor complete todos los campos.'
     });
   }
@@ -488,27 +445,35 @@ router.post('/restablecer-password', async (req, res) => {
   if (password !== confirm_password) {
     return res.render('auth/restablecer_password', {
       user: null,
-      token,
+      email,
+      code,
       error: 'Las contraseñas no coinciden.'
     });
   }
 
-  if (password.length < 6) {
+  const user = await db.prepare(`SELECT * FROM users WHERE LOWER(email) = ?`).get(email.trim().toLowerCase());
+  if (!user) {
     return res.render('auth/restablecer_password', {
       user: null,
-      token,
-      error: 'La contraseña debe tener al menos 6 caracteres.'
+      email,
+      code,
+      error: 'No se encontró una cuenta con ese email.'
     });
   }
 
-  const resetRecord = await db.prepare(`SELECT * FROM password_resets WHERE token = ?`).get(token);
+  const resetRecord = await db.prepare(`SELECT * FROM password_resets WHERE user_id = ? AND token = ?`).get(user.id, code.trim());
   if (!resetRecord || new Date(resetRecord.expires_at) < new Date()) {
-    return res.redirect('/auth/login?error=' + encodeURIComponent('El enlace expiró o es inválido.'));
+    return res.render('auth/restablecer_password', {
+      user: null,
+      email,
+      code,
+      error: 'El código es inválido o expiró. Solicitalo de nuevo.'
+    });
   }
 
   const passwordHash = bcrypt.hashSync(password, 10);
-  await db.prepare(`UPDATE users SET password_hash = ? WHERE id = ?`).run(passwordHash, resetRecord.user_id);
-  await db.prepare(`DELETE FROM password_resets WHERE user_id = ?`).run(resetRecord.user_id);
+  await db.prepare(`UPDATE users SET password_hash = ? WHERE id = ?`).run(passwordHash, user.id);
+  await db.prepare(`DELETE FROM password_resets WHERE user_id = ?`).run(user.id);
 
   res.redirect('/auth/login?success=' + encodeURIComponent('✅ Contraseña restablecida con éxito. Ya podés ingresar con tu nueva clave.'));
 });
@@ -528,5 +493,5 @@ function redirectRole(role, res) {
 }
 
 module.exports = router;
-module.exports.sendResetEmail = sendResetEmail;
+module.exports.sendResetCode = sendResetCode;
 module.exports.sendVerificationEmail = sendVerificationEmail;
