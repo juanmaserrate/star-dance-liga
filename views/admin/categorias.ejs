@@ -1,14 +1,13 @@
 <%- include('../partials/header', { title: 'Categorías - ' + tournament.name }) %>
-<%- include('../partials/navbar') %>
+<%- include('admin_shell', { activeNav: 'torneos', topbarSection: 'Torneos' }) %>
 
-<div class="main-wrapper">
+
   <div style="margin-bottom: 1.5rem;">
     <span class="badge badge-violet">CONFIGURACIÓN DE CATEGORÍAS</span>
     <h1 style="color: var(--gold-light); font-size: 1.8rem;"><%= tournament.name %></h1>
     <p style="color: var(--text-muted);">Defina las categorías de edad, niveles, disciplinas, horarios y aranceles para este torneo.</p>
   </div>
 
-  <%- include('admin_nav') %>
 
   <% if (typeof success !== 'undefined' && success) { %>
     <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
@@ -129,6 +128,6 @@
       <% } %>
     </div>
   </div>
-</div>
+</main>
 
 <%- include('../partials/footer') %>

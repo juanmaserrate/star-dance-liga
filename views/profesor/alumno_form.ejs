@@ -1,13 +1,13 @@
 <%- include('../partials/header', { title: student && student.id ? 'Editar Patinadora' : 'Nueva Patinadora' }) %>
-<%- include('../partials/navbar') %>
+<%- include('profesor_shell', { activeNav: 'mis_alumnas', topbarSection: 'Mis Alumnas' }) %>
 
-<div class="main-wrapper">
+
   <div class="card" style="max-width: 800px; margin: 0 auto;">
     <div class="card-header">
       <h1 class="card-title">
         <%= student && student.id ? '✏️ Editar Ficha de Patinadora' : '👤 Alta de Patinadora' %>
       </h1>
-      <a href="/profesor/alumnos" class="btn btn-secondary btn-sm">&larr; Volver al Padrón</a>
+      <a href="/profesor/dashboard" class="btn btn-secondary btn-sm">&larr; Volver al Padrón</a>
     </div>
 
     <% if (typeof error !== 'undefined' && error) { %>
@@ -20,16 +20,9 @@
         1. Datos Personales (Almacenamiento en MAYÚSCULAS)
       </h3>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label" for="first_name">Nombre *</label>
-          <input type="text" id="first_name" name="first_name" class="form-control" value="<%= student ? student.first_name : '' %>" placeholder="EJ: SOFÍA" required style="text-transform: uppercase;">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="last_name">Apellido *</label>
-          <input type="text" id="last_name" name="last_name" class="form-control" value="<%= student ? student.last_name : '' %>" placeholder="EJ: MARTÍNEZ" required style="text-transform: uppercase;">
-        </div>
+      <div class="form-group">
+        <label class="form-label" for="full_name">Nombre y Apellido * <small style="color: var(--text-muted);">(ej: MARTINEZ SOFIA)</small></label>
+        <input type="text" id="full_name" name="full_name" class="form-control" value="<%= student ? ((student.last_name || '') + ' ' + (student.first_name || '')).trim() : '' %>" placeholder="EJ: MARTINEZ SOFIA" required style="text-transform: uppercase;">
       </div>
 
       <div class="form-row">
@@ -42,10 +35,17 @@
           <label class="form-label" for="cuil">CUIL</label>
           <input type="text" id="cuil" name="cuil" class="form-control" value="<%= student ? student.cuil : '' %>" placeholder="EJ: 27-48123456-4">
         </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="birth_date">Fecha de Nacimiento <small style="color: var(--text-muted);">(o cargá la Edad)</small></label>
+          <input type="date" id="birth_date" name="birth_date" class="form-control" value="<%= student ? student.birth_date : '' %>">
+        </div>
 
         <div class="form-group">
-          <label class="form-label" for="birth_date">Fecha de Nacimiento *</label>
-          <input type="date" id="birth_date" name="birth_date" class="form-control" value="<%= student ? student.birth_date : '' %>" required>
+          <label class="form-label" for="edad">Edad (en años)</label>
+          <input type="number" id="edad" name="edad" class="form-control" min="3" max="99" placeholder="EJ: 10">
         </div>
       </div>
 
@@ -74,7 +74,7 @@
                 prevDisc = c.discipline;
                 %><optgroup label="<%= c.discipline %>"><%
               }
-              %><option value="<%= c.name %>" <%= student && student.category_default === c.name ? 'selected' : '' %>><%= c.name %></option><%
+              %><option value="<%= c.name %>" <%= student && student.category_default === c.name ? 'selected' : '' %>><%= c.label || c.name %></option><%
             });
             if (prevDisc !== null) { %></optgroup><% }
           %>
@@ -148,11 +148,31 @@
         <button type="submit" class="btn btn-gold" style="flex: 1;">
           💾 <%= student && student.id ? 'Guardar Cambios' : 'Registrar Patinadora' %>
         </button>
-        <a href="/profesor/alumnos" class="btn btn-secondary">Cancelar</a>
+        <a href="/profesor/dashboard" class="btn btn-secondary">Cancelar</a>
       </div>
 
     </form>
   </div>
-</div>
+</main>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const birthInput = document.getElementById('birth_date');
+    const edadInput = document.getElementById('edad');
+    if (!birthInput || !edadInput) return;
+
+    const calcAge = () => {
+      if (!birthInput.value) { edadInput.value = ''; return; }
+      const b = new Date(birthInput.value);
+      const now = new Date();
+      let age = now.getFullYear() - b.getFullYear();
+      if (now.getMonth() < b.getMonth() || (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())) age--;
+      edadInput.value = age >= 0 ? age : '';
+    };
+
+    calcAge();
+    birthInput.addEventListener('change', calcAge);
+  });
+</script>
 
 <%- include('../partials/footer') %>

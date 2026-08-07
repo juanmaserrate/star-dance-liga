@@ -1,4 +1,12 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Las columnas DATE/TIMESTAMP llegan de Postgres como objetos Date y, al
+// imprimirlas en las vistas EJS con <%= %> salen en formato
+// "Mon Feb 02 2009 00:00:00 GMT+0000 (Coordinated Universal Time)".
+// Devolvemos el texto crudo (YYYY-MM-DD) para que se rendericen correctamente.
+types.setTypeParser(1082, (val) => val); // DATE
+types.setTypeParser(1114, (val) => val); // TIMESTAMP
+types.setTypeParser(1184, (val) => val); // TIMESTAMPTZ
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -106,6 +114,11 @@ async function initDb() {
       status TEXT NOT NULL DEFAULT 'upcoming' CHECK(status IN ('upcoming', 'active', 'finished')),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS date_from DATE;
+    ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS date_to DATE;
+    UPDATE tournaments SET date_from = COALESCE(date_from, event_date) WHERE date_from IS NULL;
+    UPDATE tournaments SET date_to = COALESCE(date_to, event_date) WHERE date_to IS NULL;
 
     CREATE TABLE IF NOT EXISTS categories (
       id SERIAL PRIMARY KEY,
@@ -235,6 +248,15 @@ async function initDb() {
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       token TEXT UNIQUE NOT NULL,
       expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      message TEXT NOT NULL,
+      link TEXT,
+      is_read BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);

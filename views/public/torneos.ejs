@@ -5,7 +5,7 @@
 
   <!-- Hero Section -->
   <section style="text-align: center; padding: 2rem 1.5rem 3rem;">
-    <img src="/img/logo.svg" alt="Star Dance Logo" class="hero-logo" style="width: 130px; height: 130px;">
+    <img src="/img/logo-emblem.png" alt="Star Dance Logo" class="hero-logo" style="height: 130px; width: auto;">
     <h1 class="hero-title">Torneos de la Liga Star Dance</h1>
     <p class="hero-subtitle">Calendario oficial de competencias, torneos provinciales e interclubes de patinaje artístico.</p>
   </section>
@@ -26,10 +26,10 @@
               <span style="color: var(--gold-primary);">📍</span><span><strong style="color: var(--text-main);">Lugar:</strong> <span style="color: var(--text-muted);"><%= t.venue %></span></span>
             </div>
             <div style="display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.5rem;">
-              <span style="color: var(--gold-primary);">📅</span><span><strong style="color: var(--text-main);">Fecha:</strong> <span style="color: var(--text-muted);"><%= t.event_date %></span></span>
+              <span style="color: var(--gold-primary);">📅</span><span><strong style="color: var(--text-main);">Fecha:</strong> <span style="color: var(--text-muted);"><%= t.datesLabel %></span></span>
             </div>
             <div style="display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.5rem;">
-              <span style="color: var(--gold-primary);">⏳</span><span><strong style="color: var(--text-main);">Cierre:</strong> <span style="color: var(--text-muted);"><%= t.registration_deadline %></span></span>
+              <span style="color: var(--gold-primary);">⏳</span><span><strong style="color: var(--text-main);">Cierre:</strong> <span style="color: var(--text-muted);"><%= t.deadlineLabel || t.registration_deadline %></span></span>
             </div>
             <div style="display: flex; align-items: flex-start; gap: 0.6rem;">
               <span style="color: var(--gold-primary);">📊</span><span><strong style="color: var(--text-main);">Categorías:</strong> <span style="color: var(--text-muted);"><%= t.total_categories %> niveles</span></span>

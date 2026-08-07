@@ -1,16 +1,20 @@
 <%- include('../partials/header', { title: 'Mis Alumnas' }) %>
-<%- include('../partials/navbar') %>
+<%- include('profesor_shell', { activeNav: 'mis_alumnas', topbarSection: 'Mis Alumnas', selectedClubId }) %>
 
-<div class="main-wrapper">
-  <!-- Header Title -->
-  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
-    <div>
-      <h1 style="color: var(--gold-light); font-size: 1.8rem;">👩‍🎓 Mis Alumnas</h1>
-      <p style="color: var(--text-muted);">Padrón de patinadoras, altas e inscripciones a torneos en un solo lugar.</p>
+
+  <div class="page-head-row">
+    <div class="page-head">
+      <h1 class="page-title">Mis Alumnas</h1>
+      <% if (selectedClubId && myClubs && myClubs.length > 0) { %>
+        <% const clubFiltro = myClubs.find(c => c.id == selectedClubId); %>
+        <% if (clubFiltro) { %>
+          <p class="page-sub">Mostrando el padrón del club <strong style="color: var(--gold-light);"><%= clubFiltro.name %></strong>. Elegí otro club en el desplegable de arriba.</p>
+        <% } %>
+      <% } %>
     </div>
-    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-      <button type="button" class="btn btn-gold" data-open-wizard="wizardNuevaAlumna">+ Cargar Alumna</button>
-      <button type="button" class="btn btn-outline-gold" data-open-wizard="wizardInscribir">✍️ Inscribir a Torneo</button>
+    <div class="page-head-actions">
+      <a href="/profesor/alumnos/nuevo" class="btn btn-gold">+ Cargar Alumna</a>
+      <a href="/profesor/inscribir" class="btn btn-outline-gold">✍️ Inscribir a Torneo</a>
     </div>
   </div>
 
@@ -22,123 +26,75 @@
     <div class="alert alert-danger alert-auto-dismiss">⚠️ <%= error %></div>
   <% } %>
 
-  <!-- Stats Grid -->
-  <div class="stat-grid">
-    <div class="stat-tile">
-      <div class="stat-icon">👥</div>
-      <div>
-        <div class="stat-val"><%= stats.totalStudents %></div>
-        <div class="stat-label">Patinadoras Registradas</div>
-      </div>
-    </div>
-
-    <div class="stat-tile">
-      <div class="stat-icon">📝</div>
-      <div>
-        <div class="stat-val"><%= stats.activeRegistrations %></div>
-        <div class="stat-label">Inscripciones Realizadas</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Mis Clubes -->
-  <div class="card" style="margin-bottom: 2rem;">
-    <div class="card-header">
-      <h2 class="card-title">🏛️ Mis Clubes (<%= (myClubs || []).length %>)</h2>
-    </div>
-    <div style="display: flex; flex-wrap: wrap; gap: 1.5rem;">
-      <div style="flex: 1; min-width: 260px;">
-        <h3 style="color: var(--gold-light); font-size: 0.95rem; margin-bottom: 0.75rem;">Clubes a los que pertenezco</h3>
-        <% if (myClubs && myClubs.length > 0) { %>
-          <% myClubs.forEach(c => { %>
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.55rem 0.75rem; margin-bottom: 0.5rem; background: rgba(18,6,28,0.6); border: 1px solid rgba(212,175,55,0.2); border-radius: var(--radius-sm);">
-              <div>
-                <strong style="color: #eeeeee;"><%= c.name %></strong><br>
-                <small style="color: var(--text-muted);"><%= c.city || 'Ciudad no especificada' %><%= c.contact_phone ? ' · ' + c.contact_phone : '' %></small>
-              </div>
-              <form action="/profesor/clubes/quitar" method="POST" onsubmit="return confirm('¿Quitar este club de tu lista? Las alumnas ya cargadas conservan su club.');">
-                <input type="hidden" name="club_id" value="<%= c.id %>">
-                <button type="submit" class="btn btn-secondary btn-sm" title="Quitar de mi lista">✕ Quitar</button>
-              </form>
-            </div>
-          <% }) %>
-        <% } else { %>
-          <p style="color: var(--text-muted); font-size: 0.9rem;">Aún no tenés clubes. Creá tu primer club abajo.</p>
-        <% } %>
-      </div>
-
-      <div style="flex: 1; min-width: 260px;">
-        <h3 style="color: var(--gold-light); font-size: 0.95rem; margin-bottom: 0.75rem;">+ Crear nuevo club / escuela</h3>
-        <form action="/profesor/clubes/nuevo" method="POST">
-          <div class="form-group">
-            <input type="text" name="name" class="form-control" placeholder="Nombre del Club / Escuela *" style="text-transform: uppercase;" required>
-          </div>
-          <div class="form-group">
-            <input type="text" name="city" class="form-control" placeholder="Ciudad / Provincia" style="text-transform: uppercase;">
-          </div>
-          <div class="form-group">
-            <input type="text" name="contact_phone" class="form-control" placeholder="Teléfono de Contacto">
-          </div>
-          <button type="submit" class="btn btn-gold" style="width: 100%;">🏛️ Crear Club</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Padrón -->
+  <!-- Padrón con edición masiva -->
   <div class="card" style="margin-bottom: 2rem;">
     <div class="card-header">
       <h2 class="card-title">👥 Padrón de Alumnas (<%= students.length %>)</h2>
-      <button type="button" class="btn btn-gold btn-sm" data-open-wizard="wizardNuevaAlumna">+ Cargar Alumna</button>
+      <div style="display: flex; gap: 0.5rem;">
+        <a href="/profesor/alumnos/nuevo" class="btn btn-gold btn-sm">+ Cargar Alumna</a>
+      </div>
     </div>
 
     <% if (students && students.length > 0) { %>
-      <div class="table-responsive">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Apellido</th>
-              <th>DNI</th>
-              <th>Fecha Nacimiento</th>
-              <th>Edad</th>
-              <th>Club</th>
-              <th>Seguro</th>
-              <th>N° Póliza</th>
-              <th>Contacto Emergencia</th>
-              <th>Inscripciones</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% students.forEach(s => { %>
+      <form action="/profesor/alumnos/masiva" method="POST" id="bulkEditForm" style="margin-bottom: 1rem;">
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; background: rgba(18,6,28,0.6); border: 1px solid rgba(212,175,55,0.2); border-radius: var(--radius-sm); padding: 0.85rem;">
+          <div class="form-group" style="margin-bottom: 0; min-width: 200px;">
+            <label class="form-label" for="bulk_field">Edición masiva: campo a modificar</label>
+            <select id="bulk_field" name="field" class="form-select">
+              <option value="category_default">Categoría</option>
+              <option value="club_id">Club</option>
+              <option value="health_insurance">Obra Social / Seguro</option>
+              <option value="policy_number">N° Póliza</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0; min-width: 200px; flex: 1;">
+            <label class="form-label" for="bulk_value">Nuevo valor (en MAYÚSCULAS)</label>
+            <input type="text" id="bulk_value" name="value" class="form-control" style="text-transform: uppercase;" placeholder="EJ: OSDE 310">
+          </div>
+          <button type="submit" class="btn btn-gold" onclick="return confirm('¿Aplicar este cambio a las patinadoras seleccionadas?');">Aplicar a seleccionadas</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
               <tr>
-                <td><strong><%= s.first_name %></strong></td>
-                <td><strong><%= s.last_name %></strong></td>
-                <td><strong style="color: var(--gold-light);"><%= s.dni %></strong></td>
-                <td><%= s.birth_date %></td>
-                <td><span class="badge badge-violet"><%= s.age %> AÑOS</span></td>
-                <td><strong><%= s.club_name %></strong></td>
-                <td><%= s.health_insurance || '-' %></td>
-                <td><%= s.policy_number || '-' %></td>
-                <td><%= s.emergency_contact || '-' %></td>
-                <td><span class="badge badge-violet">📄 <%= s.reg_count %></span></td>
-                <td>
-                  <div style="display: flex; gap: 0.4rem;">
-                    <a href="/profesor/alumnos/<%= s.id %>/ver" class="btn btn-outline-gold btn-sm" title="Ver ficha técnica completa">🔍 Ver</a>
-                    <a href="/profesor/alumnos/<%= s.id %>/editar" class="btn btn-secondary btn-sm" title="Editar datos">✏️ Editar</a>
-                    <button type="button" class="btn btn-gold btn-sm" data-open-wizard="wizardInscribir" data-student-id="<%= s.id %>" title="Inscribir a torneo">✍️ Inscribir</button>
-                  </div>
-                </td>
+                <th style="width: 36px;"><input type="checkbox" id="selectAll" title="Seleccionar todas"></th>
+                <th>Nombre y Apellido</th>
+                <th>DNI</th>
+                <th>Categoría</th>
+                <th>Edad</th>
+                <th>Fecha Nacimiento</th>
+                <th>Club</th>
+                <th>Acciones</th>
               </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              <% students.forEach(s => { %>
+                <tr>
+                  <td><input type="checkbox" name="student_ids" value="<%= s.id %>" class="row-check"></td>
+                  <td><strong><%= s.last_name %>, <%= s.first_name %></strong></td>
+                  <td><strong style="color: var(--gold-light);"><%= s.dni %></strong></td>
+                  <td><%= s.category_default ? formatCategoryName(s.category_default) : '-' %></td>
+                  <td><span class="badge badge-violet"><%= s.age %> AÑOS</span></td>
+                  <td><%= s.birth_date %></td>
+                  <td><strong><%= s.club_name %></strong></td>
+                  <td>
+                    <div style="display: flex; gap: 0.4rem;">
+                      <a href="/profesor/alumnos/<%= s.id %>/ver" class="btn btn-outline-gold btn-sm" title="Ver ficha técnica completa">🔍 Ver</a>
+                      <a href="/profesor/alumnos/<%= s.id %>/editar" class="btn btn-secondary btn-sm" title="Editar datos">✏️ Editar</a>
+                      <a href="/profesor/inscribir?student_id=<%= s.id %>" class="btn btn-gold btn-sm" title="Inscribir a torneo">✍️ Inscribir</a>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </form>
     <% } else { %>
       <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">
         Aún no has registrado patinadoras en tu padrón.<br>
-        <button type="button" class="btn btn-gold" style="margin-top: 1rem;" data-open-wizard="wizardNuevaAlumna">+ Cargar Primera Alumna</button>
+        <a href="/profesor/alumnos/nuevo" class="btn btn-gold" style="margin-top: 1rem;">+ Cargar Primera Alumna</a>
       </p>
     <% } %>
   </div>
@@ -147,7 +103,7 @@
   <div class="card">
     <div class="card-header">
       <h2 class="card-title">📜 Mis Inscripciones en Torneos</h2>
-      <button type="button" class="btn btn-gold btn-sm" data-open-wizard="wizardInscribir">+ Nueva Inscripción</button>
+      <a href="/profesor/inscribir" class="btn btn-gold btn-sm">+ Nueva Inscripción</a>
     </div>
 
     <% if (myRegistrations && myRegistrations.length > 0) { %>
@@ -171,10 +127,10 @@
                 <td><strong><%= r.last_name %></strong></td>
                 <td><%= r.tournament_name %></td>
                 <td>
-                  <span class="badge badge-violet"><%= r.category_name %></span>
+                  <span class="badge badge-violet"><%= formatCategoryName(r.category_name, r.discipline) %></span>
                   <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.discipline %> - <%= r.level %></div>
                 </td>
-                <td><%= r.event_date %></td>
+                <td><%= r.datesLabel %></td>
                 <td>
                   <% if (r.payment_status === 'paid') { %>
                     <span class="badge badge-paid">✅ PAGADO</span>
@@ -193,237 +149,21 @@
     <% } else { %>
       <p style="color: var(--text-muted); text-align: center; padding: 2rem;">
         No has inscripto alumnas en torneos aún.<br>
-        <button type="button" class="btn btn-gold btn-sm" style="margin-top: 0.75rem;" data-open-wizard="wizardInscribir">Ir al Wizard de Inscripción</button>
+        <a href="/profesor/inscribir" class="btn btn-gold btn-sm" style="margin-top: 0.75rem;">Ir a Inscripción</a>
       </p>
     <% } %>
   </div>
 </div>
 
-<!-- WIZARD: Cargar Nueva Alumna -->
-<div class="wizard-overlay" id="wizardNuevaAlumna">
-  <div class="wizard-panel">
-    <div class="wizard-head">
-      <span class="wizard-title">👤 Cargar Nueva Alumna</span>
-      <div class="wizard-controls">
-        <button type="button" class="wizard-min" data-wizard="wizardNuevaAlumna" title="Minimizar">—</button>
-        <button type="button" class="wizard-close" data-wizard="wizardNuevaAlumna" title="Cerrar">✕</button>
-      </div>
-    </div>
-    <div class="wizard-body">
-      <div class="wizard-result" id="resultNuevaAlumna" style="display:none;"></div>
-      <form id="formNuevaAlumna" enctype="multipart/form-data">
-        <h3 class="wizard-section">1. Datos Personales (en MAYÚSCULAS)</h3>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="al_first_name">Nombre *</label>
-            <input type="text" id="al_first_name" name="first_name" class="form-control" placeholder="EJ: SOFÍA" required style="text-transform: uppercase;">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="al_last_name">Apellido *</label>
-            <input type="text" id="al_last_name" name="last_name" class="form-control" placeholder="EJ: MARTÍNEZ" required style="text-transform: uppercase;">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="al_dni">DNI / Documento *</label>
-            <input type="text" id="al_dni" name="dni" class="form-control" placeholder="Sin puntos" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="al_cuil">CUIL</label>
-            <input type="text" id="al_cuil" name="cuil" class="form-control" placeholder="EJ: 27-48123456-4">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="al_birth_date">Fecha de Nacimiento *</label>
-            <input type="date" id="al_birth_date" name="birth_date" class="form-control" required>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="al_club_id">Club *</label>
-          <select id="al_club_id" name="club_id" class="form-select" required>
-            <% if (typeof myClubs !== 'undefined' && myClubs && myClubs.length > 0) { %>
-              <% myClubs.forEach(c => { %>
-                <option value="<%= c.id %>"><%= c.name %></option>
-              <% }) %>
-            <% } else { %>
-              <option value="1">CLUB DEPORTIVO ESTRELLA</option>
-            <% } %>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="al_category">Categoría de la Alumna</label>
-          <select id="al_category" name="category_default" class="form-select">
-            <option value="">-- Seleccionar categoría --</option>
-            <%
-              let prevDisc = null;
-              (categoryOptions || []).forEach(c => {
-                if (c.discipline !== prevDisc) {
-                  if (prevDisc !== null) { %></optgroup><% }
-                  prevDisc = c.discipline;
-                  %><optgroup label="<%= c.discipline %>"><%
-                }
-                %><option value="<%= c.name %>"><%= c.name %></option><%
-              });
-              if (prevDisc !== null) { %></optgroup><% }
-            %>
-          </select>
-        </div>
-
-        <h3 class="wizard-section">2. Cobertura Médica y Emergencia</h3>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="al_health_insurance">Obra Social / Seguro *</label>
-            <input type="text" id="al_health_insurance" name="health_insurance" class="form-control" placeholder="EJ: OSDE / SWISS MEDICAL" required style="text-transform: uppercase;">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="al_policy_number">N° de Afiliado / Póliza *</label>
-            <input type="text" id="al_policy_number" name="policy_number" class="form-control" placeholder="EJ: 987654321" required style="text-transform: uppercase;">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="al_emergency_contact">Contacto de Emergencia</label>
-            <input type="text" id="al_emergency_contact" name="emergency_contact" class="form-control" placeholder="NOMBRE COMPLETO" style="text-transform: uppercase;">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="al_emergency_phone">Teléfono de Emergencia</label>
-            <input type="text" id="al_emergency_phone" name="emergency_phone" class="form-control" placeholder="EJ: +54 9 264 ...">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="al_medical_notes">Observaciones Médicas / Ficha Técnica</label>
-          <textarea id="al_medical_notes" name="medical_notes" class="form-control" rows="2" placeholder="ALERGIAS, MEDICAMENTOS, APTO MÉDICO..." style="text-transform: uppercase;"></textarea>
-        </div>
-
-        <h3 class="wizard-section">3. Apto Médico / Documentación (Opcional)</h3>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="al_doc_title">Título del Archivo</label>
-            <input type="text" id="al_doc_title" name="doc_title" class="form-control" placeholder="EJ: APTO MÉDICO 2026" style="text-transform: uppercase;">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="al_documento">Seleccionar Archivo (PDF / Imagen)</label>
-            <input type="file" id="al_documento" name="documento" class="form-control" accept=".pdf,.png,.jpg,.jpeg">
-          </div>
-        </div>
-
-        <div class="wizard-actions">
-          <button type="submit" class="btn btn-gold" style="flex: 1;">💾 Registrar Patinadora</button>
-          <button type="button" class="btn btn-secondary" data-close-wizard="wizardNuevaAlumna">Cancelar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- WIZARD: Inscribir a Torneo -->
-<div class="wizard-overlay" id="wizardInscribir">
-  <div class="wizard-panel">
-    <div class="wizard-head">
-      <span class="wizard-title">✍️ Inscribir Alumna / Grupo a Torneo</span>
-      <div class="wizard-controls">
-        <button type="button" class="wizard-min" data-wizard="wizardInscribir" title="Minimizar">—</button>
-        <button type="button" class="wizard-close" data-wizard="wizardInscribir" title="Cerrar">✕</button>
-      </div>
-    </div>
-    <div class="wizard-body">
-      <div class="wizard-result" id="resultInscribir" style="display:none;"></div>
-      <form id="formInscribir">
-        <div class="form-group">
-          <label class="form-label" for="in_tournament">1. Seleccionar Torneo *</label>
-          <select id="in_tournament" name="tournament_id" class="form-select" required>
-            <option value="">-- Seleccionar Torneo --</option>
-            <% (activeTournaments || []).forEach(t => { %>
-              <option value="<%= t.id %>"><%= t.name %> (📅 <%= t.event_date %>)</option>
-            <% }) %>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="in_discipline">2. Seleccionar Disciplina *</label>
-          <select id="in_discipline" name="discipline" class="form-select" required>
-            <option value="">-- Primero elegí un torneo --</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="in_category">3. Seleccionar Categoría *</label>
-          <select id="in_category" name="category_id" class="form-select" required disabled>
-            <option value="">-- Primero elegí una disciplina --</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="in_group_type">4. Tipo de Inscripción</label>
-          <select id="in_group_type" name="group_type" class="form-select">
-            <option value="Individual">Individual (1 Patinadora)</option>
-            <option value="Dúo">Dúo (2 Patinadoras)</option>
-            <option value="Trío">Trío (3 Patinadoras)</option>
-            <option value="Cuarteto">Cuarteto (4 Patinadoras)</option>
-            <option value="Small">Small Group (Hasta 6)</option>
-            <option value="Show">Show (Hasta 30)</option>
-            <option value="Precisión">Precisión (Hasta 30)</option>
-            <option value="Parejas Mixtas">Parejas Mixtas (2)</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">5. Seleccionar Patinadoras *</label>
-          <small style="color: var(--gold-light); display: block; margin-bottom: 0.5rem;">
-            ℹ️ En disciplinas grupales, la categoría se evalúa según la participante de mayor categoría o edad.
-          </small>
-          <div class="wizard-student-list" id="in_students">
-            <% (students || []).forEach(s => { %>
-              <label class="wizard-student-item">
-                <input type="checkbox" name="student_ids" value="<%= s.id %>" data-club-id="<%= s.club_id %>">
-                <span>
-                  <strong><%= s.last_name %>, <%= s.first_name %></strong>
-                  <small style="color: var(--text-muted);">DNI: <%= s.dni %> | <%= s.age %> AÑOS | <%= s.club_name %></small>
-                </span>
-              </label>
-            <% }) %>
-            <% if (!students || students.length === 0) { %>
-              <p style="color: var(--text-muted);">No tienes patinadoras en tu padrón. Carga una primero.</p>
-            <% } %>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="in_club">6. Club de la Inscripción *</label>
-          <select id="in_club" name="club_id" class="form-select">
-            <% (myClubs || []).forEach(c => { %>
-              <option value="<%= c.id %>"><%= c.name %></option>
-            <% }) %>
-          </select>
-          <small style="color: var(--text-muted);">
-            Se autoselecciona el club de la primera patinadora elegida. Podés cambiarlo manualmente.
-          </small>
-        </div>
-
-        <div class="form-group" id="in_group_name_box" style="display:none;">
-          <label class="form-label" for="in_group_name">Nombre de Fantasía del Grupo / Pareja *</label>
-          <input type="text" id="in_group_name" name="group_name" class="form-control" placeholder="EJ: LAS ESTRELLAS DEL SUR" style="text-transform: uppercase;">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="in_notes">Notas o Comentarios</label>
-          <input type="text" id="in_notes" name="notes" class="form-control" placeholder="EJ: MÚSICA ENVIADA / PISTAS">
-        </div>
-
-        <div class="wizard-actions">
-          <button type="submit" class="btn btn-gold" style="flex: 1;" <%= (!students || students.length === 0) ? 'disabled' : '' %>>✨ Confirmar Inscripción</button>
-          <button type="button" class="btn btn-secondary" data-close-wizard="wizardInscribir">Cancelar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
 <script>
-  window.WIZARDS_DATA = {
-    tournaments: <%- JSON.stringify(activeTournaments || []) %>,
-    categories: <%- JSON.stringify(allCategories || []) %>
-  };
+  document.addEventListener('DOMContentLoaded', () => {
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) {
+      selectAll.addEventListener('change', () => {
+        document.querySelectorAll('.row-check').forEach(cb => { cb.checked = selectAll.checked; });
+      });
+    }
+  });
 </script>
 
 <%- include('../partials/footer') %>
-<script src="/js/wizards.js"></script>

@@ -7,12 +7,24 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'star-dance-secret-key-2026-liga-patin';
 
+// Red de seguridad: un error no capturado (p. ej. un handler async que rechaza)
+// no debe tumbar el proceso entero; eso causaba 502 y pérdida de todas las sesiones.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
 // Trust Railway/Heroku-style proxy headers so req.protocol is https behind TLS
 app.set('trust proxy', 1);
 
 // View engine setup
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// Helpers disponibles en todas las vistas EJS
+app.locals.formatCategoryName = require('./lib/categories').formatCategoryName;
 
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
@@ -70,11 +82,20 @@ app.use((err, req, res, next) => {
 });
 
 db.initPromise.then(async () => {
-  const row = await db.prepare('SELECT COUNT(*) as count FROM registrations').get();
-  if (!row || Number(row.count) === 0) {
+  // Seed automático SOLO en base realmente vacía (sin usuarios), para que no
+  // vuelva a crear torneos demo cuando una limpieza borra registraciones.
+  const usersCount = await db.prepare('SELECT COUNT(*) as count FROM users').get();
+  if (!usersCount || Number(usersCount.count) === 0) {
     console.log('🌱 Base de datos vacía, ejecutando seed automático...');
     const seed = require('./seed');
     await seed();
+  }
+
+  // Elimina torneos demo y garantiza los torneos oficiales multifecha (idempotente)
+  const { ensureOfficialTournaments } = require('./lib/ensure_official_tournaments');
+  const torneosReport = await ensureOfficialTournaments();
+  if (torneosReport.deleted > 0 || torneosReport.created > 0) {
+    console.log(`🏆 Torneos oficiales asegurados: ${torneosReport.created} creado(s), ${torneosReport.deleted} demo eliminado(s).`);
   }
 
   // Habilitar categorías/disciplinas en todos los torneos (idempotente)

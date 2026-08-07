@@ -1,0 +1,66 @@
+<%- include('../partials/header', { title: 'Mis Clubes' }) %>
+<%- include('profesor_shell', { activeNav: 'clubes', topbarSection: 'Mis Clubes' }) %>
+
+
+  <div class="page-head-row">
+    <div class="page-head">
+      <h1 class="page-title">Mis Clubes</h1>
+      <p class="page-sub">Gestioná los clubes o escuelas para los que cargás patinadoras e inscripciones.</p>
+    </div>
+    <div class="page-head-actions">
+      <a href="/profesor/dashboard" class="btn btn-secondary">&larr; Volver al Padrón</a>
+    </div>
+  </div>
+
+  <% if (typeof success !== 'undefined' && success) { %>
+    <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
+  <% } %>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger alert-auto-dismiss">⚠️ <%= error %></div>
+  <% } %>
+
+  <div class="card" style="margin-bottom: 2rem;">
+    <div class="card-header">
+      <h2 class="card-title">🏛️ Mis Clubes (<%= (myClubs || []).length %>)</h2>
+    </div>
+    <div style="padding: 1.25rem; display: flex; flex-wrap: wrap; gap: 1.5rem;">
+      <div style="flex: 1; min-width: 260px;">
+        <% if (myClubs && myClubs.length > 0) { %>
+          <% myClubs.forEach(c => { %>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.55rem 0.75rem; margin-bottom: 0.5rem; background: rgba(18,6,28,0.6); border: 1px solid rgba(212,175,55,0.2); border-radius: var(--radius-sm);">
+              <div>
+                <strong style="color: #eeeeee;"><%= c.name %></strong><br>
+                <small style="color: var(--text-muted);"><%= c.city || 'Ciudad no especificada' %></small>
+              </div>
+              <div style="display: flex; gap: 0.4rem;">
+                <a href="/profesor/dashboard?club_id=<%= c.id %>" class="btn btn-outline-gold btn-sm" title="Ver padrón de este club">👥 Ver Alumnas</a>
+                <form action="/profesor/clubes/quitar" method="POST" onsubmit="return confirm('¿Quitar este club de tu lista? Las alumnas ya cargadas conservan su club.');">
+                  <input type="hidden" name="club_id" value="<%= c.id %>">
+                  <button type="submit" class="btn btn-secondary btn-sm" title="Quitar de mi lista">✕ Quitar</button>
+                </form>
+              </div>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Aún no tenés clubes. Creá tu primer club abajo.</p>
+        <% } %>
+      </div>
+
+      <div style="flex: 1; min-width: 260px;">
+        <h3 style="color: var(--gold-light); font-size: 0.95rem; margin-bottom: 0.75rem;">+ Crear nuevo club / escuela</h3>
+        <form action="/profesor/clubes/nuevo" method="POST">
+          <div class="form-group">
+            <input type="text" name="name" class="form-control" placeholder="Nombre del Club / Escuela *" style="text-transform: uppercase;" required>
+          </div>
+          <div class="form-group">
+            <input type="text" name="city" class="form-control" placeholder="Barrio / Localidad" style="text-transform: uppercase;">
+          </div>
+          <button type="submit" class="btn btn-gold" style="width: 100%;">🏛️ Crear Club</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>

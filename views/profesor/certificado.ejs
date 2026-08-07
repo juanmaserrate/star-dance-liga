@@ -27,10 +27,10 @@
   <div class="cert-body" style="background: #fdfaf0; padding: 1.25rem; border-radius: 8px; border: 1px dashed #d4af37;">
     ha quedado formalmente inscripta/o en el evento:<br>
     <strong style="font-size: 1.25rem; color: #3b1959;"><%= reg.tournament_name %></strong><br>
-    <span style="font-size: 0.95rem;">📅 Fecha del Evento: <strong><%= reg.event_date %></strong> &bull; 📍 Sede: <strong><%= reg.venue %></strong></span>
+    <span style="font-size: 0.95rem;">📅 Fecha del Evento: <strong><%= reg.datesLabel %></strong> &bull; 📍 Sede: <strong><%= reg.venue %></strong></span>
     
     <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid #e2d196;">
-      Categoría: <span class="cert-highlight"><%= reg.category_name %></span><br>
+      Categoría: <span class="cert-highlight"><%= formatCategoryName(reg.category_name, reg.discipline) %></span><br>
       Disciplina: <strong><%= reg.discipline %></strong> &bull; Nivel: <strong><%= reg.level %></strong>
     </div>
   </div>

@@ -1,13 +1,12 @@
 <%- include('../partials/header', { title: 'Puntajes de Clubes' }) %>
-<%- include('../partials/navbar') %>
+<%- include('admin_shell', { activeNav: 'posiciones', topbarSection: 'Posiciones' }) %>
 
-<div class="main-wrapper">
+
   <div style="margin-bottom: 1.5rem;">
     <h1 style="color: var(--gold-light); font-size: 1.8rem;">🥇 Ranking Anual y Puntajes de Clubes</h1>
     <p style="color: var(--text-muted);">Tabla acumulativa de calificaciones por institución en la Liga Star Dance.</p>
   </div>
 
-  <%- include('admin_nav') %>
 
   <div class="card">
     <div class="card-header">
@@ -47,6 +46,6 @@
       </p>
     <% } %>
   </div>
-</div>
+</main>
 
 <%- include('../partials/footer') %>

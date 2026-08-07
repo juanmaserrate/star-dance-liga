@@ -1,7 +1,7 @@
 <%- include('../partials/header', { title: 'Padrón Único de Patinadoras' }) %>
-<%- include('../partials/navbar') %>
+<%- include('admin_shell', { activeNav: 'alumnos', topbarSection: 'Patinadoras' }) %>
 
-<div class="main-wrapper">
+
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
     <div>
       <h1 style="color: var(--gold-light); font-size: 1.8rem;">👥 Padrón Único de Patinadoras (<%= students.length %>)</h1>
@@ -96,6 +96,6 @@
       <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">No se encontraron patinadoras en el padrón con los filtros seleccionados.</p>
     <% } %>
   </div>
-</div>
+</main>
 
 <%- include('../partials/footer') %>

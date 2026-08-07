@@ -1,142 +1,139 @@
 <%- include('../partials/header', { title: 'Inicio' }) %>
 <%- include('../partials/navbar') %>
 
-<div class="main-wrapper" style="max-width: 1280px; margin: 0 auto; padding: 3rem 2rem;">
+<div class="main-wrapper">
+  <div class="home-container">
 
-  <!-- Hero Section -->
-  <section style="text-align: center; padding: 4rem 1.5rem 2rem;">
-    <img src="/img/logo.svg" alt="Liga Star Dance" class="hero-logo" style="width: 150px; height: 150px;">
-    <h1 class="hero-title"><%= cms.hero_title %></h1>
-    <p class="hero-subtitle"><%= cms.hero_subtitle %></p>
+    <!-- Hero Section -->
+    <section class="home-hero">
+      <img src="/img/logo-emblem.png" alt="Liga Star Dance" class="hero-logo" style="height: 150px; width: auto;">
+      <h1 class="hero-title"><%= cms.hero_title === 'LIGA DE PATINAJE ARTÍSTICO STAR DANCE' ? 'Liga Star Dance · Patín Artístico' : cms.hero_title %></h1>
+      <p class="hero-subtitle"><%= cms.hero_subtitle %></p>
 
-    <% if (user && user.role === 'admin') { %>
-      <div style="margin-bottom: 1rem;">
-        <a href="/admin/cms" class="btn btn-outline-gold btn-sm">⚙️ Editar esta portada en el CMS</a>
-      </div>
-    <% } %>
-
-    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-      <a href="/torneos" class="btn btn-gold gold-glow" style="padding: 0.85rem 2rem;">Ver Próximos Torneos</a>
-      <% if (!user) { %>
-        <a href="/auth/login" class="btn btn-secondary" style="padding: 0.85rem 2rem;">Ingreso Profesores / Jueces</a>
-      <% } else if (user.role === 'profesor') { %>
-        <a href="/profesor/alumnos/nuevo" class="btn btn-gold">+ Cargar Alumna</a>
-      <% } else if (user.role === 'admin') { %>
-        <a href="/admin/torneos/nuevo" class="btn btn-gold">+ Crear Torneo</a>
+      <% if (user && user.role === 'admin') { %>
+        <div style="margin-bottom: 1rem;">
+          <a href="/admin/cms" class="btn btn-outline-gold btn-sm">⚙️ Editar esta portada en el CMS</a>
+        </div>
       <% } %>
-    </div>
-  </section>
 
-  <!-- Featured Actions Bento -->
-  <% if (cms.slides && cms.slides.length > 0) { %>
-    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
-      <% cms.slides.forEach(s => { %>
-        <div class="card glass-panel gold-glow" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <h3 style="color: var(--gold-light); font-size: 1.25rem; margin-bottom: 0.6rem;"><%= s.title %></h3>
-            <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.25rem;"><%= s.subtitle %></p>
-          </div>
-          <a href="<%= s.button_link %>" class="btn btn-outline-gold btn-sm" style="align-self: flex-start;"><%= s.button_text %> &rarr;</a>
-        </div>
-      <% }) %>
-    </section>
-  <% } else { %>
-    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
-      <div class="card glass-panel gold-glow" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between; border-left: 4px solid var(--gold-primary);">
-        <div>
-          <h3 style="color: var(--gold-light); font-size: 1.25rem; margin-bottom: 0.6rem;">GRAN TORNEO APERTURA 2026</h3>
-          <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.25rem;">Competencia clasificatoria en el Estadio Aldo Cantoni con todas las disciplinas.</p>
-        </div>
-        <a href="/torneos" class="btn btn-outline-gold btn-sm" style="align-self: flex-start;">VER PRÓXIMOS TORNEOS &rarr;</a>
-      </div>
-      <div class="card glass-panel" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
-        <div>
-          <h3 style="color: var(--gold-light); font-size: 1.25rem; margin-bottom: 0.6rem;">CUERPO DE JUECES OFICIALES</h3>
-          <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.25rem;">Conoce a nuestro distinguido jurado acreditado para evaluaciones individuales y grupales.</p>
-        </div>
-        <a href="/jueces" class="btn btn-outline-gold btn-sm" style="align-self: flex-start;">CONOCER JURADO &rarr;</a>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="/torneos" class="btn btn-gold btn-lg aura-gold">Ver Próximos Torneos</a>
+        <% if (!user) { %>
+          <a href="/auth/login" class="btn btn-outline-gold btn-lg">Iniciar Sesión</a>
+        <% } else if (user.role === 'profesor') { %>
+          <a href="/profesor/alumnos/nuevo" class="btn btn-tertiary btn-lg">+ Cargar Alumna</a>
+        <% } else if (user.role === 'admin') { %>
+          <a href="/admin/torneos/nuevo" class="btn btn-gold btn-lg">+ Crear Torneo</a>
+        <% } %>
       </div>
     </section>
-  <% } %>
 
-  <!-- Stats Bar -->
-  <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin: 2.5rem 0;">
-    <div class="stat-tile">
-      <div class="stat-icon">🏆</div>
-      <div>
-        <div class="stat-val"><%= stats.tournaments %></div>
-        <div class="stat-label">Torneos Realizados</div>
-      </div>
-    </div>
-    <div class="stat-tile">
-      <div class="stat-icon">⛸️</div>
-      <div>
-        <div class="stat-val"><%= stats.skaters %></div>
-        <div class="stat-label">Patinadoras Registradas</div>
-      </div>
-    </div>
-    <div class="stat-tile">
-      <div class="stat-icon">🏛️</div>
-      <div>
-        <div class="stat-val"><%= stats.clubs %></div>
-        <div class="stat-label">Clubes Afiliados</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- About Us & Purpose Section -->
-  <section style="margin: 2.5rem 0; text-align: center; padding: 3rem 2rem; background: rgba(61, 25, 91, 0.3); border: 1px solid var(--border-gold); border-radius: var(--radius-lg);">
-    <span class="badge badge-violet" style="margin-bottom: 1rem;"><%= cms.about_title ? 'PROPÓSITO INSTITUCIONAL' : '' %></span>
-    <h2 class="hero-title" style="font-size: 1.9rem; margin-bottom: 1rem;"><%= cms.about_title %></h2>
-    <p style="color: var(--text-muted); font-size: 1.05rem; max-width: 850px; margin: 0 auto; line-height: 1.8;"><%= cms.about_content %></p>
-  </section>
-
-  <!-- Disciplines Showcase -->
-  <section style="margin: 2.5rem 0;">
-    <h2 style="color: var(--gold-light); font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.75rem;">⛸️ Disciplinas Oficiales de la Liga Star Dance</h2>
-    <% if (cms.disciplines && cms.disciplines.length > 0) { %>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem;">
-        <% cms.disciplines.forEach(d => { %>
-          <div class="card glass-panel" style="margin: 0; background: rgba(61, 25, 91, 0.35);">
-            <div style="font-size: 2rem; margin-bottom: 0.6rem;"><%= d.icon %></div>
-            <h3 style="color: var(--gold-light); font-size: 1.1rem; margin-bottom: 0.4rem;"><%= d.name %></h3>
-            <p style="color: var(--text-muted); font-size: 0.88rem;"><%= d.description %></p>
-          </div>
-        <% }) %>
-      </div>
-    <% } %>
-  </section>
-
-  <!-- Next Tournaments Preview -->
-  <section style="margin: 2.5rem 0;">
-    <div style="display: flex; justify-content: space-between; align-items: end; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
-      <h2 style="color: var(--gold-light); font-size: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">✨ Próximos Torneos y Competencias</h2>
-      <a href="/torneos" class="btn btn-outline-gold btn-sm">Ver Todos</a>
-    </div>
-
-    <% if (tournaments && tournaments.length > 0) { %>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
-        <% tournaments.forEach(t => { %>
-          <div class="card glass-panel gold-glow" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid var(--gold-primary);">
-            <div>
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-                <span class="badge badge-violet"><%= t.status === 'upcoming' ? 'PRÓXIMAMENTE' : (t.status === 'active' ? 'EN CURSO' : 'FINALIZADO') %></span>
-                <small style="color: var(--gold-primary); font-weight: 700;">📅 <%= t.event_date %></small>
+    <!-- Featured Actions Bento -->
+    <section class="home-section">
+      <% if (cms.slides && cms.slides.length > 0) { %>
+        <div class="bento-grid">
+          <% cms.slides.forEach((s, i) => { %>
+            <div class="card glass-panel <%= i === 0 ? 'card-featured gold-glow' : '' %>" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <span class="chip <%= i === 0 ? 'chip-gold' : 'chip-amethyst' %>" style="margin-bottom: 1rem;"><%= i === 0 ? '★ Destacado' : 'Liga Star Dance' %></span>
+                <h3 style="font-family: 'Libre Caslon Text', serif; color: var(--gold-light); font-size: 1.3rem; margin-bottom: 0.6rem;"><%= s.title %></h3>
+                <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.25rem;"><%= s.subtitle %></p>
               </div>
-              <h3 style="color: var(--gold-light); margin-bottom: 0.6rem; font-size: 1.15rem;"><%= t.name %></h3>
-              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-                📍 <strong>Sede:</strong> <%= t.venue %><br>
-                📝 <strong>Cierre inscripción:</strong> <%= t.registration_deadline %>
-              </p>
+              <a href="<%= s.button_link %>" class="btn <%= i === 0 ? 'btn-gold' : 'btn-outline-gold' %> btn-sm" style="align-self: flex-start;"><%= s.button_text %> &rarr;</a>
             </div>
-            <a href="/torneos/<%= t.id %>" class="btn btn-outline-gold btn-sm" style="width: 100%;">Detalles y Categorías &rarr;</a>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="bento-grid">
+          <div class="card glass-panel card-featured gold-glow" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <span class="chip chip-gold" style="margin-bottom: 1rem;">★ Destacado</span>
+              <h3 style="font-family: 'Libre Caslon Text', serif; color: var(--gold-light); font-size: 1.3rem; margin-bottom: 0.6rem;">GRAN TORNEO APERTURA 2026</h3>
+              <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.25rem;">Competencia clasificatoria en el Estadio Aldo Cantoni con todas las disciplinas.</p>
+            </div>
+            <a href="/torneos" class="btn btn-gold btn-sm" style="align-self: flex-start;">VER PRÓXIMOS TORNEOS &rarr;</a>
           </div>
-        <% }) %>
-      </div>
-    <% } else { %>
-      <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No hay torneos activos en este momento.</p>
+          <div class="card glass-panel" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <span class="chip chip-amethyst" style="margin-bottom: 1rem;">Plataforma Oficial</span>
+              <h3 style="font-family: 'Libre Caslon Text', serif; color: var(--gold-light); font-size: 1.3rem; margin-bottom: 0.6rem;">INSCRIPCIONES Y GESTIÓN</h3>
+              <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.25rem;">Carga de patinadoras, inscripciones a torneos y certificados desde un solo lugar.</p>
+            </div>
+            <a href="/auth/registro" class="btn btn-outline-gold btn-sm" style="align-self: flex-start;">CREAR CUENTA &rarr;</a>
+          </div>
+        </div>
+      <% } %>
+    </section>
+
+    <!-- About Us & Purpose Section -->
+    <% if (cms.about_title) { %>
+      <section class="home-section">
+        <div class="purpose-panel">
+          <span class="chip chip-amethyst" style="margin-bottom: 1rem;">Propósito Institucional</span>
+          <h2 class="hero-title" style="margin-bottom: 1rem;"><%= cms.about_title %></h2>
+          <p class="purpose-text"><%= cms.about_content %></p>
+        </div>
+      </section>
     <% } %>
-  </section>
+
+    <!-- Disciplines Showcase -->
+    <% if (cms.disciplines && cms.disciplines.length > 0) { %>
+      <section class="home-section">
+        <div class="section-head">
+          <div>
+            <span class="section-eyebrow">Disciplinas</span>
+            <h2 class="section-title">Disciplinas Oficiales de la Liga</h2>
+            <p class="section-sub">Modalidades avaladas por la federación para todas las categorías y niveles.</p>
+          </div>
+        </div>
+        <div class="card-grid-3">
+          <% cms.disciplines.forEach(d => { %>
+            <div class="discipline-card">
+              <div class="discipline-icon"><%= d.icon %></div>
+              <h3 class="discipline-name"><%= d.name %></h3>
+              <p class="discipline-desc"><%= d.description %></p>
+            </div>
+          <% }) %>
+        </div>
+      </section>
+    <% } %>
+
+    <!-- Next Tournaments Preview -->
+    <section class="home-section">
+      <div class="section-head">
+        <div>
+          <span class="section-eyebrow">Calendario</span>
+          <h2 class="section-title">Próximos Torneos y Competencias</h2>
+          <p class="section-sub">Agenda oficial de competencias clasificatorias y abiertas de la temporada.</p>
+        </div>
+        <a href="/torneos" class="btn btn-outline-gold">Ver Todos</a>
+      </div>
+
+      <% if (tournaments && tournaments.length > 0) { %>
+        <div class="bento-grid">
+          <% tournaments.forEach(t => { %>
+            <div class="card glass-panel card-featured" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                  <span class="chip chip-amethyst"><%= t.status === 'upcoming' ? 'Próximamente' : (t.status === 'active' ? 'En Curso' : 'Finalizado') %></span>
+                  <small style="color: var(--gold-primary); font-weight: 700;">📅 <%= t.datesLabel %></small>
+                </div>
+                <h3 style="font-family: 'Libre Caslon Text', serif; color: var(--gold-light); margin-bottom: 0.6rem; font-size: 1.15rem;"><%= t.name %></h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">
+                  📍 <strong>Sede:</strong> <%= t.venue %><br>
+                  📝 <strong>Cierre inscripción:</strong> <%= t.deadlineLabel || t.registration_deadline %>
+                </p>
+              </div>
+              <a href="/torneos/<%= t.id %>" class="btn btn-outline-gold btn-sm" style="width: 100%;">Detalles y Categorías &rarr;</a>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No hay torneos activos en este momento.</p>
+      <% } %>
+    </section>
+
+  </div>
 </div>
 
 <%- include('../partials/footer') %>

@@ -1,12 +1,12 @@
-<%- include('partials/header', { title: title || 'Error' }) %>
+<%- include('partials/header', { title: typeof title !== 'undefined' ? title : 'Error' }) %>
 <%- include('partials/navbar') %>
 
 <div class="main-wrapper">
   <div class="card" style="text-align: center; max-width: 600px; margin: 3rem auto;">
     <div style="font-size: 3.5rem; color: var(--gold-bright); margin-bottom: 1rem;">⚠️</div>
-    <h1 style="color: var(--gold-light); margin-bottom: 1rem;"><%= title || 'Ocurrió un inconveniente' %></h1>
+    <h1 style="color: var(--gold-light); margin-bottom: 1rem;"><%= typeof title !== 'undefined' ? title : 'Ocurrió un inconveniente' %></h1>
     <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 1.1rem;">
-      <%= message || 'No se pudo procesar la solicitud especificada.' %>
+      <%= typeof message !== 'undefined' ? message : 'No se pudo procesar la solicitud especificada.' %>
     </p>
     <a href="/" class="btn btn-gold">Volver al Inicio</a>
   </div>

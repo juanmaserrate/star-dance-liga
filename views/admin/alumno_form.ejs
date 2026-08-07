@@ -1,7 +1,7 @@
 <%- include('../partials/header', { title: student && student.id ? 'Editar Patinadora' : 'Nueva Patinadora' }) %>
-<%- include('../partials/navbar') %>
+<%- include('admin_shell', { activeNav: 'alumnos', topbarSection: 'Patinadoras' }) %>
 
-<div class="main-wrapper">
+
   <div class="card" style="max-width: 850px; margin: 0 auto;">
     <div class="card-header">
       <h1 class="card-title">
@@ -111,6 +111,6 @@
 
     </form>
   </div>
-</div>
+</main>
 
 <%- include('../partials/footer') %>

@@ -144,9 +144,9 @@ router.get('/registro', (req, res) => {
 
 // POST: Public Registration (login automático, sin verificación de email)
 router.post('/registro', async (req, res) => {
-  const { full_name, email, password, confirm_password, phone } = req.body;
+  const { full_name, email, password, phone } = req.body;
 
-  if (!full_name || !email || !password || !confirm_password) {
+  if (!full_name || !email || !password) {
     return res.render('auth/registro', {
       user: null,
       error: 'Complete todos los campos obligatorios.',
@@ -156,21 +156,21 @@ router.post('/registro', async (req, res) => {
     });
   }
 
-  if (password !== confirm_password) {
+  if (String(password).length < 6) {
     return res.render('auth/registro', {
       user: null,
-      error: 'Las contraseñas no coinciden.',
+      error: 'La contraseña debe tener al menos 6 caracteres.',
       success: null,
       verificationLink: null,
       form: req.body
     });
   }
 
-  // Parsear los clubes que el profesor crea en el registro (puede crear uno o más)
-  const rawNames = req.body.club_names;
-  const rawCities = req.body.club_cities;
-  const clubNamesArr = Array.isArray(rawNames) ? rawNames : (rawNames ? [rawNames] : []);
-  const clubCitiesArr = Array.isArray(rawCities) ? rawCities : (rawCities ? [rawCities] : []);
+  // Parsear el club que el profesor crea en el registro (un club con su barrio)
+  const rawNames = req.body.club_names || (req.body.club_name ? [req.body.club_name] : []);
+  const rawCities = req.body.club_cities || (req.body.club_city ? [req.body.club_city] : []);
+  const clubNamesArr = Array.isArray(rawNames) ? rawNames : [rawNames];
+  const clubCitiesArr = Array.isArray(rawCities) ? rawCities : [rawCities];
 
   const cleanClubs = [];
   clubNamesArr.forEach((n, i) => {

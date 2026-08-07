@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
+const { formatEventDates, formatDeadline } = require('../lib/dates');
 
 // Helper to get CMS setting by key
 async function getSetting(key, fallback = '') {
@@ -16,29 +17,25 @@ async function getSetting(key, fallback = '') {
 router.get('/', async (req, res) => {
   const upcomingTournaments = await db.prepare(`
     SELECT * FROM tournaments
-    ORDER BY event_date ASC LIMIT 3
+    ORDER BY COALESCE(date_from, event_date) ASC LIMIT 3
   `).all();
-
-  const stats = {
-    tournaments: (await db.prepare(`SELECT COUNT(*) as count FROM tournaments`).get()).count,
-    clubs: (await db.prepare(`SELECT COUNT(*) as count FROM clubs`).get()).count,
-    skaters: (await db.prepare(`SELECT COUNT(*) as count FROM students`).get()).count
-  };
+  upcomingTournaments.forEach(t => { t.datesLabel = formatEventDates(t.date_from || t.event_date, t.date_to); t.deadlineLabel = formatDeadline(t.registration_deadline); });
 
   const cms = {
-    hero_title: await getSetting('hero_title', 'LIGA DE PATINAJE ARTÍSTICO STAR DANCE'),
+    hero_title: await getSetting('hero_title', 'Liga Star Dance · Patín Artístico'),
     hero_subtitle: await getSetting('hero_subtitle', 'Plataforma oficial de gestión de torneos, cuerpo de jueces e inscripciones.'),
     about_title: await getSetting('about_title', 'SOBRE LA LIGA STAR DANCE Y NUESTRO PROPÓSITO'),
     about_content: await getSetting('about_content', 'La Liga Star Dance nace con el propósito de promover y profesionalizar el Patinaje Artístico sobre ruedas.'),
-    slides: await db.prepare(`SELECT * FROM home_slides WHERE is_active = true ORDER BY order_index ASC`).all(),
-    disciplines: await db.prepare(`SELECT * FROM discipline_info ORDER BY order_index ASC`).all(),
-    judges: await db.prepare(`SELECT * FROM judge_profiles ORDER BY order_index ASC`).all()
+    slides: (await db.prepare(`SELECT * FROM home_slides WHERE is_active = true ORDER BY order_index ASC`).all()).map(s => {
+      if (s.button_link && /\/jueces/.test(s.button_link)) s.button_link = '/torneos';
+      return s;
+    }),
+    disciplines: await db.prepare(`SELECT * FROM discipline_info ORDER BY order_index ASC`).all()
   };
 
   res.render('public/index', {
     user: req.session.user || null,
     tournaments: upcomingTournaments,
-    stats,
     cms
   });
 });
@@ -52,6 +49,7 @@ router.get('/torneos', async (req, res) => {
     FROM tournaments t
     ORDER BY t.event_date DESC
   `).all();
+  tournaments.forEach(t => { t.datesLabel = formatEventDates(t.date_from || t.event_date, t.date_to); t.deadlineLabel = formatDeadline(t.registration_deadline); });
 
   res.render('public/torneos', {
     user: req.session.user || null,
@@ -68,6 +66,9 @@ router.get('/torneos/:id', async (req, res) => {
     return res.status(404).render('error', { title: 'Torneo No Encontrado', message: 'El torneo solicitado no existe.' });
   }
 
+  tournament.datesLabel = formatEventDates(tournament.date_from || tournament.event_date, tournament.date_to);
+  tournament.deadlineLabel = formatDeadline(tournament.registration_deadline);
+
   const categories = await db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY min_age ASC, division ASC`).all(tournamentId);
   const totalRegistrations = (await db.prepare(`SELECT COUNT(*) as count FROM registrations WHERE tournament_id = ?`).get(tournamentId)).count;
 
@@ -76,16 +77,6 @@ router.get('/torneos/:id', async (req, res) => {
     tournament,
     categories,
     totalRegistrations
-  });
-});
-
-// Public Judges Panel Page
-router.get('/jueces', async (req, res) => {
-  const judges = await db.prepare(`SELECT * FROM judge_profiles ORDER BY order_index ASC`).all();
-
-  res.render('public/jueces', {
-    user: req.session.user || null,
-    judges
   });
 });
 

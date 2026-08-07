@@ -1,27 +1,24 @@
 <%- include('../partials/header', { title: 'Gestión de Usuarios' }) %>
-<%- include('../partials/navbar') %>
+<%- include('admin_shell', { activeNav: 'usuarios', topbarSection: 'Usuarios' }) %>
 
-<div class="main-wrapper">
-  <!-- Header & Actions -->
-  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(212,175,55,0.15); padding-bottom: 1rem;">
-    <div>
-      <h1 style="color: var(--gold-light); font-size: 1.8rem; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-        👥 Usuarios y Accesos
-      </h1>
-      <p style="color: var(--text-muted); margin: 0.25rem 0 0 0; font-size: 0.95rem;">
-        Control de cuentas para profesores, jueces y administradores con credenciales y recuperación directa.
-      </p>
+  <div class="page-head-row">
+    <div class="page-head">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span class="material-symbols-outlined" style="font-size: 2.4rem; color: var(--gold-light); font-variation-settings: 'FILL' 1;">group</span>
+        <h1 class="page-title" style="margin-bottom: 0;">Usuarios y Accesos</h1>
+      </div>
+      <p class="page-sub" style="margin-top: 0.5rem;">Control de cuentas para profesores, jueces y administradores con credenciales y recuperación directa.</p>
     </div>
-    
-    <button type="button" class="btn btn-gold" onclick="toggleNewUserForm()" style="display: flex; align-items: center; gap: 0.5rem;">
-      <span id="toggleBtnIcon">➕</span> <span id="toggleBtnText">Nuevo Usuario</span>
-    </button>
+    <div class="page-head-actions">
+      <button type="button" class="btn btn-gold" onclick="toggleNewUserForm()" style="display: flex; align-items: center; gap: 0.5rem;">
+        <span class="material-symbols-outlined" style="font-size: 1.1rem;">add</span> <span id="toggleBtnText">Nuevo Usuario</span>
+      </button>
+    </div>
   </div>
 
   <% if (typeof success !== 'undefined' && success) { %>
     <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
   <% } %>
-
   <% if (typeof error !== 'undefined' && error) { %>
     <div class="alert alert-danger alert-auto-dismiss">⚠️ <%= error %></div>
   <% } %>
@@ -31,7 +28,7 @@
     <div class="card-header" style="border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 0.75rem;">
       <h2 class="card-title" style="font-size: 1.2rem; color: var(--gold-light);">➕ Registrar Nuevo Integrante</h2>
     </div>
-    
+
     <form action="/admin/usuarios" method="POST" style="margin-top: 1rem;">
       <div class="form-group">
         <label class="form-label" for="full_name">Nombre Completo *</label>
@@ -84,119 +81,114 @@
   </div>
 
   <!-- Aesthetic User Cards Grid -->
-  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
-    <% if (usersList && usersList.length > 0) { %>
-      <% usersList.forEach(u => { %>
-        <% 
-          // Generate Initials for Avatar
-          let initials = 'SD';
-          if (u.full_name) {
-            const parts = u.full_name.trim().split(' ');
-            initials = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]) : parts[0].substring(0, 2);
-          }
-          initials = initials.toUpperCase();
+  <div class="admin-card" style="padding: 0;">
+    <div class="admin-user-grid">
+      <% if (usersList && usersList.length > 0) { %>
+        <% usersList.forEach(u => { %>
+          <%
+            let initials = 'SD';
+            if (u.full_name) {
+              const parts = u.full_name.trim().split(' ');
+              initials = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]) : parts[0].substring(0, 2);
+            }
+            initials = initials.toUpperCase();
 
-          // Get role specific color classes
-          let roleBadgeClass = 'badge-pending'; // Profesor (violet/orange)
-          let avatarBorder = 'rgba(212,175,55,0.4)';
-          if (u.role === 'admin') {
-            roleBadgeClass = 'badge-paid'; // Green / Emerald glow
-            avatarBorder = '#2ec4b6';
-          } else if (u.role === 'juez') {
-            roleBadgeClass = 'badge-violet'; // Purple / Cyan glow
-            avatarBorder = '#9d4edf';
-          }
-        %>
-        
-        <div class="card" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid <%= u.role === 'admin' ? '#2ec4b6' : (u.role === 'juez' ? '#9d4edf' : 'var(--gold-primary)') %>; transition: transform 0.25s ease, box-shadow 0.25s ease; cursor: default;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 24px rgba(212,175,55,0.15)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
-          
-          <div>
-            <!-- Top Card Stats -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-              <!-- Circle Avatar -->
-              <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 2px solid <%= avatarBorder %>; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--gold-light); font-size: 1.1rem; letter-spacing: 1px;">
-                <%= initials %>
-              </div>
-              
-              <span class="badge <%= roleBadgeClass %>" style="text-transform: uppercase; font-size: 0.78rem; font-weight: 700; letter-spacing: 1px; padding: 0.3rem 0.65rem;">
-                <%= u.role === 'admin' ? 'ADMIN' : (u.role === 'juez' ? 'JUEZ' : 'PROFE') %>
-              </span>
+            let roleBadgeClass = 'role-badge-profesor';
+            if (u.role === 'admin') roleBadgeClass = 'role-badge-admin';
+            else if (u.role === 'juez') roleBadgeClass = 'role-badge-juez';
+
+            let roleLabel = 'Profe';
+            if (u.role === 'admin') roleLabel = 'Admin';
+            else if (u.role === 'juez') roleLabel = 'Juez';
+          %>
+
+          <div class="admin-user-card">
+            <div class="admin-user-head">
+              <div class="admin-user-avatar"><%= initials %></div>
+              <span class="role-badge <%= roleBadgeClass %>"><%= roleLabel %></span>
             </div>
 
-            <!-- Profile Info -->
-            <h3 style="color: #ffffff; font-size: 1.15rem; margin: 0 0 0.25rem 0; font-weight: 700;"><%= u.full_name %></h3>
-            <div style="color: var(--gold-light); font-size: 0.88rem; font-weight: 600; margin-bottom: 0.75rem;">@<%= u.username %></div>
+            <h3 class="admin-user-name"><%= u.full_name %></h3>
+            <p class="admin-user-handle">@<%= u.username %></p>
 
-            <!-- Meta details (Club / Contact) -->
-            <div style="display: flex; flex-direction: column; gap: 0.5rem; border-top: 1px solid rgba(255,255,255,0.07); padding-top: 0.75rem; margin-top: 0.75rem; font-size: 0.88rem;">
+            <div class="admin-user-meta">
               <% if (u.club_name) { %>
-                <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted);">
-                  <span>🏛️</span> <strong style="color: #eeeeee;"><%= u.club_name %></strong>
+                <div class="row">
+                  <span class="material-symbols-outlined">account_balance</span>
+                  <span><%= u.club_name %></span>
                 </div>
               <% } %>
-              
-              <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); word-break: break-all; flex-wrap: wrap;">
-                <span>✉️</span> <span><%= u.email || 'Sin correo registrado' %></span>
-                <span class="badge <%= u.email_verified ? 'badge-paid' : 'badge-pending' %>" style="font-size: 0.68rem; padding: 0.2rem 0.5rem;">
-                  <%= u.email_verified ? '✓ VERIFICADO' : '⏳ PENDIENTE' %>
+
+              <div class="row">
+                <span class="material-symbols-outlined">mail</span>
+                <span><%= u.email || 'Sin correo registrado' %></span>
+              </div>
+
+              <div class="row">
+                <span class="verify-chip <%= u.email_verified ? 'verify-ok' : 'verify-pending' %>">
+                  <span class="material-symbols-outlined"><%= u.email_verified ? 'check' : 'hourglass_empty' %></span>
+                  <%= u.email_verified ? 'Verificado' : 'Pendiente' %>
                 </span>
               </div>
 
               <% if (u.phone) { %>
-                <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted);">
-                  <span>📞</span> <span><%= u.phone %></span>
+                <div class="row">
+                  <span class="material-symbols-outlined">phone</span>
+                  <span><%= u.phone %></span>
+                </div>
+              <% } %>
+            </div>
+
+            <div class="admin-user-actions">
+              <form action="/admin/usuarios/<%= u.id %>/restablecer" method="POST" style="margin: 0; width: 100%;">
+                <button type="submit" class="btn btn-ghost" title="Enviar mail con link de recuperación">
+                  <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 0.3rem;">mail</span>
+                  Enviar Acceso por Mail
+                </button>
+              </form>
+              <% if (!u.email_verified) { %>
+                <div class="btn-row">
+                  <form action="/admin/usuarios/<%= u.id %>/verificar" method="POST">
+                    <button type="submit" class="btn btn-gold btn-sm" title="Confirmar email manualmente">
+                      <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 0.25rem;">check_circle</span>
+                      Verificar
+                    </button>
+                  </form>
+                  <form action="/admin/usuarios/<%= u.id %>/reenviar-verificacion" method="POST">
+                    <button type="submit" class="btn btn-secondary btn-sm" title="Reenviar enlace de verificación">
+                      <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 0.25rem;">replay</span>
+                      Reenviar
+                    </button>
+                  </form>
                 </div>
               <% } %>
             </div>
           </div>
-
-          <!-- Quick Action Bar -->
-          <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; gap: 0.5rem;">
-            <form action="/admin/usuarios/<%= u.id %>/restablecer" method="POST" style="margin: 0; width: 100%;">
-              <button type="submit" class="btn btn-outline-gold btn-sm" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" title="Enviar mail con link de recuperación">
-                ✉️ Enviar Acceso por Mail
-              </button>
-            </form>
-            <% if (!u.email_verified) { %>
-              <div style="display: flex; gap: 0.5rem; width: 100%;">
-                <form action="/admin/usuarios/<%= u.id %>/verificar" method="POST" style="margin: 0; flex: 1;">
-                  <button type="submit" class="btn btn-gold btn-sm" style="width: 100%;" title="Confirmar email manualmente">
-                    ✅ Verificar Email
-                  </button>
-                </form>
-                <form action="/admin/usuarios/<%= u.id %>/reenviar-verificacion" method="POST" style="margin: 0; flex: 1;">
-                  <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%;" title="Reenviar enlace de verificación">
-                    🔁 Reenviar
-                  </button>
-                </form>
-              </div>
-            <% } %>
-          </div>
-
+        <% }) %>
+      <% } else { %>
+        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+          <p style="color: var(--text-muted);">No se encontraron usuarios registrados.</p>
         </div>
-      <% }) %>
-    <% } else { %>
-      <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
-        <p style="color: var(--text-muted);">No se encontraron usuarios registrados.</p>
-      </div>
-    <% } %>
+      <% } %>
+    </div>
   </div>
-</div>
+
+</main>
 
 <script>
   function toggleNewUserForm() {
     const card = document.getElementById('newUserFormCard');
     const icon = document.getElementById('toggleBtnIcon');
     const text = document.getElementById('toggleBtnText');
-    
+
     if (card.style.display === 'none') {
       card.style.display = 'block';
-      icon.innerText = '❌';
+      if (icon) icon.innerText = '❌';
       text.innerText = 'Cerrar Formulario';
       document.getElementById('full_name').focus();
     } else {
       card.style.display = 'none';
-      icon.innerText = '➕';
+      if (icon) icon.innerText = '➕';
       text.innerText = 'Nuevo Usuario';
     }
   }

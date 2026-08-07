@@ -1,7 +1,7 @@
 <%- include('../partials/header', { title: 'Nuevo Torneo' }) %>
-<%- include('../partials/navbar') %>
+<%- include('admin_shell', { activeNav: 'torneos', topbarSection: 'Torneos' }) %>
 
-<div class="main-wrapper">
+
   <div class="card" style="max-width: 700px; margin: 0 auto;">
     <div class="card-header">
       <h1 class="card-title">🏆 Crear Nuevo Torneo</h1>
@@ -30,24 +30,32 @@
 
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label" for="event_date">Fecha del Evento *</label>
-          <input type="date" id="event_date" name="event_date" class="form-control" value="<%= tournament ? tournament.event_date : '' %>" required>
+          <label class="form-label" for="date_from">Fecha de Inicio *</label>
+          <input type="date" id="date_from" name="date_from" class="form-control" value="<%= tournament ? (tournament.date_from || tournament.event_date) : '' %>" required>
         </div>
 
+        <div class="form-group">
+          <label class="form-label" for="date_to">Fecha de Fin <small>(si son varias fechas)</small></label>
+          <input type="date" id="date_to" name="date_to" class="form-control" value="<%= tournament ? tournament.date_to : '' %>">
+        </div>
+      </div>
+
+      <div class="form-row">
         <div class="form-group">
           <label class="form-label" for="registration_deadline">Cierre de Inscripciones *</label>
           <input type="date" id="registration_deadline" name="registration_deadline" class="form-control" value="<%= tournament ? tournament.registration_deadline : '' %>" required>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label class="form-label" for="status">Estado del Torneo</label>
-        <select id="status" name="status" class="form-select">
-          <option value="upcoming" <%= tournament && tournament.status === 'upcoming' ? 'selected' : '' %>>Próximo (Inscripciones Abiertas)</option>
-          <option value="active" <%= tournament && tournament.status === 'active' ? 'selected' : '' %>>En Curso</option>
-          <option value="finished" <%= tournament && tournament.status === 'finished' ? 'selected' : '' %>>Finalizado</option>
-        </select>
+        <div class="form-group">
+          <label class="form-label" for="status">Estado del Torneo</label>
+          <select id="status" name="status" class="form-select">
+            <option value="upcoming" <%= tournament && tournament.status === 'upcoming' ? 'selected' : '' %>>Próximo (Inscripciones Abiertas)</option>
+            <option value="active" <%= tournament && tournament.status === 'active' ? 'selected' : '' %>>En Curso</option>
+            <option value="finished" <%= tournament && tournament.status === 'finished' ? 'selected' : '' %>>Finalizado</option>
+          </select>
+        </div>
       </div>
+      <input type="hidden" id="event_date" name="event_date" value="<%= tournament ? (tournament.date_from || tournament.event_date) : '' %>">
 
       <div style="margin-top: 2rem;">
         <button type="submit" class="btn btn-gold" style="width: 100%;">
@@ -56,6 +64,6 @@
       </div>
     </form>
   </div>
-</div>
+</main>
 
 <%- include('../partials/footer') %>

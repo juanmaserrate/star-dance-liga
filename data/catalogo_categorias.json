@@ -1,99 +1,188 @@
 [
   {
-    "discipline": "CUARTETO",
-    "fee": 34000,
-    "categories": [
-      "AMARILLO",
-      "NARANJA",
-      "ROSA",
-      "TURQUESA",
-      "VERDE",
-      "VIOLETA"
-    ]
-  },
-  {
-    "discipline": "DÚO",
-    "fee": 22000,
-    "categories": [
-      "AMARILLO",
-      "NARANJA",
-      "ROSA",
-      "TURQUESA",
-      "VERDE",
-      "VIOLETA"
-    ]
-  },
-  {
-    "discipline": "FREE DANCE",
-    "fee": 16000,
-    "categories": [
-      "AVANZADO C",
-      "STYLE",
-      "NACIONAL BÁSICO",
-      "NACIONAL INTERMEDIO"
-    ]
-  },
-  {
-    "discipline": "INLINE",
-    "fee": 16000,
-    "categories": [
-      "INLINE ARTÍSTICO 2C",
-      "ROLLER ARTÍSTICO 3C"
-    ]
-  },
-  {
     "discipline": "LIBRE",
     "fee": 15000,
     "categories": [
-      "1B",
-      "1C",
-      "2B",
-      "2C",
-      "3B",
-      "3C",
-      "4C",
-      "5C",
-      "ADULTOS",
-      "ESCUELA FORMATIVA",
       "EXHIBICIÓN",
-      "INICIACIÓN A",
       "INICIACIÓN B",
-      "PRE 3C",
-      "PRE 5C",
-      "PROMO B"
+      "INICIACIÓN A",
+      "ESCUELA FORMATIVA",
+      "PRE 5TA C",
+      "5TA C",
+      "4TA",
+      "PRE 3ERA C",
+      "3ERA C",
+      "2DA C",
+      "PRIMERA C",
+      "PROMO B",
+      "TERCERA B",
+      "SEGUNDA B",
+      "PRIMERA B"
     ]
   },
   {
     "discipline": "PAREJAS MIXTAS",
     "fee": 20000,
     "categories": [
-      "PAREJA MIXTAS"
+      "EXHIBICIÓN",
+      "INICIACIÓN B",
+      "INICIACIÓN A",
+      "ESCUELA FORMATIVA",
+      "PRE 5TA C",
+      "5TA C",
+      "4TA",
+      "PRE 3ERA C",
+      "3ERA C",
+      "2DA C",
+      "PRIMERA C",
+      "PROMO B",
+      "TERCERA B",
+      "SEGUNDA B",
+      "PRIMERA B"
     ]
   },
   {
-    "discipline": "SHOW",
-    "fee": 60000,
+    "discipline": "FREE DANCE",
+    "fee": 16000,
     "categories": [
-      "ADULTOS",
-      "INFANTIL",
-      "JUVENIL",
-      "MAYORES",
-      "MINI INFANTIL",
-      "MINI TOTS",
-      "TOTS"
+      "DEBUTANTES",
+      "INICIAL",
+      "BÁSICO",
+      "AVANZADO"
+    ],
+    "ages": [
+      { "name": "MINI TOTS", "min": 6, "max": 7 },
+      { "name": "TOTS", "min": 8, "max": 9 },
+      { "name": "MINIS", "min": 10, "max": 11 },
+      { "name": "INFANTIL", "min": 12, "max": 13 },
+      { "name": "JUVENIL", "min": 14, "max": 15 },
+      { "name": "JUVENIL", "min": 16, "max": 17 },
+      { "name": "SENIOR", "min": 18, "max": 20 },
+      { "name": "CLÁSICO", "min": 21, "max": 30 },
+      { "name": "NOVICIO", "min": 31, "max": 40 },
+      { "name": "PROFESIONAL", "min": 41, "max": 50 },
+      { "name": "MASTER", "min": 51, "max": 60 },
+      { "name": "EXPERTO", "min": 61, "max": 70 }
+    ]
+  },
+  {
+    "discipline": "STAR DANCE",
+    "fee": 16000,
+    "categories": [
+      "DEBUTANTES",
+      "INICIAL",
+      "BÁSICO",
+      "AVANZADO"
+    ],
+    "ages": [
+      { "name": "MINI TOTS", "min": 6, "max": 7 },
+      { "name": "TOTS", "min": 8, "max": 9 },
+      { "name": "MINIS", "min": 10, "max": 11 },
+      { "name": "INFANTIL", "min": 12, "max": 13 },
+      { "name": "JUVENIL", "min": 14, "max": 15 },
+      { "name": "JUVENIL", "min": 16, "max": 17 },
+      { "name": "SENIOR", "min": 18, "max": 20 },
+      { "name": "CLÁSICO", "min": 21, "max": 30 },
+      { "name": "NOVICIO", "min": 31, "max": 40 },
+      { "name": "PROFESIONAL", "min": 41, "max": 50 },
+      { "name": "MASTER", "min": 51, "max": 60 },
+      { "name": "EXPERTO", "min": 61, "max": 70 }
+    ]
+  },
+  {
+    "discipline": "STYLE",
+    "fee": 16000,
+    "categories": [
+      "DEBUTANTES",
+      "INICIAL",
+      "BÁSICO",
+      "AVANZADO"
+    ],
+    "ages": [
+      { "name": "MINI TOTS", "min": 6, "max": 7 },
+      { "name": "TOTS", "min": 8, "max": 9 },
+      { "name": "MINIS", "min": 10, "max": 11 },
+      { "name": "INFANTIL", "min": 12, "max": 13 },
+      { "name": "JUVENIL", "min": 14, "max": 15 },
+      { "name": "JUVENIL", "min": 16, "max": 17 },
+      { "name": "SENIOR", "min": 18, "max": 20 },
+      { "name": "CLÁSICO", "min": 21, "max": 30 },
+      { "name": "NOVICIO", "min": 31, "max": 40 },
+      { "name": "PROFESIONAL", "min": 41, "max": 50 },
+      { "name": "MASTER", "min": 51, "max": 60 },
+      { "name": "EXPERTO", "min": 61, "max": 70 }
     ]
   },
   {
     "discipline": "SMALL",
     "fee": 40000,
     "categories": [
-      "ADULTOS",
-      "INFANTIL",
-      "JUVENIL",
-      "MAYORES",
-      "MINI INFANTIL",
-      "MINI TOTS",
-      "TOTS"
+      "DEBUTANTES",
+      "INICIAL",
+      "BÁSICO",
+      "AVANZADO"
+    ],
+    "ages": [
+      { "name": "MINI TOTS", "min": 6, "max": 7 },
+      { "name": "TOTS", "min": 8, "max": 9 },
+      { "name": "MINIS", "min": 10, "max": 11 },
+      { "name": "INFANTIL", "min": 12, "max": 13 },
+      { "name": "JUVENIL", "min": 14, "max": 15 },
+      { "name": "JUVENIL", "min": 16, "max": 17 },
+      { "name": "SENIOR", "min": 18, "max": 20 },
+      { "name": "CLÁSICO", "min": 21, "max": 30 },
+      { "name": "NOVICIO", "min": 31, "max": 40 },
+      { "name": "PROFESIONAL", "min": 41, "max": 50 },
+      { "name": "MASTER", "min": 51, "max": 60 },
+      { "name": "EXPERTO", "min": 61, "max": 70 }
+    ]
+  },
+  {
+    "discipline": "SHOW",
+    "fee": 60000,
+    "categories": [
+      "DEBUTANTES",
+      "INICIAL",
+      "BÁSICO",
+      "AVANZADO"
+    ],
+    "ages": [
+      { "name": "MINI TOTS", "min": 6, "max": 7 },
+      { "name": "TOTS", "min": 8, "max": 9 },
+      { "name": "MINIS", "min": 10, "max": 11 },
+      { "name": "INFANTIL", "min": 12, "max": 13 },
+      { "name": "JUVENIL", "min": 14, "max": 15 },
+      { "name": "JUVENIL", "min": 16, "max": 17 },
+      { "name": "SENIOR", "min": 18, "max": 20 },
+      { "name": "CLÁSICO", "min": 21, "max": 30 },
+      { "name": "NOVICIO", "min": 31, "max": 40 },
+      { "name": "PROFESIONAL", "min": 41, "max": 50 },
+      { "name": "MASTER", "min": 51, "max": 60 },
+      { "name": "EXPERTO", "min": 61, "max": 70 }
+    ]
+  },
+  {
+    "discipline": "PRECISIÓN",
+    "fee": 60000,
+    "categories": [
+      "DEBUTANTES",
+      "INICIAL",
+      "BÁSICO",
+      "AVANZADO"
+    ],
+    "ages": [
+      { "name": "MINI TOTS", "min": 6, "max": 7 },
+      { "name": "TOTS", "min": 8, "max": 9 },
+      { "name": "MINIS", "min": 10, "max": 11 },
+      { "name": "INFANTIL", "min": 12, "max": 13 },
+      { "name": "JUVENIL", "min": 14, "max": 15 },
+      { "name": "JUVENIL", "min": 16, "max": 17 },
+      { "name": "SENIOR", "min": 18, "max": 20 },
+      { "name": "CLÁSICO", "min": 21, "max": 30 },
+      { "name": "NOVICIO", "min": 31, "max": 40 },
+      { "name": "PROFESIONAL", "min": 41, "max": 50 },
+      { "name": "MASTER", "min": 51, "max": 60 },
+      { "name": "EXPERTO", "min": 61, "max": 70 }
     ]
   },
   {
@@ -104,28 +193,55 @@
       "BÁSICO C",
       "DIVISIONAL INTERNACIONAL WS",
       "EFICIENCIA BÁSICO"
+    ],
+    "ages": [
+      { "name": "MINI TOTS", "min": 6, "max": 7 },
+      { "name": "TOTS", "min": 8, "max": 9 },
+      { "name": "MINIS", "min": 10, "max": 11 },
+      { "name": "INFANTIL", "min": 12, "max": 13 },
+      { "name": "JUVENIL", "min": 14, "max": 15 },
+      { "name": "JUVENIL", "min": 16, "max": 17 },
+      { "name": "SENIOR", "min": 18, "max": 20 },
+      { "name": "CLÁSICO", "min": 21, "max": 30 },
+      { "name": "NOVICIO", "min": 31, "max": 40 },
+      { "name": "PROFESIONAL", "min": 41, "max": 50 },
+      { "name": "MASTER", "min": 51, "max": 60 },
+      { "name": "EXPERTO", "min": 61, "max": 70 }
     ]
   },
   {
-    "discipline": "STAR DANCE FREE",
-    "fee": 16000,
+    "discipline": "DÚO",
+    "fee": 22000,
     "categories": [
-      "AVANZADO- PRE 3C- 3C",
-      "BASICO- 5C- 4C",
-      "DEBUTANTE- EXHIBICIÓN- INICIACIÓN",
-      "INICIAL- ESCUELA FORMATIVA- PRE 5C",
-      "STAR DANCE- 2C EN ADELANTE"
+      "NARANJA",
+      "TURQUESA",
+      "VERDE",
+      "ROSA",
+      "AMARILLO",
+      "VIOLETA"
     ]
   },
   {
     "discipline": "TRÍO",
     "fee": 28000,
     "categories": [
-      "AMARILLO",
       "NARANJA",
-      "ROSA",
       "TURQUESA",
       "VERDE",
+      "ROSA",
+      "AMARILLO",
+      "VIOLETA"
+    ]
+  },
+  {
+    "discipline": "CUARTETO",
+    "fee": 34000,
+    "categories": [
+      "NARANJA",
+      "TURQUESA",
+      "VERDE",
+      "ROSA",
+      "AMARILLO",
       "VIOLETA"
     ]
   }

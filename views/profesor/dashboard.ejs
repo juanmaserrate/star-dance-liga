@@ -1,14 +1,14 @@
 <%- include('../partials/header', { title: 'Panel Status Profesor' }) %>
-<%- include('../partials/navbar') %>
+<%- include('profesor_shell', { activeNav: 'mis_alumnas', topbarSection: 'Panel Profesor' }) %>
 
-<div class="main-wrapper">
-  <!-- Header Title -->
-  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
-    <div>
-      <h1 style="color: var(--gold-light); font-size: 1.8rem;">📊 Módulo Status - Profesor / Club</h1>
-      <p style="color: var(--text-muted);">Visualizador de patinadoras registradas, fichas técnicas e inscripciones a torneos.</p>
+
+  <div class="page-head-row">
+    <div class="page-head">
+      <span class="page-eyebrow">Módulo Profesor / Club</span>
+      <h1 class="page-title">Panel de Control del Profesor</h1>
+      <p class="page-sub">Visualizador de patinadoras registradas, fichas técnicas e inscripciones a torneos.</p>
     </div>
-    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+    <div class="page-head-actions">
       <a href="/profesor/alumnos/nuevo" class="btn btn-gold">+ Cargar Alumna</a>
       <a href="/profesor/inscribir" class="btn btn-outline-gold">✍️ Inscribir a Torneo</a>
     </div>
@@ -133,7 +133,7 @@
                 <td><%= r.dni %></td>
                 <td><%= r.tournament_name %></td>
                 <td>
-                  <span class="badge badge-violet"><%= r.category_name %></span>
+                  <span class="badge badge-violet"><%= formatCategoryName(r.category_name, r.discipline) %></span>
                   <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.discipline %> - <%= r.level %></div>
                 </td>
                 <td><%= r.event_date %></td>
@@ -159,6 +159,6 @@
       </p>
     <% } %>
   </div>
-</div>
+</main>
 
 <%- include('../partials/footer') %>

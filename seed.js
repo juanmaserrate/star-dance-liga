@@ -171,7 +171,7 @@ async function seed() {
 
   // 8. CMS Site Settings
   const setSetting = db.prepare(`INSERT INTO site_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`);
-  await setSetting.run('hero_title', 'LIGA DE PATINAJE ARTÍSTICO STAR DANCE');
+  await setSetting.run('hero_title', 'Liga Star Dance · Patín Artístico');
   await setSetting.run('hero_subtitle', 'Plataforma oficial de gestión de torneos, cuerpo de jueces, inscripción digital de patinadoras y fichas técnicas.');
   await setSetting.run('about_title', 'SOBRE LA LIGA STAR DANCE Y NUESTRO PROPÓSITO');
   await setSetting.run('about_content', 'La Liga Star Dance nace con la misión de impulsar, promover y profesionalizar el Patinaje Artístico sobre ruedas. Ofrecemos un marco competitivo sano, transparente y de máxima calidad técnica para deportistas desde categorías Iniciales e Infantil hasta Másters y Elite.');

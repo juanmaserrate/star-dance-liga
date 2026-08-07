@@ -1,13 +1,12 @@
 <%- include('../partials/header', { title: 'Gestor CMS de Portada' }) %>
-<%- include('../partials/navbar') %>
+<%- include('admin_shell', { activeNav: 'cms', topbarSection: 'Página Principal' }) %>
 
-<div class="main-wrapper">
+
   <div style="margin-bottom: 1.5rem;">
     <h1 style="color: var(--gold-light); font-size: 1.8rem;">🖥️ Administrador de Portada / CMS</h1>
     <p style="color: var(--text-muted);">Administra fácilmente las secciones de la página principal: banners, propósito, jueces y disciplinas.</p>
   </div>
 
-  <%- include('admin_nav') %>
 
   <% if (typeof success !== 'undefined' && success) { %>
     <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
@@ -213,6 +212,6 @@
       </div>
     <% } %>
   </div>
-</div>
+</main>
 
 <%- include('../partials/footer') %>

@@ -1,7 +1,7 @@
 <%- include('../partials/header', { title: 'Inscribir Alumna / Grupo' }) %>
-<%- include('../partials/navbar') %>
+<%- include('profesor_shell', { activeNav: 'inscribir', topbarSection: 'Inscribir a Torneo' }) %>
 
-<div class="main-wrapper">
+
   <div class="card" style="max-width: 850px; margin: 0 auto;">
     <div class="card-header">
       <h1 class="card-title">✍️ Inscripción a Torneo (Individual o Grupal)</h1>
@@ -20,23 +20,21 @@
         <select id="tournament_select" class="form-select" onchange="window.location.href='/profesor/inscribir?tournament_id=' + this.value + '<%= preselectedStudentId ? '&student_id=' + preselectedStudentId : '' %>'" required>
           <% activeTournaments.forEach(t => { %>
             <option value="<%= t.id %>" <%= (selectedTournamentId == t.id) ? 'selected' : '' %>>
-              <%= t.name %> (📅 <%= t.event_date %> - 📍 <%= t.venue %>)
+              <%= t.name %> (📅 <%= t.datesLabel %> - 📍 <%= t.venue %>)
             </option>
           <% }) %>
         </select>
         <input type="hidden" name="tournament_id" value="<%= selectedTournamentId %>">
       </div>
 
-      <!-- Select Category & Discipline -->
+      <!-- Select Discipline -->
       <div class="form-group">
-        <label class="form-label" for="category_id">2. Seleccionar Disciplina y Categoría *</label>
-        <% if (categories && categories.length > 0) { %>
-          <select id="category_id" name="category_id" class="form-select" onchange="autoDetectDisciplineType(this)" required>
-            <option value="">-- Seleccionar Categoría --</option>
-            <% categories.forEach(c => { %>
-              <option value="<%= c.id %>" data-discipline="<%= c.discipline %>">
-                [<%= c.discipline %>] <%= c.name %> (<%= c.min_age %>-<%= c.max_age %> años) - Arancel: $<%= c.fee %>
-              </option>
+        <label class="form-label" for="discipline_select">2. Seleccionar Disciplina *</label>
+        <% if (typeof disciplines !== 'undefined' && disciplines && disciplines.length > 0) { %>
+          <select id="discipline_select" class="form-select" required>
+            <option value="">-- Seleccionar Disciplina --</option>
+            <% disciplines.forEach(d => { %>
+              <option value="<%= d %>"><%= d %></option>
             <% }) %>
           </select>
         <% } else { %>
@@ -44,9 +42,24 @@
         <% } %>
       </div>
 
+      <!-- Select Category (filtered by discipline) -->
+      <div class="form-group">
+        <label class="form-label" for="category_id">3. Seleccionar Categoría *</label>
+        <% if (categories && categories.length > 0) { %>
+          <select id="category_id" name="category_id" class="form-select" onchange="autoDetectDisciplineType(this)" required disabled data-all-categories='<%- JSON.stringify(categories.map(c => ({ id: c.id, label: c.label || c.name, discipline: c.discipline }))) %>'></select>
+        <% } else { %>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">No hay categorías creadas para este torneo.</p>
+        <% } %>
+        <% if (typeof ageBandsByDiscipline !== 'undefined' && ageBandsByDiscipline && Object.keys(ageBandsByDiscipline).length > 0) { %>
+          <small id="age_bands_note" style="color: var(--text-muted); display: none; margin-top: 0.4rem; font-size: 0.82rem;">
+            Franjas de edad: <strong style="color: var(--gold-light);"></strong>
+          </small>
+        <% } %>
+      </div>
+
       <!-- Registration Type -->
       <div class="form-group">
-        <label class="form-label" for="group_type">3. Tipo de Inscripción *</label>
+        <label class="form-label" for="group_type">4. Tipo de Inscripción *</label>
         <select id="group_type" name="group_type" class="form-select" onchange="updateRowVisibility()">
           <option value="Individual">Individual (1 Patinadora)</option>
           <option value="Dúo">Dúo (2 Patinadoras)</option>
@@ -61,65 +74,13 @@
 
       <!-- Select Students Line-by-Line -->
       <div class="form-group" id="student_selection_box">
-        <label class="form-label" id="participants_label">4. Seleccionar Patinadora *</label>
+        <label class="form-label" id="participants_label">5. Seleccionar Patinadora *</label>
         <small id="group_info_help" style="color: var(--gold-light); display: none; margin-bottom: 0.5rem;">
           ℹ️ En disciplinas grupales o parejas, la categoría y edad del grupo se evalúan según la participante de mayor categoría o edad.
         </small>
 
         <% if (students && students.length > 0) { %>
-          <div style="display: flex; flex-direction: column; gap: 0.65rem;">
-            <!-- Renglón 1 (Principal) -->
-            <div id="row_1" style="display: flex; gap: 0.5rem; align-items: center;">
-              <span style="font-weight: 700; color: var(--gold-primary); min-width: 80px;" id="row_1_label">Patinadora:</span>
-              <select name="student_ids" id="student_select_1" class="form-select" required>
-                <option value="">-- Seleccionar Patinadora --</option>
-                <% students.forEach(s => { %>
-                  <option value="<%= s.id %>" <%= (preselectedStudentId == s.id) ? 'selected' : '' %>>
-                    <%= s.last_name %>, <%= s.first_name %> (DNI: <%= s.dni %> | <%= s.age %> AÑOS | <%= s.club_name %>)
-                  </option>
-                <% }) %>
-              </select>
-            </div>
-
-            <!-- Renglón 2 (Dúos / Parejas / Grupos) -->
-            <div id="row_2" style="display: none; gap: 0.5rem; align-items: center;">
-              <span style="font-weight: 700; color: var(--gold-primary); min-width: 80px;">Renglón 2:</span>
-              <select name="student_ids" id="student_select_2" class="form-select" disabled>
-                <option value="">-- Seleccionar 2da Patinadora --</option>
-                <% students.forEach(s => { %>
-                  <option value="<%= s.id %>">
-                    <%= s.last_name %>, <%= s.first_name %> (DNI: <%= s.dni %> | <%= s.age %> AÑOS | <%= s.club_name %>)
-                  </option>
-                <% }) %>
-              </select>
-            </div>
-
-            <!-- Renglón 3 (Tríos / Grupos) -->
-            <div id="row_3" style="display: none; gap: 0.5rem; align-items: center;">
-              <span style="font-weight: 700; color: var(--gold-primary); min-width: 80px;">Renglón 3:</span>
-              <select name="student_ids" id="student_select_3" class="form-select" disabled>
-                <option value="">-- Seleccionar 3ra Patinadora --</option>
-                <% students.forEach(s => { %>
-                  <option value="<%= s.id %>">
-                    <%= s.last_name %>, <%= s.first_name %> (DNI: <%= s.dni %> | <%= s.age %> AÑOS | <%= s.club_name %>)
-                  </option>
-                <% }) %>
-              </select>
-            </div>
-
-            <!-- Renglón 4 (Cuartetos / Grupos) -->
-            <div id="row_4" style="display: none; gap: 0.5rem; align-items: center;">
-              <span style="font-weight: 700; color: var(--gold-primary); min-width: 80px;">Renglón 4:</span>
-              <select name="student_ids" id="student_select_4" class="form-select" disabled>
-                <option value="">-- Seleccionar 4ta Patinadora --</option>
-                <% students.forEach(s => { %>
-                  <option value="<%= s.id %>">
-                    <%= s.last_name %>, <%= s.first_name %> (DNI: <%= s.dni %> | <%= s.age %> AÑOS | <%= s.club_name %>)
-                  </option>
-                <% }) %>
-              </select>
-            </div>
-          </div>
+          <div id="student_rows" style="display: flex; flex-direction: column; gap: 0.65rem;"></div>
         <% } else { %>
           <div class="alert alert-danger" style="margin-top: 0.5rem;">
             No tienes patinadoras en tu padrón. <a href="/profesor/alumnos/nuevo" style="color: white; text-decoration: underline">Carga una aquí primero</a>.
@@ -129,7 +90,7 @@
 
       <!-- Club de la Inscripción -->
       <div class="form-group">
-        <label class="form-label" for="club_id">5. Club de la Inscripción *</label>
+        <label class="form-label" for="club_id">6. Club de la Inscripción *</label>
         <select id="club_id" name="club_id" class="form-select">
           <% if (typeof myClubs !== 'undefined' && myClubs && myClubs.length > 0) { %>
             <% myClubs.forEach(c => { %>
@@ -155,15 +116,84 @@
 
       <div style="margin-top: 2rem;">
         <button type="submit" class="btn btn-gold" style="width: 100%; font-size: 1.1rem;" <%= (!students || students.length === 0 || !categories || categories.length === 0) ? 'disabled' : '' %>>
-          ✨ Confirmar Inscripción en MAYÚSCULAS
+          ✨ Confirmar
         </button>
       </div>
 
     </form>
   </div>
-</div>
+</main>
 
 <script>
+  const STUDENTS = <%- JSON.stringify(students.map(s => ({ id: s.id, first_name: s.first_name, last_name: s.last_name, dni: s.dni, age: s.age, club_name: s.club_name }))).replace(/</g, '\\u003c') %>;
+  const PRESELECTED_ID = <%- JSON.stringify(preselectedStudentId || null) %>;
+
+  const MAX_BY_TYPE = {
+    'Individual': 1,
+    'Dúo': 2,
+    'Parejas Mixtas': 2,
+    'Trío': 3,
+    'Cuarteto': 4,
+    'Small': 6,
+    'Show': 30,
+    'Precisión': 30
+  };
+
+  function ordinal(n) {
+    const map = { 1: '1ra', 2: '2da', 3: '3ra', 4: '4ta', 5: '5ta', 6: '6ta', 7: '7ma', 8: '8va', 9: '9na', 10: '10ma' };
+    return map[n] || (n + '°');
+  }
+
+  // Genera los renglones de patinadoras según el máximo que permite el tipo (hasta 30)
+  function buildStudentRows(max) {
+    const container = document.getElementById('student_rows');
+    if (!container) return;
+
+    const prev = {};
+    container.querySelectorAll('select[name="student_ids"]').forEach((s, i) => {
+      if (s.value) prev[i + 1] = s.value;
+    });
+
+    container.innerHTML = '';
+    for (let i = 1; i <= max; i++) {
+      const row = document.createElement('div');
+      row.id = 'row_' + i;
+      row.style.cssText = 'display: flex; gap: 0.5rem; align-items: center;';
+
+      const label = document.createElement('span');
+      label.style.cssText = 'font-weight: 700; color: var(--gold-primary); min-width: 90px;';
+      label.textContent = max === 1 ? 'Patinadora:' : 'Renglón ' + i + ':';
+
+      const sel = document.createElement('select');
+      sel.name = 'student_ids';
+      sel.id = 'student_select_' + i;
+      sel.className = 'form-select';
+      if (i === 1) sel.required = true;
+
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = max === 1
+        ? '-- Seleccionar Patinadora --'
+        : (i === 1 ? '-- Seleccionar 1ra Patinadora --' : '-- Seleccionar ' + ordinal(i) + ' Patinadora --');
+      sel.appendChild(placeholder);
+
+      STUDENTS.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.last_name + ', ' + s.first_name + ' (DNI: ' + s.dni + ' | ' + s.age + ' AÑOS | ' + s.club_name + ')';
+        if (i === 1 && PRESELECTED_ID && String(PRESELECTED_ID) === String(s.id)) opt.selected = true;
+        sel.appendChild(opt);
+      });
+
+      if (prev[i]) sel.value = prev[i];
+
+      row.appendChild(label);
+      row.appendChild(sel);
+      container.appendChild(row);
+    }
+    filterSelectedStudents();
+  }
+
   function autoDetectDisciplineType(selectElem) {
     const selectedOption = selectElem.options[selectElem.selectedIndex];
     if (!selectedOption) return;
@@ -192,83 +222,114 @@
     updateRowVisibility();
   }
 
+  function filterCategoriesByDiscipline() {
+    const discSelect = document.getElementById('discipline_select');
+    const catSelect = document.getElementById('category_id');
+    if (!discSelect || !catSelect) return;
+
+    const selectedDisc = discSelect.value;
+    const allCategories = catSelect.dataset.allCategories ? JSON.parse(catSelect.dataset.allCategories) : [];
+
+    catSelect.innerHTML = '';
+
+    (allCategories || []).forEach(c => {
+      if (!selectedDisc || c.discipline === selectedDisc) {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.setAttribute('data-discipline', c.discipline);
+        opt.textContent = c.label || c.name;
+        catSelect.appendChild(opt);
+      }
+    });
+
+    if (catSelect.options.length > 0) {
+      catSelect.disabled = false;
+    } else {
+      catSelect.disabled = true;
+      catSelect.innerHTML = '<option value="">-- No hay categorías en esta disciplina --</option>';
+    }
+    catSelect.value = '';
+
+    const ageNote = document.getElementById('age_bands_note');
+    if (ageNote) {
+      const AGE_BANDS = <%- typeof ageBandsByDiscipline !== 'undefined' ? JSON.stringify(ageBandsByDiscipline).replace(/</g, '\\u003c') : '{}' %>;
+      const strong = ageNote.querySelector('strong');
+      if (strong && AGE_BANDS[selectedDisc]) {
+        strong.textContent = AGE_BANDS[selectedDisc];
+        ageNote.style.display = 'block';
+      } else if (strong) {
+        strong.textContent = '';
+        ageNote.style.display = 'none';
+      }
+    }
+  }
+
+  // Acopla la disciplina con el tipo de inscripción permitido
+  function filterGroupTypesByDiscipline(disc) {
+    const d = (disc || '').toUpperCase();
+    let allowed = ['Individual'];
+    if (d.includes('DÚO')) allowed = ['Dúo'];
+    else if (d.includes('TRÍO')) allowed = ['Trío'];
+    else if (d.includes('CUARTETO')) allowed = ['Cuarteto'];
+    else if (d.includes('PAREJA')) allowed = ['Parejas Mixtas'];
+    else if (d.includes('SMALL')) allowed = ['Small'];
+    else if (d.includes('SHOW')) allowed = ['Show'];
+    else if (d.includes('PRECISIÓN')) allowed = ['Precisión'];
+
+    const groupSelect = document.getElementById('group_type');
+    const labels = {
+      'Individual': 'Individual (1 Patinadora)',
+      'Dúo': 'Dúo (2 Patinadoras)',
+      'Trío': 'Trío (3 Patinadoras)',
+      'Cuarteto': 'Cuarteto (4 Patinadoras)',
+      'Small': 'Small Group (Hasta 6 Patinadoras)',
+      'Show': 'Show (Hasta 30 Patinadoras)',
+      'Precisión': 'Precisión (Hasta 30 Patinadoras)',
+      'Parejas Mixtas': 'Parejas Mixtas (2 Patinadores)'
+    };
+
+    groupSelect.innerHTML = '';
+    allowed.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = labels[t] || t;
+      groupSelect.appendChild(opt);
+    });
+    groupSelect.value = allowed[0];
+    updateRowVisibility();
+  }
+
   function updateRowVisibility() {
     const type = document.getElementById('group_type').value;
-
-    const row1 = document.getElementById('row_1');
-    const row2 = document.getElementById('row_2');
-    const row3 = document.getElementById('row_3');
-    const row4 = document.getElementById('row_4');
-
-    const select1 = document.getElementById('student_select_1');
-    const select2 = document.getElementById('student_select_2');
-    const select3 = document.getElementById('student_select_3');
-    const select4 = document.getElementById('student_select_4');
+    const max = MAX_BY_TYPE[type] || 1;
 
     const groupNameBox = document.getElementById('group_name_box');
     const helpText = document.getElementById('group_info_help');
     const mainLabel = document.getElementById('participants_label');
-    const row1Label = document.getElementById('row_1_label');
 
     if (type === 'Individual') {
       mainLabel.innerText = '4. Seleccionar Patinadora *';
-      row1Label.innerText = 'Patinadora:';
       helpText.style.display = 'none';
       groupNameBox.style.display = 'none';
-
-      row2.style.display = 'none';
-      row3.style.display = 'none';
-      row4.style.display = 'none';
-
-      select2.disabled = true;
-      select3.disabled = true;
-      select4.disabled = true;
     } else {
       mainLabel.innerText = '4. Seleccionar Patinadoras del Grupo (Línea por Línea) *';
-      row1Label.innerText = 'Renglón 1:';
       helpText.style.display = 'block';
       groupNameBox.style.display = 'block';
-
-      if (type === 'Dúo' || type === 'Parejas Mixtas') {
-        row2.style.display = 'flex'; select2.disabled = false;
-        row3.style.display = 'none'; select3.disabled = true;
-        row4.style.display = 'none'; select4.disabled = true;
-      } else if (type === 'Trío') {
-        row2.style.display = 'flex'; select2.disabled = false;
-        row3.style.display = 'flex'; select3.disabled = false;
-        row4.style.display = 'none'; select4.disabled = true;
-      } else { // Cuarteto, Small, Show, Precisión
-        row2.style.display = 'flex'; select2.disabled = false;
-        row3.style.display = 'flex'; select3.disabled = false;
-        row4.style.display = 'flex'; select4.disabled = false;
-      }
     }
-    
-    // Trigger filtering on visibility updates
-    filterSelectedStudents();
+
+    buildStudentRows(max);
   }
 
   function filterSelectedStudents() {
-    const selects = [
-      document.getElementById('student_select_1'),
-      document.getElementById('student_select_2'),
-      document.getElementById('student_select_3'),
-      document.getElementById('student_select_4')
-    ];
+    const container = document.getElementById('student_rows');
+    if (!container) return;
+    const selects = Array.from(container.querySelectorAll('select[name="student_ids"]'));
 
-    // Gather currently selected values (excluding empty placeholder)
-    const selectedValues = selects
-      .filter(s => s && !s.disabled)
-      .map(s => s.value)
-      .filter(val => val !== '');
+    const selectedValues = selects.map(s => s.value).filter(v => v !== '');
 
     selects.forEach(currentSelect => {
-      if (!currentSelect || currentSelect.disabled) return;
-
       const currentValue = currentSelect.value;
-      const options = currentSelect.querySelectorAll('option');
-
-      options.forEach(opt => {
+      currentSelect.querySelectorAll('option').forEach(opt => {
         if (opt.value === '') return; // Never disable placeholder
 
         // Disable this option if it's selected in any other dropdown
@@ -281,22 +342,23 @@
     });
   }
 
-  // Attach event listeners to all student dropdowns
+  // Attach event listeners (delegación: no hace falta re-adjuntar por renglón)
   document.addEventListener('DOMContentLoaded', () => {
     updateRowVisibility();
-    
-    const selects = [
-      document.getElementById('student_select_1'),
-      document.getElementById('student_select_2'),
-      document.getElementById('student_select_3'),
-      document.getElementById('student_select_4')
-    ];
 
-    selects.forEach(s => {
-      if (s) {
-        s.addEventListener('change', filterSelectedStudents);
-      }
-    });
+    const disciplineSelect = document.getElementById('discipline_select');
+    if (disciplineSelect) {
+      disciplineSelect.addEventListener('change', filterCategoriesByDiscipline);
+      disciplineSelect.addEventListener('change', () => filterGroupTypesByDiscipline(disciplineSelect.value));
+      filterGroupTypesByDiscipline(disciplineSelect.value);
+    }
+
+    const container = document.getElementById('student_rows');
+    if (container) {
+      container.addEventListener('change', (e) => {
+        if (e.target && e.target.name === 'student_ids') filterSelectedStudents();
+      });
+    }
   });
 </script>
 

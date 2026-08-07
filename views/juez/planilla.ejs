@@ -1,13 +1,16 @@
 <%- include('../partials/header', { title: 'Planilla de Juzgamiento' }) %>
-<%- include('../partials/navbar') %>
+<%- include('juez_shell', { activeNav: 'planilla', topbarSection: 'Planilla' }) %>
 
-<div class="main-wrapper">
-  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;" class="no-print">
-    <div>
-      <h1 style="color: var(--gold-light); font-size: 1.8rem;">⚖️ Planilla Oficial de Evaluación (Jueces)</h1>
-      <p style="color: var(--text-muted);">Listado de competidores ordenado por categoría para la mesa examinadora.</p>
+
+  <div class="page-head-row no-print">
+    <div class="page-head">
+      <span class="page-eyebrow">Módulo Juez</span>
+      <h1 class="page-title">Planilla Oficial de Evaluación</h1>
+      <p class="page-sub">Listado de competidores ordenado por categoría para la mesa examinadora.</p>
     </div>
-    <button onclick="window.print()" class="btn btn-gold">🖨️ Imprimir Planillas de Juzgamiento</button>
+    <div class="page-head-actions">
+      <button onclick="window.print()" class="btn btn-gold">🖨️ Imprimir Planillas de Juzgamiento</button>
+    </div>
   </div>
 
   <!-- Filter Bar -->
@@ -27,7 +30,7 @@
         <select name="category_id" class="form-select" onchange="this.form.submit()">
           <option value="">-- Todas las Categorías --</option>
           <% categories.forEach(c => { %>
-            <option value="<%= c.id %>" <%= selectedCategoryId == c.id ? 'selected' : '' %>><%= c.name %> (<%= c.discipline %> - <%= c.level %>)</option>
+            <option value="<%= c.id %>" <%= selectedCategoryId == c.id ? 'selected' : '' %>><%= formatCategoryName(c.name, c.discipline) %> <% if (c.level) { %>(<%= c.level %>)<% } %></option>
           <% }) %>
         </select>
       </div>
@@ -85,6 +88,6 @@
       <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">No hay inscriptos para el torneo o categoría seleccionada.</p>
     </div>
   <% } %>
-</div>
+</main>
 
 <%- include('../partials/footer') %>

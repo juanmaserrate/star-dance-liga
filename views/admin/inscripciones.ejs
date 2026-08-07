@@ -1,25 +1,65 @@
 <%- include('../partials/header', { title: 'Gestión de Inscripciones y Pagos' }) %>
-<%- include('../partials/navbar') %>
+<%- include('admin_shell', { activeNav: 'inscripciones', topbarSection: 'Inscripciones' }) %>
 
-<div class="main-wrapper">
+
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
     <div>
       <h1 style="color: var(--gold-light); font-size: 1.8rem;">Master de Inscripciones, Bonificaciones y Control de Pagos</h1>
       <p style="color: var(--text-muted);">Visualizador general con desglose en columnas individuales para cada dato.</p>
     </div>
-    
-    <a href="/admin/exportar/csv?<%= selectedTournament ? 'tournament_id=' + selectedTournament + '&' : '' %><%= selectedClub ? 'club_id=' + selectedClub + '&' : '' %><%= selectedPayment ? 'payment_status=' + selectedPayment : '' %>" class="btn btn-gold">
-      📥 Exportar a Excel / CSV (MAYÚSCULAS)
-    </a>
+
+    <button type="button" class="btn btn-gold" onclick="document.getElementById('export_panel').style.display = document.getElementById('export_panel').style.display === 'none' ? 'block' : 'none'">
+      📥 Exportar (Excel / CSV)
+    </button>
+  </div>
+
+  <!-- Export Configuration Panel -->
+  <div id="export_panel" class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; display: none; border-top: 3px solid var(--gold-primary);">
+    <form method="GET" action="/admin/exportar/csv" id="export_form">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.9rem;">
+        <strong style="color: var(--gold-light); font-size: 1.05rem;">🎯 Configurar Exportación (<%= registrations.length %> inscripciones con los filtros actuales)</strong>
+        <div style="display: flex; gap: 0.4rem; align-items: center;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="document.querySelectorAll('#export_form input[name=\'fields[]\']').forEach(c => c.checked = true)">Marcar todos</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="document.querySelectorAll('#export_form input[name=\'fields[]\']').forEach(c => c.checked = false)">Limpiar</button>
+        </div>
+      </div>
+
+      <input type="hidden" name="tournament_id" value="<%= selectedTournament %>">
+      <input type="hidden" name="club_id" value="<%= selectedClub %>">
+      <input type="hidden" name="payment_status" value="<%= selectedPayment %>">
+      <input type="hidden" name="buscar" value="<%= typeof buscar !== 'undefined' ? buscar : '' %>">
+      <input type="hidden" name="disciplina" value="<%= typeof disciplina !== 'undefined' ? disciplina : '' %>">
+      <input type="hidden" name="categoria" value="<%= typeof categoria !== 'undefined' ? categoria : '' %>">
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem 1rem; padding: 0.9rem; background: rgba(18,6,28,0.55); border: 1px solid var(--border-gold); border-radius: var(--radius-sm);">
+        <% (typeof exportFields !== 'undefined' ? exportFields : []).forEach(f => { %>
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--text-main); cursor: pointer;">
+            <input type="checkbox" name="fields[]" value="<%= f.id %>" checked style="accent-color: var(--gold-primary);">
+            <%= f.label %>
+          </label>
+        <% }) %>
+      </div>
+
+      <div style="display: flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap;">
+        <button type="submit" class="btn btn-gold" formaction="/admin/exportar/excel">⬇️ Descargar Excel (.xlsx) estilizado</button>
+        <button type="submit" class="btn btn-outline-gold">📋 Descargar CSV (MAYÚSCULAS)</button>
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('export_panel').style.display='none'">Cerrar</button>
+      </div>
+      <small style="color: var(--text-muted); display: block; margin-top: 0.7rem;">El Excel se genera con la paleta de colores del sistema (dorado y violeta), encabezados dorados, bandas alternadas, auto-filtro por columna y los integrantes de cada grupo juntos en la fila.</small>
+    </form>
   </div>
 
   <% if (typeof success !== 'undefined' && success) { %>
     <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
   <% } %>
 
-  <!-- Filter Bar -->
-  <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
-    <form action="/admin/inscripciones" method="GET" class="form-row" style="align-items: flex-end;">
+  <!-- Registrations Table with Every Field in a Separate Column -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">📋 Patinadoras e Inscripciones (<%= registrations.length %>)</h2>
+    </div>
+
+    <form action="/admin/inscripciones" method="GET" class="form-row" style="align-items: flex-end; flex-wrap: wrap; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-gold);">
       <div class="form-group" style="margin-bottom: 0;">
         <label class="form-label">Filtrar por Torneo</label>
         <select name="tournament_id" class="form-select" onchange="this.form.submit()">
@@ -49,31 +89,41 @@
         </select>
       </div>
 
-      <div>
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Disciplina</label>
+        <input type="text" name="disciplina" class="form-control" placeholder="EJ: LIBRE / FREE DANCE" value="<%= typeof disciplina !== 'undefined' ? disciplina : '' %>" style="text-transform: uppercase;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Categoría</label>
+        <input type="text" name="categoria" class="form-control" placeholder="EJ: 1B / INFANTIL" value="<%= typeof categoria !== 'undefined' ? categoria : '' %>" style="text-transform: uppercase;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 220px;">
+        <label class="form-label">Buscar (nombre, DNI, club, torneo, categoría)</label>
+        <input type="text" name="buscar" class="form-control" placeholder="EJ: MARTINEZ / 45.123.456 / ESTRELLA" value="<%= typeof buscar !== 'undefined' ? buscar : '' %>" style="text-transform: uppercase;">
+      </div>
+
+      <div style="display: flex; gap: 0.4rem;">
+        <button type="submit" class="btn btn-gold" style="height: 40px;">🔍 Buscar</button>
         <a href="/admin/inscripciones" class="btn btn-secondary btn-sm" style="height: 40px; display: flex; align-items: center;">Limpiar Filtros</a>
       </div>
     </form>
-  </div>
-
-  <!-- Registrations Table with Every Field in a Separate Column -->
-  <div class="card">
-    <div class="card-header">
-      <h2 class="card-title">📋 Patinadoras e Inscripciones (<%= registrations.length %>)</h2>
-    </div>
 
     <% if (registrations && registrations.length > 0) { %>
       <div class="table-responsive">
         <table class="table">
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Apellido</th>
+              <th>Nombre y Apellido</th>
               <th>DNI</th>
               <th>CUIL</th>
               <th>Fecha Nac.</th>
               <th>Edad</th>
               <th>Club</th>
               <th>Profesora</th>
+              <th>Torneo</th>
+              <th>Fecha Evento</th>
               <th>Categoría</th>
               <th>Disciplina</th>
               <th>Arancel Base</th>
@@ -88,19 +138,27 @@
             <% registrations.forEach(r => { %>
               <tr>
                 <td>
-                  <strong><%= r.first_name %></strong>
                   <% if (r.is_group) { %>
-                    <div style="font-size: 0.75rem; color: var(--gold-light);"><%= r.group_type %>: <%= r.group_name %></div>
+                    <strong style="color: var(--gold-light);"><%= r.group_name || 'GRUPO' %></strong>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.3rem;"><%= r.group_type %></div>
+                    <div style="display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-start;">
+                      <% (r.members || []).forEach(m => { %>
+                        <span class="badge badge-violet"><%= m.last_name %>, <%= m.first_name %><% if (m.dni) { %> (DNI <%= m.dni %>)<% } %></span>
+                      <% }) %>
+                    </div>
+                  <% } else { %>
+                    <strong><%= r.last_name %>, <%= r.first_name %></strong>
                   <% } %>
                 </td>
-                <td><strong><%= r.last_name %></strong></td>
                 <td><strong style="color: var(--gold-light);"><%= r.dni %></strong></td>
                 <td><%= r.cuil || '-' %></td>
                 <td><%= r.birth_date || '-' %></td>
                 <td><span class="badge badge-violet"><%= r.age || 0 %> AÑOS</span></td>
                 <td><strong><%= r.club_name %></strong></td>
                 <td><span style="color: var(--gold-primary); font-size: 0.85rem;"><%= r.teacher_name %></span></td>
-                <td><span class="badge badge-violet"><%= r.category_name %></span></td>
+                <td><%= r.tournament_name %></td>
+                <td><span style="color: var(--gold-light); font-weight: 700; white-space: nowrap;"><%= r.datesLabel %></span></td>
+                <td><span class="badge badge-violet"><%= formatCategoryName(r.category_name, r.discipline) %></span></td>
                 <td><%= r.discipline %></td>
                 <td>$<%= r.original_fee %></td>
                 <td>
@@ -160,6 +218,6 @@
       <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">No se encontraron inscripciones con los filtros seleccionados.</p>
     <% } %>
   </div>
-</div>
+</main>
 
 <%- include('../partials/footer') %>

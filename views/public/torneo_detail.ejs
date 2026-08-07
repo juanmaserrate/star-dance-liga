@@ -25,11 +25,11 @@
       </div>
       <div>
         <small class="label-caps" style="color: var(--gold-primary);">📅 Fecha del Evento</small>
-        <div style="font-size: 1.1rem; font-weight: 600;"><%= tournament.event_date %></div>
+        <div style="font-size: 1.1rem; font-weight: 600;"><%= tournament.datesLabel %></div>
       </div>
       <div>
         <small class="label-caps" style="color: var(--gold-primary);">⏳ Cierre de Inscripción</small>
-        <div style="font-size: 1.1rem; font-weight: 600;"><%= tournament.registration_deadline %></div>
+        <div style="font-size: 1.1rem; font-weight: 600;"><%= tournament.deadlineLabel || tournament.registration_deadline %></div>
       </div>
       <div>
         <small class="label-caps" style="color: var(--gold-primary);">👥 Total Inscriptos</small>
@@ -57,7 +57,7 @@
         <tbody>
           <% categories.forEach(c => { %>
             <tr>
-              <td><strong><%= c.name %></strong></td>
+              <td><strong><%= formatCategoryName(c.name, c.discipline) %></strong></td>
               <td><%= c.discipline %></td>
               <td><span class="badge badge-violet"><%= c.level %></span></td>
               <td><%= c.min_age %> - <%= c.max_age %> años</td>

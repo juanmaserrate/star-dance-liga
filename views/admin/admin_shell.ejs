@@ -1,0 +1,86 @@
+<!-- Admin Suite Shell (Rediseño 2026): Sidebar + Topbar -->
+<aside class="admin-sidebar" id="adminSidebar">
+  <div class="admin-sidebar-brand">
+    <div class="admin-sidebar-logo">
+      <img src="/img/logo.svg" alt="Star Dance" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;" />
+    </div>
+    <h1>Star Dance</h1>
+    <p>Admin Suite</p>
+  </div>
+
+  <nav class="admin-sidebar-nav">
+    <a href="/admin/dashboard" class="admin-nav-link <%= activeNav === 'dashboard' ? 'active' : '' %>">
+      <span class="material-symbols-outlined">dashboard</span> Dashboard
+    </a>
+    <a href="/admin/usuarios" class="admin-nav-link <%= activeNav === 'usuarios' ? 'active' : '' %>">
+      <span class="material-symbols-outlined">group</span> Usuarios
+    </a>
+    <a href="/admin/torneos" class="admin-nav-link <%= activeNav === 'torneos' ? 'active' : '' %>">
+      <span class="material-symbols-outlined">emoji_events</span> Torneos
+    </a>
+    <a href="/admin/clubes" class="admin-nav-link <%= activeNav === 'clubes' ? 'active' : '' %>">
+      <span class="material-symbols-outlined">account_balance</span> Clubes
+    </a>
+    <a href="/admin/alumnos" class="admin-nav-link <%= activeNav === 'alumnos' ? 'active' : '' %>">
+      <span class="material-symbols-outlined">school</span> Patinadoras
+    </a>
+    <a href="/admin/inscripciones" class="admin-nav-link <%= activeNav === 'inscripciones' ? 'active' : '' %>">
+      <span class="material-symbols-outlined">assignment</span> Inscripciones
+    </a>
+    <a href="/admin/finanzas" class="admin-nav-link <%= activeNav === 'finanzas' ? 'active' : '' %>">
+      <span class="material-symbols-outlined">payments</span> Finanzas
+    </a>
+    <a href="/admin/posiciones" class="admin-nav-link <%= activeNav === 'posiciones' ? 'active' : '' %>">
+      <span class="material-symbols-outlined">leaderboard</span> Posiciones
+    </a>
+    <a href="/admin/cms" class="admin-nav-link <%= activeNav === 'cms' ? 'active' : '' %>">
+      <span class="material-symbols-outlined">settings_applications</span> Página Principal
+    </a>
+  </nav>
+
+  <div class="admin-sidebar-footer">
+    <a href="/admin/torneos/nuevo" class="btn btn-gold">
+      <span class="material-symbols-outlined" style="font-size: 1.1rem;">add</span> Nuevo Torneo
+    </a>
+  </div>
+</aside>
+
+<header class="admin-topbar">
+  <div style="display: flex; align-items: center;">
+    <button class="admin-menu-toggle" id="adminMenuToggle" aria-label="Abrir menú">
+      <span class="material-symbols-outlined">menu</span>
+    </button>
+    <div class="admin-topbar-title">
+      Star Dance League Admin
+      <span class="material-symbols-outlined">chevron_right</span>
+      <strong><%= topbarSection %></strong>
+    </div>
+  </div>
+
+  <div class="admin-topbar-actions">
+    <span class="admin-topbar-icon material-symbols-outlined">notifications</span>
+    <span class="admin-topbar-icon material-symbols-outlined">settings</span>
+    <span class="admin-topbar-icon material-symbols-outlined">help_outline</span>
+    <div class="admin-topbar-user">
+      <div class="avatar"><%= (user && user.full_name ? user.full_name.trim().split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() : 'AD') %></div>
+      <div class="info">
+        <span><%= user ? user.full_name : 'Administrador' %></span>
+        <a href="/auth/logout">Cerrar Sesión</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="admin-main">
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('adminMenuToggle');
+    const sidebar = document.getElementById('adminSidebar');
+    if (toggle && sidebar) {
+      toggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+      });
+    }
+  });
+</script>

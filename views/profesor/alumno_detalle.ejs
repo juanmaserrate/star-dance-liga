@@ -1,13 +1,13 @@
 <%- include('../partials/header', { title: 'Ficha de Alumna' }) %>
-<%- include('../partials/navbar') %>
+<%- include('profesor_shell', { activeNav: 'mis_alumnas', topbarSection: 'Ficha de Alumna' }) %>
 
-<div class="main-wrapper">
+
   <div class="card" style="max-width: 900px; margin: 0 auto; border-top: 5px solid var(--gold-primary);">
     <div class="card-header">
       <h1 class="card-title">👤 Ficha Técnica y Datos de la Alumna</h1>
       <div style="display: flex; gap: 0.5rem;">
         <a href="/profesor/alumnos/<%= student.id %>/editar" class="btn btn-gold btn-sm">✏️ Editar Datos</a>
-        <a href="/profesor/alumnos" class="btn btn-secondary btn-sm">&larr; Volver al Padrón</a>
+        <a href="/profesor/dashboard" class="btn btn-secondary btn-sm">&larr; Volver al Padrón</a>
       </div>
     </div>
 
@@ -89,9 +89,9 @@
               <% registrations.forEach(r => { %>
                 <tr>
                   <td><strong><%= r.tournament_name %></strong></td>
-                  <td><%= r.event_date %></td>
+                  <td><%= r.datesLabel %></td>
                   <td>
-                    <span class="badge badge-violet"><%= r.category_name %></span>
+                    <span class="badge badge-violet"><%= formatCategoryName(r.category_name, r.discipline) %></span>
                     <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.discipline %></div>
                   </td>
                   <td>
@@ -113,6 +113,6 @@
     </div>
 
   </div>
-</div>
+</main>
 
 <%- include('../partials/footer') %>

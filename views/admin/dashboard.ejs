@@ -1,69 +1,85 @@
 <%- include('../partials/header', { title: 'Dashboard Status Administrador' }) %>
-<%- include('../partials/navbar') %>
+<%- include('admin_shell', { activeNav: 'dashboard', topbarSection: 'Dashboard' }) %>
 
-<div class="main-wrapper">
-  <div style="margin-bottom: 1.5rem;">
-    <h1 style="color: var(--gold-light); font-size: 1.8rem;">📊 Módulo Status - Administración Star Dance</h1>
-    <p style="color: var(--text-muted);">Control general de estadísticas, padrón maestro de deportistas cargadas y finanzas.</p>
+  <div class="page-head-row">
+    <div class="page-head">
+      <span class="page-eyebrow">Módulo Administrador</span>
+      <h1 class="page-title">Panel de Control — Star Dance</h1>
+      <p class="page-sub">Control general de estadísticas, padrón maestro de deportistas cargadas y finanzas.</p>
+    </div>
+    <div class="page-head-actions">
+      <a href="/admin/alumnos/nuevo" class="btn btn-gold">+ Nueva Patinadora</a>
+      <a href="/admin/torneos/nuevo" class="btn btn-ghost">+ Nuevo Torneo</a>
+    </div>
   </div>
 
   <!-- Summary Stat Tiles -->
-  <div class="stat-grid">
-    <div class="stat-tile">
-      <div class="stat-icon">⛸️</div>
+  <div class="admin-stat-grid">
+    <div class="admin-stat">
+      <div class="admin-stat-icon"><span class="material-symbols-outlined">roller_skating</span></div>
       <div>
-        <div class="stat-val"><%= stats.totalSkaters %></div>
-        <div class="stat-label">Total Patinadoras Cargadas</div>
+        <div class="admin-stat-val"><%= stats.totalSkaters %></div>
+        <div class="admin-stat-label">Total Patinadoras Cargadas</div>
       </div>
     </div>
 
-    <div class="stat-tile">
-      <div class="stat-icon">📝</div>
+    <div class="admin-stat">
+      <div class="admin-stat-icon"><span class="material-symbols-outlined">assignment</span></div>
       <div>
-        <div class="stat-val"><%= stats.totalRegistrations %></div>
-        <div class="stat-label">Inscripciones Totales</div>
+        <div class="admin-stat-val"><%= stats.totalRegistrations %></div>
+        <div class="admin-stat-label">Inscripciones Totales</div>
       </div>
     </div>
 
-    <div class="stat-tile">
-      <div class="stat-icon" style="color: #2ec4b6;">💰</div>
+    <div class="admin-stat">
+      <div class="admin-stat-icon"><span class="material-symbols-outlined">payments</span></div>
       <div>
-        <div class="stat-val" style="color: #2ec4b6;">$<%= stats.totalPaid.toLocaleString() %></div>
-        <div class="stat-label">Recaudado (Pagado)</div>
+        <div class="admin-stat-val text-tertiary">$<%= stats.totalPaid.toLocaleString() %></div>
+        <div class="admin-stat-label">Recaudado (Pagado)</div>
       </div>
     </div>
 
-    <div class="stat-tile">
-      <div class="stat-icon" style="color: #ff9f1c;">⏳</div>
+    <div class="admin-stat">
+      <div class="admin-stat-icon text-error"><span class="material-symbols-outlined">hourglass_empty</span></div>
       <div>
-        <div class="stat-val" style="color: #ff9f1c;">$<%= stats.totalPending.toLocaleString() %></div>
-        <div class="stat-label">Saldo Pendiente</div>
+        <div class="admin-stat-val text-error">$<%= stats.totalPending.toLocaleString() %></div>
+        <div class="admin-stat-label">Saldo Pendiente</div>
       </div>
     </div>
   </div>
 
-  <!-- Summary Cards Grid -->
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-    <!-- Inscriptos por Club -->
-    <div class="card" style="margin: 0;">
-      <h2 class="card-title" style="margin-bottom: 1rem;">🏛️ Patinadoras por Club</h2>
-      <% if (registrationsByClub && registrationsByClub.length > 0) { %>
-        <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.75rem;">
+  <!-- Secondary Grid -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Patinadoras por Club -->
+    <div class="admin-card" style="margin: 0; display: flex; flex-direction: column;">
+      <div class="admin-card-head">
+        <div class="head-left">
+          <span class="material-symbols-outlined">account_balance</span>
+          <h3 class="admin-card-title">Patinadoras por Club</h3>
+        </div>
+      </div>
+      <div style="flex: 1;">
+        <% if (registrationsByClub && registrationsByClub.length > 0) { %>
           <% registrationsByClub.forEach(c => { %>
-            <li style="display: flex; justify-content: space-between; align-items: center; background: rgba(18,6,28,0.6); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-gold);">
-              <span><strong><%= c.club_name %></strong></span>
-              <span class="badge badge-violet" style="font-size: 0.9rem;"><%= c.count %> inscripciones</span>
-            </li>
+            <div class="admin-list-row">
+              <span style="font-weight: 600; text-transform: uppercase; color: var(--text-main);"><%= c.club_name %></span>
+              <span class="count-chip"><%= c.count %> inscripciones</span>
+            </div>
           <% }) %>
-        </ul>
-      <% } else { %>
-        <p style="color: var(--text-muted);">Sin datos registrados aún.</p>
-      <% } %>
+        <% } else { %>
+          <p style="color: var(--text-muted); padding: 1.5rem; text-align: center;">Sin datos registrados aún.</p>
+        <% } %>
+      </div>
     </div>
 
-    <!-- Últimas Inscripciones -->
-    <div class="card" style="margin: 0;">
-      <h2 class="card-title" style="margin-bottom: 1rem;">⚡ Últimas Inscripciones Activas</h2>
+    <!-- Últimas Inscripciones Activas -->
+    <div class="admin-card" style="margin: 0; display: flex; flex-direction: column;">
+      <div class="admin-card-head">
+        <div class="head-left">
+          <span class="material-symbols-outlined">bolt</span>
+          <h3 class="admin-card-title">Últimas Inscripciones Activas</h3>
+        </div>
+      </div>
       <% if (recentRegistrations && recentRegistrations.length > 0) { %>
         <div class="table-responsive">
           <table class="table">
@@ -94,15 +110,18 @@
           </table>
         </div>
       <% } else { %>
-        <p style="color: var(--text-muted);">Sin inscripciones recientes.</p>
+        <p style="color: var(--text-muted); padding: 1.5rem; text-align: center;">Sin inscripciones recientes.</p>
       <% } %>
     </div>
   </div>
 
   <!-- Master Skaters Table in Status Module -->
-  <div class="card">
-    <div class="card-header">
-      <h2 class="card-title">👥 Datos de Patinadoras Cargadas en el Sistema (<%= studentsList.length %>)</h2>
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <div class="head-left">
+        <span class="material-symbols-outlined">group</span>
+        <h2 class="admin-card-title">Datos de Patinadoras Cargadas en el Sistema (<%= studentsList.length %>)</h2>
+      </div>
       <a href="/admin/alumnos/nuevo" class="btn btn-gold btn-sm">+ Nueva Patinadora</a>
     </div>
 
@@ -150,10 +169,16 @@
           </tbody>
         </table>
       </div>
+      <div style="padding: 1rem; border-top: 1px solid rgba(77, 70, 53, 0.1); display: flex; justify-content: center;">
+        <a href="/admin/alumnos" class="btn btn-ghost btn-sm" style="text-transform: uppercase; letter-spacing: 0.06em;">
+          Ver Todos (<%= studentsList.length %>) <span class="material-symbols-outlined" style="font-size: 1rem; margin-left: 0.25rem;">expand_more</span>
+        </a>
+      </div>
     <% } else { %>
       <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">No hay patinadoras registradas en el sistema aún.</p>
     <% } %>
   </div>
-</div>
+
+</main>
 
 <%- include('../partials/footer') %>

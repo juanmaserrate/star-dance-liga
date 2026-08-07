@@ -4,7 +4,7 @@
 <div class="main-wrapper" style="display: flex; align-items: center; justify-content: center; min-height: 70vh;">
   <div class="card" style="width: 100%; max-width: 480px; border-top: 5px solid var(--gold-primary);">
     <div style="text-align: center; margin-bottom: 1.5rem;">
-      <img src="/img/logo.svg" alt="Star Dance" style="width: 70px; height: 70px; margin-bottom: 0.5rem; filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.4));">
+      <img src="/img/logo-emblem.png" alt="Star Dance" style="width: 84px; height: 84px; margin-bottom: 0.5rem; border-radius: 50%; filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.4));">
       <h1 style="color: var(--gold-light); font-size: 1.6rem;">Crear Cuenta</h1>
       <p style="color: var(--text-muted); font-size: 0.9rem;">Registrate para cargar e inscribir tus patinadoras. Tu cuenta queda activa de inmediato.</p>
     </div>
@@ -39,55 +39,29 @@
           <label class="form-label" for="phone">Teléfono</label>
           <input type="text" id="phone" name="phone" class="form-control" placeholder="+54 9 264 ..." value="<%= typeof form !== 'undefined' && form ? form.phone || '' : '' %>">
         </div>
-      </div>
 
       <h3 style="color: var(--gold-light); margin: 1.25rem 0 0.5rem; font-size: 1.05rem; border-bottom: 1px solid var(--border-gold); padding-bottom: 0.4rem;">
-        🏛️ Clubes / Escuelas (creá uno o más)
+        🏛️ Club / Escuela
       </h3>
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">
-          Cada club que crees queda vinculado a tu cuenta. Después podés crear más desde tu panel.
+          El club que crees queda vinculado a tu cuenta. Después podés crear más desde tu panel.
         </p>
 
-        <div id="clubsContainer">
-          <%
-            let formClubs = [];
-            if (typeof form !== 'undefined' && form && form.club_names) {
-              const names = Array.isArray(form.club_names) ? form.club_names : [form.club_names];
-              const cities = Array.isArray(form.club_cities) ? form.club_cities : (form.club_cities ? [form.club_cities] : []);
-              formClubs = names.map((n, i) => ({ name: n, city: cities[i] || '' }));
-            }
-            if (formClubs.length === 0) formClubs = [{ name: '', city: '' }];
-          %>
-          <% formClubs.forEach((cl, idx) => { %>
-            <div class="club-row form-row" style="border: 1px solid rgba(212,175,55,0.25); border-radius: var(--radius-sm); padding: 0.75rem; margin-bottom: 0.75rem; background: rgba(18,6,28,0.5);">
-              <div class="form-group" style="flex: 2;">
-                <label class="form-label">Nombre del Club / Escuela *</label>
-                <input type="text" name="club_names[]" class="form-control" placeholder="EJ: CLUB DEPORTIVO ESTRELLA" style="text-transform: uppercase;" value="<%= cl.name %>" required>
-              </div>
-              <div class="form-group" style="flex: 1;">
-                <label class="form-label">Ciudad / Provincia</label>
-                <input type="text" name="club_cities[]" class="form-control" placeholder="EJ: SAN JUAN" style="text-transform: uppercase;" value="<%= cl.city %>">
-              </div>
-              <div style="display: flex; align-items: flex-end; padding-bottom: 0.35rem;">
-                <button type="button" class="btn btn-secondary btn-sm club-row-remove" title="Quitar club">✕</button>
-              </div>
-            </div>
-          <% }) %>
+        <div class="form-group">
+          <label class="form-label" for="club_name">Nombre del Club / Escuela *</label>
+          <input type="text" id="club_name" name="club_name" class="form-control" placeholder="EJ: CLUB DEPORTIVO ESTRELLA" style="text-transform: uppercase;" value="<%= typeof form !== 'undefined' && form && form.club_name ? form.club_name : '' %>" required>
         </div>
 
-        <div style="margin-bottom: 1rem;">
-          <button type="button" class="btn btn-outline-gold btn-sm" id="btnAddClub">+ Agregar otro club</button>
+        <div class="form-group">
+          <label class="form-label" for="club_city">Barrio / Localidad</label>
+          <input type="text" id="club_city" name="club_city" class="form-control" placeholder="EJ: VILLA CAROLINA" style="text-transform: uppercase;" value="<%= typeof form !== 'undefined' && form && form.club_city ? form.club_city : '' %>">
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="password">Contraseña *</label>
-            <input type="password" id="password" name="password" class="form-control" placeholder="Tu contraseña" required>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="confirm_password">Repetir Contraseña *</label>
-            <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="••••••••" required>
+        <div class="form-group">
+          <label class="form-label" for="password">Contraseña * <small style="color: var(--text-muted);">(mín. 6 caracteres)</small></label>
+          <div style="position: relative;">
+            <input type="password" id="password" name="password" class="form-control" placeholder="Tu contraseña" required minlength="6" style="padding-right: 2.75rem;">
+            <button type="button" id="togglePassword" class="btn btn-secondary btn-sm" style="position: absolute; right: 0.35rem; top: 50%; transform: translateY(-50%);" aria-label="Mostrar/ocultar contraseña">👁</button>
           </div>
         </div>
 
@@ -104,45 +78,17 @@
 </div>
 
 <script>
-  (function () {
-    function clubRowHTML(name, city) {
-      return '<div class="club-row form-row" style="border: 1px solid rgba(212,175,55,0.25); border-radius: var(--radius-sm); padding: 0.75rem; margin-bottom: 0.75rem; background: rgba(18,6,28,0.5);">' +
-        '<div class="form-group" style="flex: 2;">' +
-        '<label class="form-label">Nombre del Club / Escuela *</label>' +
-        '<input type="text" name="club_names[]" class="form-control" placeholder="EJ: CLUB DEPORTIVO ESTRELLA" style="text-transform: uppercase;" value="' + (name || '') + '" required>' +
-        '</div>' +
-        '<div class="form-group" style="flex: 1;">' +
-        '<label class="form-label">Ciudad / Provincia</label>' +
-        '<input type="text" name="club_cities[]" class="form-control" placeholder="EJ: SAN JUAN" style="text-transform: uppercase;" value="' + (city || '') + '">' +
-        '</div>' +
-        '<div style="display: flex; align-items: flex-end; padding-bottom: 0.35rem;">' +
-        '<button type="button" class="btn btn-secondary btn-sm club-row-remove" title="Quitar club">✕</button>' +
-        '</div>' +
-        '</div>';
-    }
-
-    function attachRemove(container) {
-      container.querySelectorAll('.club-row-remove').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var row = btn.closest('.club-row');
-          if (row) row.remove();
-          if (container.querySelectorAll('.club-row').length === 0) {
-            container.insertAdjacentHTML('beforeend', clubRowHTML('', ''));
-            attachRemove(container);
-          }
-        });
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('togglePassword');
+    const input = document.getElementById('password');
+    if (btn && input) {
+      btn.addEventListener('click', () => {
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.textContent = show ? '🙈' : '👁';
       });
     }
-
-    var container = document.getElementById('clubsContainer');
-    if (!container) return;
-    attachRemove(container);
-
-    document.getElementById('btnAddClub').addEventListener('click', function () {
-      container.insertAdjacentHTML('beforeend', clubRowHTML('', ''));
-      attachRemove(container);
-    });
-  })();
+  });
 </script>
 
 <%- include('../partials/footer') %>

@@ -1,13 +1,12 @@
 <%- include('../partials/header', { title: 'Presupuesto y Gastos' }) %>
-<%- include('../partials/navbar') %>
+<%- include('admin_shell', { activeNav: 'finanzas', topbarSection: 'Finanzas' }) %>
 
-<div class="main-wrapper">
+
   <div style="margin-bottom: 1.5rem;">
     <h1 style="color: var(--gold-light); font-size: 1.8rem;">💰 Presupuesto, Gastos y Forecast del Torneo</h1>
     <p style="color: var(--text-muted);">Registro de costos operacionales (medallas, sonido, alquileres) e ingresos proyectados.</p>
   </div>
 
-  <%- include('admin_nav') %>
 
   <% if (typeof success !== 'undefined' && success) { %>
     <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
@@ -137,6 +136,6 @@
       <% } %>
     </div>
   </div>
-</div>
+</main>
 
 <%- include('../partials/footer') %>

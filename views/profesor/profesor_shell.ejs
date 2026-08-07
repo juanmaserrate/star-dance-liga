@@ -1,0 +1,142 @@
+<!-- Profesor Suite Shell (Rediseño 2026): Sidebar + Topbar -->
+<aside class="admin-sidebar" id="adminSidebar">
+  <div class="admin-sidebar-brand">
+    <div class="admin-sidebar-logo">
+      <img src="/img/logo.svg" alt="Star Dance" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;" />
+    </div>
+    <h1>Star Dance</h1>
+    <p>Academia</p>
+  </div>
+
+  <nav class="admin-sidebar-nav">
+    <a href="/profesor/dashboard" class="admin-nav-link <%= activeNav === 'mis_alumnas' ? 'active' : '' %>">
+      <span class="material-symbols-outlined">school</span> Mis Alumnas
+    </a>
+    <a href="/profesor/clubes" class="admin-nav-link <%= activeNav === 'clubes' ? 'active' : '' %>">
+      <span class="material-symbols-outlined">diversity_1</span> Mis Clubes
+    </a>
+    <a href="/profesor/inscribir" class="admin-nav-link <%= activeNav === 'inscribir' ? 'active' : '' %>">
+      <span class="material-symbols-outlined">assignment</span> Inscribir a Torneo
+    </a>
+  </nav>
+
+  <div class="admin-sidebar-footer">
+    <a href="/profesor/alumnos/nuevo" class="btn btn-gold">
+      <span class="material-symbols-outlined" style="font-size: 1.1rem;">person_add</span> Nueva Alumna
+    </a>
+  </div>
+</aside>
+
+<header class="admin-topbar">
+  <div style="display: flex; align-items: center;">
+    <button class="admin-menu-toggle" id="adminMenuToggle" aria-label="Abrir menú">
+      <span class="material-symbols-outlined">menu</span>
+    </button>
+    <div class="admin-topbar-title">
+      Star Dance Academy
+      <span class="material-symbols-outlined">chevron_right</span>
+      <strong><%= topbarSection %></strong>
+    </div>
+  </div>
+
+  <div class="admin-topbar-actions">
+    <label class="topbar-club-filter" title="Filtrar por club">
+      <span class="material-symbols-outlined" style="font-size: 1.1rem;">diversity_1</span>
+      <select id="topbarClubSelect" class="form-select" style="width: auto; padding: 0.3rem 1.75rem 0.3rem 0.6rem; font-size: 0.82rem;">
+        <option value="">TODOS MIS CLUBES</option>
+        <% (typeof myClubs !== 'undefined' && myClubs ? myClubs : []).forEach(c => { %>
+          <option value="<%= c.id %>" <%= (typeof selectedClubId !== 'undefined' && selectedClubId == c.id) ? 'selected' : '' %>><%= c.name %></option>
+        <% }) %>
+      </select>
+    </label>
+
+    <div class="bell-wrap">
+      <button type="button" class="admin-topbar-icon bell-btn" id="bellButton" title="Notificaciones">
+        <span class="material-symbols-outlined">notifications</span>
+        <% if (typeof unreadCount !== 'undefined' && unreadCount > 0) { %>
+          <span class="bell-badge" id="bellBadge"><%= unreadCount %></span>
+        <% } %>
+      </button>
+      <div class="bell-dropdown" id="bellDropdown" style="display: none;">
+        <div class="bell-dropdown-header">Notificaciones</div>
+        <div class="bell-dropdown-body" id="bellDropdownBody">
+          <p style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">Cargando...</p>
+        </div>
+      </div>
+    </div>
+
+    <span class="admin-topbar-icon material-symbols-outlined">settings</span>
+    <span class="admin-topbar-icon material-symbols-outlined">help_outline</span>
+    <div class="admin-topbar-user">
+      <div class="avatar"><%= (user && user.full_name ? user.full_name.trim().split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() : 'PF') %></div>
+      <div class="info">
+        <span><%= user ? user.full_name : 'Profesor' %></span>
+        <a href="/auth/logout">Cerrar Sesión</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="admin-main">
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('adminMenuToggle');
+    const sidebar = document.getElementById('adminSidebar');
+    if (toggle && sidebar) {
+      toggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+      });
+    }
+
+    const clubSelect = document.getElementById('topbarClubSelect');
+    if (clubSelect) {
+      clubSelect.addEventListener('change', () => {
+        const v = clubSelect.value;
+        window.location.href = v ? '/profesor/dashboard?club_id=' + v : '/profesor/dashboard';
+      });
+    }
+
+    const bellButton = document.getElementById('bellButton');
+    const bellDropdown = document.getElementById('bellDropdown');
+    const bellBody = document.getElementById('bellDropdownBody');
+    const bellBadge = document.getElementById('bellBadge');
+
+    if (bellButton && bellDropdown) {
+      let loaded = false;
+      bellButton.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const isOpen = bellDropdown.style.display === 'block';
+        bellDropdown.style.display = isOpen ? 'none' : 'block';
+        if (!isOpen) {
+          if (!loaded) {
+            try {
+              const res = await fetch('/profesor/notificaciones');
+              const notifs = await res.json();
+              loaded = true;
+              if (notifs.length === 0) {
+                bellBody.innerHTML = '<p style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">Sin notificaciones.</p>';
+              } else {
+                bellBody.innerHTML = notifs.map(n => `
+                  <a href="${n.link || '/profesor/dashboard'}" class="bell-item${n.is_read ? ' read' : ''}">
+                    <div class="bell-item-msg">${(n.message || '').replace(/</g, '&lt;')}</div>
+                    <div class="bell-item-time">${(n.created_at || '').replace('T', ' ').slice(0, 16)}</div>
+                  </a>
+                `).join('');
+              }
+            } catch (err) {
+              bellBody.innerHTML = '<p style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">No se pudieron cargar las notificaciones.</p>';
+            }
+          }
+          fetch('/profesor/notificaciones/leer', { method: 'POST' });
+          if (bellBadge) bellBadge.remove();
+        }
+      });
+      document.addEventListener('click', (e) => {
+        if (bellDropdown.style.display === 'block' && !e.target.closest('.bell-wrap')) {
+          bellDropdown.style.display = 'none';
+        }
+      });
+    }
+  });
+</script>

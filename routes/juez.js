@@ -6,11 +6,18 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 // All routes require role 'juez' or 'admin'
 router.use(requireAuth, requireRole('juez', 'admin'));
 
+// Helper: entero positivo o null (evita que ?tournament_id=abc tumbe la consulta)
+function toInt(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 // Planilla de Competencia para Jueces
 router.get('/planilla', async (req, res) => {
   const tournaments = await db.prepare(`SELECT * FROM tournaments ORDER BY event_date DESC`).all();
-  const selectedTournamentId = req.query.tournament_id || (tournaments.length > 0 ? tournaments[0].id : null);
-  const selectedCategoryId = req.query.category_id || null;
+  const selectedTournamentId = toInt(req.query.tournament_id) || (tournaments.length > 0 ? tournaments[0].id : null);
+  const selectedCategoryId = toInt(req.query.category_id);
 
   let categories = [];
   if (selectedTournamentId) {

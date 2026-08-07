@@ -1,12 +1,7 @@
 <nav class="navbar">
   <div class="nav-container" style="flex-direction: column; align-items: stretch; gap: 0.75rem;">
     <!-- Top Row: Brand, Mobile Toggle, User Badge & Logout -->
-    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-      <a href="<%= user ? (user.role === 'admin' ? '/admin/dashboard' : (user.role === 'profesor' ? '/profesor/dashboard' : '/juez/planilla')) : '/' %>" class="brand">
-        <img src="/img/logo.svg" alt="Star Dance Logo">
-        <span>STAR DANCE LIGA</span>
-      </a>
-
+    <div style="display: flex; justify-content: center; align-items: center; width: 100%;">
       <button class="mobile-toggle" id="mobileToggle" aria-label="Menú">&#9776;</button>
 
       <div style="display: flex; align-items: center; gap: 1rem;">
@@ -19,8 +14,7 @@
           <ul class="nav-links" id="navLinks" style="margin: 0;">
             <li><a href="/" class="nav-link">Inicio</a></li>
             <li><a href="/torneos" class="nav-link">Torneos</a></li>
-            <li><a href="/jueces" class="nav-link">Jueces</a></li>
-            <li><a href="/auth/login" class="nav-link" style="border-bottom-color: transparent;">Ingreso Profesores / Jueces</a></li>
+            <li><a href="/auth/login" class="nav-link" style="border-bottom-color: transparent;">Iniciar Sesión</a></li>
             <li><a href="/auth/registro" class="btn btn-gold btn-sm">📝 Registrarse</a></li>
           </ul>
         <% } %>
