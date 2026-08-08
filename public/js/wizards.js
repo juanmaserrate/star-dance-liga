@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const opt = document.createElement('option');
         opt.value = c.id;
         opt.setAttribute('data-discipline', c.discipline || '');
-        opt.textContent = `${c.name} (${c.min_age}-${c.max_age} años) - Arancel: $${c.fee}`;
+        opt.textContent = `${c.name} (${c.min_age}-${c.max_age} años)`;
         categorySel.appendChild(opt);
       });
     categorySel.disabled = false;

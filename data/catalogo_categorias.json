@@ -1,7 +1,6 @@
 [
   {
     "discipline": "LIBRE",
-    "fee": 15000,
     "categories": [
       "EXHIBICIÓN",
       "INICIACIÓN B",
@@ -22,7 +21,6 @@
   },
   {
     "discipline": "PAREJAS MIXTAS",
-    "fee": 20000,
     "categories": [
       "EXHIBICIÓN",
       "INICIACIÓN B",
@@ -43,7 +41,6 @@
   },
   {
     "discipline": "FREE DANCE",
-    "fee": 16000,
     "categories": [
       "DEBUTANTES",
       "INICIAL",
@@ -51,23 +48,70 @@
       "AVANZADO"
     ],
     "ages": [
-      { "name": "MINI TOTS", "min": 6, "max": 7 },
-      { "name": "TOTS", "min": 8, "max": 9 },
-      { "name": "MINIS", "min": 10, "max": 11 },
-      { "name": "INFANTIL", "min": 12, "max": 13 },
-      { "name": "JUVENIL", "min": 14, "max": 15 },
-      { "name": "JUVENIL", "min": 16, "max": 17 },
-      { "name": "SENIOR", "min": 18, "max": 20 },
-      { "name": "CLÁSICO", "min": 21, "max": 30 },
-      { "name": "NOVICIO", "min": 31, "max": 40 },
-      { "name": "PROFESIONAL", "min": 41, "max": 50 },
-      { "name": "MASTER", "min": 51, "max": 60 },
-      { "name": "EXPERTO", "min": 61, "max": 70 }
+      {
+        "name": "MINI TOTS",
+        "min": 6,
+        "max": 7
+      },
+      {
+        "name": "TOTS",
+        "min": 8,
+        "max": 9
+      },
+      {
+        "name": "MINIS",
+        "min": 10,
+        "max": 11
+      },
+      {
+        "name": "INFANTIL",
+        "min": 12,
+        "max": 13
+      },
+      {
+        "name": "JUVENIL",
+        "min": 14,
+        "max": 15
+      },
+      {
+        "name": "JUVENIL",
+        "min": 16,
+        "max": 17
+      },
+      {
+        "name": "SENIOR",
+        "min": 18,
+        "max": 20
+      },
+      {
+        "name": "CLÁSICO",
+        "min": 21,
+        "max": 30
+      },
+      {
+        "name": "NOVICIO",
+        "min": 31,
+        "max": 40
+      },
+      {
+        "name": "PROFESIONAL",
+        "min": 41,
+        "max": 50
+      },
+      {
+        "name": "MASTER",
+        "min": 51,
+        "max": 60
+      },
+      {
+        "name": "EXPERTO",
+        "min": 61,
+        "max": 70
+      }
     ]
   },
   {
     "discipline": "STAR DANCE",
-    "fee": 16000,
     "categories": [
       "DEBUTANTES",
       "INICIAL",
@@ -75,23 +119,70 @@
       "AVANZADO"
     ],
     "ages": [
-      { "name": "MINI TOTS", "min": 6, "max": 7 },
-      { "name": "TOTS", "min": 8, "max": 9 },
-      { "name": "MINIS", "min": 10, "max": 11 },
-      { "name": "INFANTIL", "min": 12, "max": 13 },
-      { "name": "JUVENIL", "min": 14, "max": 15 },
-      { "name": "JUVENIL", "min": 16, "max": 17 },
-      { "name": "SENIOR", "min": 18, "max": 20 },
-      { "name": "CLÁSICO", "min": 21, "max": 30 },
-      { "name": "NOVICIO", "min": 31, "max": 40 },
-      { "name": "PROFESIONAL", "min": 41, "max": 50 },
-      { "name": "MASTER", "min": 51, "max": 60 },
-      { "name": "EXPERTO", "min": 61, "max": 70 }
+      {
+        "name": "MINI TOTS",
+        "min": 6,
+        "max": 7
+      },
+      {
+        "name": "TOTS",
+        "min": 8,
+        "max": 9
+      },
+      {
+        "name": "MINIS",
+        "min": 10,
+        "max": 11
+      },
+      {
+        "name": "INFANTIL",
+        "min": 12,
+        "max": 13
+      },
+      {
+        "name": "JUVENIL",
+        "min": 14,
+        "max": 15
+      },
+      {
+        "name": "JUVENIL",
+        "min": 16,
+        "max": 17
+      },
+      {
+        "name": "SENIOR",
+        "min": 18,
+        "max": 20
+      },
+      {
+        "name": "CLÁSICO",
+        "min": 21,
+        "max": 30
+      },
+      {
+        "name": "NOVICIO",
+        "min": 31,
+        "max": 40
+      },
+      {
+        "name": "PROFESIONAL",
+        "min": 41,
+        "max": 50
+      },
+      {
+        "name": "MASTER",
+        "min": 51,
+        "max": 60
+      },
+      {
+        "name": "EXPERTO",
+        "min": 61,
+        "max": 70
+      }
     ]
   },
   {
     "discipline": "STYLE",
-    "fee": 16000,
     "categories": [
       "DEBUTANTES",
       "INICIAL",
@@ -99,23 +190,70 @@
       "AVANZADO"
     ],
     "ages": [
-      { "name": "MINI TOTS", "min": 6, "max": 7 },
-      { "name": "TOTS", "min": 8, "max": 9 },
-      { "name": "MINIS", "min": 10, "max": 11 },
-      { "name": "INFANTIL", "min": 12, "max": 13 },
-      { "name": "JUVENIL", "min": 14, "max": 15 },
-      { "name": "JUVENIL", "min": 16, "max": 17 },
-      { "name": "SENIOR", "min": 18, "max": 20 },
-      { "name": "CLÁSICO", "min": 21, "max": 30 },
-      { "name": "NOVICIO", "min": 31, "max": 40 },
-      { "name": "PROFESIONAL", "min": 41, "max": 50 },
-      { "name": "MASTER", "min": 51, "max": 60 },
-      { "name": "EXPERTO", "min": 61, "max": 70 }
+      {
+        "name": "MINI TOTS",
+        "min": 6,
+        "max": 7
+      },
+      {
+        "name": "TOTS",
+        "min": 8,
+        "max": 9
+      },
+      {
+        "name": "MINIS",
+        "min": 10,
+        "max": 11
+      },
+      {
+        "name": "INFANTIL",
+        "min": 12,
+        "max": 13
+      },
+      {
+        "name": "JUVENIL",
+        "min": 14,
+        "max": 15
+      },
+      {
+        "name": "JUVENIL",
+        "min": 16,
+        "max": 17
+      },
+      {
+        "name": "SENIOR",
+        "min": 18,
+        "max": 20
+      },
+      {
+        "name": "CLÁSICO",
+        "min": 21,
+        "max": 30
+      },
+      {
+        "name": "NOVICIO",
+        "min": 31,
+        "max": 40
+      },
+      {
+        "name": "PROFESIONAL",
+        "min": 41,
+        "max": 50
+      },
+      {
+        "name": "MASTER",
+        "min": 51,
+        "max": 60
+      },
+      {
+        "name": "EXPERTO",
+        "min": 61,
+        "max": 70
+      }
     ]
   },
   {
     "discipline": "SMALL",
-    "fee": 40000,
     "categories": [
       "DEBUTANTES",
       "INICIAL",
@@ -123,23 +261,70 @@
       "AVANZADO"
     ],
     "ages": [
-      { "name": "MINI TOTS", "min": 6, "max": 7 },
-      { "name": "TOTS", "min": 8, "max": 9 },
-      { "name": "MINIS", "min": 10, "max": 11 },
-      { "name": "INFANTIL", "min": 12, "max": 13 },
-      { "name": "JUVENIL", "min": 14, "max": 15 },
-      { "name": "JUVENIL", "min": 16, "max": 17 },
-      { "name": "SENIOR", "min": 18, "max": 20 },
-      { "name": "CLÁSICO", "min": 21, "max": 30 },
-      { "name": "NOVICIO", "min": 31, "max": 40 },
-      { "name": "PROFESIONAL", "min": 41, "max": 50 },
-      { "name": "MASTER", "min": 51, "max": 60 },
-      { "name": "EXPERTO", "min": 61, "max": 70 }
+      {
+        "name": "MINI TOTS",
+        "min": 6,
+        "max": 7
+      },
+      {
+        "name": "TOTS",
+        "min": 8,
+        "max": 9
+      },
+      {
+        "name": "MINIS",
+        "min": 10,
+        "max": 11
+      },
+      {
+        "name": "INFANTIL",
+        "min": 12,
+        "max": 13
+      },
+      {
+        "name": "JUVENIL",
+        "min": 14,
+        "max": 15
+      },
+      {
+        "name": "JUVENIL",
+        "min": 16,
+        "max": 17
+      },
+      {
+        "name": "SENIOR",
+        "min": 18,
+        "max": 20
+      },
+      {
+        "name": "CLÁSICO",
+        "min": 21,
+        "max": 30
+      },
+      {
+        "name": "NOVICIO",
+        "min": 31,
+        "max": 40
+      },
+      {
+        "name": "PROFESIONAL",
+        "min": 41,
+        "max": 50
+      },
+      {
+        "name": "MASTER",
+        "min": 51,
+        "max": 60
+      },
+      {
+        "name": "EXPERTO",
+        "min": 61,
+        "max": 70
+      }
     ]
   },
   {
     "discipline": "SHOW",
-    "fee": 60000,
     "categories": [
       "DEBUTANTES",
       "INICIAL",
@@ -147,23 +332,70 @@
       "AVANZADO"
     ],
     "ages": [
-      { "name": "MINI TOTS", "min": 6, "max": 7 },
-      { "name": "TOTS", "min": 8, "max": 9 },
-      { "name": "MINIS", "min": 10, "max": 11 },
-      { "name": "INFANTIL", "min": 12, "max": 13 },
-      { "name": "JUVENIL", "min": 14, "max": 15 },
-      { "name": "JUVENIL", "min": 16, "max": 17 },
-      { "name": "SENIOR", "min": 18, "max": 20 },
-      { "name": "CLÁSICO", "min": 21, "max": 30 },
-      { "name": "NOVICIO", "min": 31, "max": 40 },
-      { "name": "PROFESIONAL", "min": 41, "max": 50 },
-      { "name": "MASTER", "min": 51, "max": 60 },
-      { "name": "EXPERTO", "min": 61, "max": 70 }
+      {
+        "name": "MINI TOTS",
+        "min": 6,
+        "max": 7
+      },
+      {
+        "name": "TOTS",
+        "min": 8,
+        "max": 9
+      },
+      {
+        "name": "MINIS",
+        "min": 10,
+        "max": 11
+      },
+      {
+        "name": "INFANTIL",
+        "min": 12,
+        "max": 13
+      },
+      {
+        "name": "JUVENIL",
+        "min": 14,
+        "max": 15
+      },
+      {
+        "name": "JUVENIL",
+        "min": 16,
+        "max": 17
+      },
+      {
+        "name": "SENIOR",
+        "min": 18,
+        "max": 20
+      },
+      {
+        "name": "CLÁSICO",
+        "min": 21,
+        "max": 30
+      },
+      {
+        "name": "NOVICIO",
+        "min": 31,
+        "max": 40
+      },
+      {
+        "name": "PROFESIONAL",
+        "min": 41,
+        "max": 50
+      },
+      {
+        "name": "MASTER",
+        "min": 51,
+        "max": 60
+      },
+      {
+        "name": "EXPERTO",
+        "min": 61,
+        "max": 70
+      }
     ]
   },
   {
     "discipline": "PRECISIÓN",
-    "fee": 60000,
     "categories": [
       "DEBUTANTES",
       "INICIAL",
@@ -171,23 +403,70 @@
       "AVANZADO"
     ],
     "ages": [
-      { "name": "MINI TOTS", "min": 6, "max": 7 },
-      { "name": "TOTS", "min": 8, "max": 9 },
-      { "name": "MINIS", "min": 10, "max": 11 },
-      { "name": "INFANTIL", "min": 12, "max": 13 },
-      { "name": "JUVENIL", "min": 14, "max": 15 },
-      { "name": "JUVENIL", "min": 16, "max": 17 },
-      { "name": "SENIOR", "min": 18, "max": 20 },
-      { "name": "CLÁSICO", "min": 21, "max": 30 },
-      { "name": "NOVICIO", "min": 31, "max": 40 },
-      { "name": "PROFESIONAL", "min": 41, "max": 50 },
-      { "name": "MASTER", "min": 51, "max": 60 },
-      { "name": "EXPERTO", "min": 61, "max": 70 }
+      {
+        "name": "MINI TOTS",
+        "min": 6,
+        "max": 7
+      },
+      {
+        "name": "TOTS",
+        "min": 8,
+        "max": 9
+      },
+      {
+        "name": "MINIS",
+        "min": 10,
+        "max": 11
+      },
+      {
+        "name": "INFANTIL",
+        "min": 12,
+        "max": 13
+      },
+      {
+        "name": "JUVENIL",
+        "min": 14,
+        "max": 15
+      },
+      {
+        "name": "JUVENIL",
+        "min": 16,
+        "max": 17
+      },
+      {
+        "name": "SENIOR",
+        "min": 18,
+        "max": 20
+      },
+      {
+        "name": "CLÁSICO",
+        "min": 21,
+        "max": 30
+      },
+      {
+        "name": "NOVICIO",
+        "min": 31,
+        "max": 40
+      },
+      {
+        "name": "PROFESIONAL",
+        "min": 41,
+        "max": 50
+      },
+      {
+        "name": "MASTER",
+        "min": 51,
+        "max": 60
+      },
+      {
+        "name": "EXPERTO",
+        "min": 61,
+        "max": 70
+      }
     ]
   },
   {
     "discipline": "SOLO DANCE",
-    "fee": 16000,
     "categories": [
       "AVANZADO C",
       "BÁSICO C",
@@ -195,23 +474,70 @@
       "EFICIENCIA BÁSICO"
     ],
     "ages": [
-      { "name": "MINI TOTS", "min": 6, "max": 7 },
-      { "name": "TOTS", "min": 8, "max": 9 },
-      { "name": "MINIS", "min": 10, "max": 11 },
-      { "name": "INFANTIL", "min": 12, "max": 13 },
-      { "name": "JUVENIL", "min": 14, "max": 15 },
-      { "name": "JUVENIL", "min": 16, "max": 17 },
-      { "name": "SENIOR", "min": 18, "max": 20 },
-      { "name": "CLÁSICO", "min": 21, "max": 30 },
-      { "name": "NOVICIO", "min": 31, "max": 40 },
-      { "name": "PROFESIONAL", "min": 41, "max": 50 },
-      { "name": "MASTER", "min": 51, "max": 60 },
-      { "name": "EXPERTO", "min": 61, "max": 70 }
+      {
+        "name": "MINI TOTS",
+        "min": 6,
+        "max": 7
+      },
+      {
+        "name": "TOTS",
+        "min": 8,
+        "max": 9
+      },
+      {
+        "name": "MINIS",
+        "min": 10,
+        "max": 11
+      },
+      {
+        "name": "INFANTIL",
+        "min": 12,
+        "max": 13
+      },
+      {
+        "name": "JUVENIL",
+        "min": 14,
+        "max": 15
+      },
+      {
+        "name": "JUVENIL",
+        "min": 16,
+        "max": 17
+      },
+      {
+        "name": "SENIOR",
+        "min": 18,
+        "max": 20
+      },
+      {
+        "name": "CLÁSICO",
+        "min": 21,
+        "max": 30
+      },
+      {
+        "name": "NOVICIO",
+        "min": 31,
+        "max": 40
+      },
+      {
+        "name": "PROFESIONAL",
+        "min": 41,
+        "max": 50
+      },
+      {
+        "name": "MASTER",
+        "min": 51,
+        "max": 60
+      },
+      {
+        "name": "EXPERTO",
+        "min": 61,
+        "max": 70
+      }
     ]
   },
   {
     "discipline": "DÚO",
-    "fee": 22000,
     "categories": [
       "NARANJA",
       "TURQUESA",
@@ -223,7 +549,6 @@
   },
   {
     "discipline": "TRÍO",
-    "fee": 28000,
     "categories": [
       "NARANJA",
       "TURQUESA",
@@ -235,7 +560,6 @@
   },
   {
     "discipline": "CUARTETO",
-    "fee": 34000,
     "categories": [
       "NARANJA",
       "TURQUESA",

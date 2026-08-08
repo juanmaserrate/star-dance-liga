@@ -4,7 +4,7 @@
 
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
     <div>
-      <h1 style="color: var(--gold-light); font-size: 1.8rem;">Master de Inscripciones, Bonificaciones y Control de Pagos</h1>
+      <h1 style="color: var(--gold-light); font-size: 1.8rem;">Master de Inscripciones</h1>
       <p style="color: var(--text-muted);">Visualizador general con desglose en columnas individuales para cada dato.</p>
     </div>
 
@@ -26,7 +26,6 @@
 
       <input type="hidden" name="tournament_id" value="<%= selectedTournament %>">
       <input type="hidden" name="club_id" value="<%= selectedClub %>">
-      <input type="hidden" name="payment_status" value="<%= selectedPayment %>">
       <input type="hidden" name="buscar" value="<%= typeof buscar !== 'undefined' ? buscar : '' %>">
       <input type="hidden" name="disciplina" value="<%= typeof disciplina !== 'undefined' ? disciplina : '' %>">
       <input type="hidden" name="categoria" value="<%= typeof categoria !== 'undefined' ? categoria : '' %>">
@@ -81,15 +80,6 @@
       </div>
 
       <div class="form-group" style="margin-bottom: 0;">
-        <label class="form-label">Estado de Pago</label>
-        <select name="payment_status" class="form-select" onchange="this.form.submit()">
-          <option value="">-- Todos los Estados --</option>
-          <option value="paid" <%= selectedPayment === 'paid' ? 'selected' : '' %>>Solo Pagados</option>
-          <option value="pending" <%= selectedPayment === 'pending' ? 'selected' : '' %>>Solo Pendientes</option>
-        </select>
-      </div>
-
-      <div class="form-group" style="margin-bottom: 0;">
         <label class="form-label">Disciplina</label>
         <input type="text" name="disciplina" class="form-control" placeholder="EJ: LIBRE / FREE DANCE" value="<%= typeof disciplina !== 'undefined' ? disciplina : '' %>" style="text-transform: uppercase;">
       </div>
@@ -126,12 +116,7 @@
               <th>Fecha Evento</th>
               <th>Categoría</th>
               <th>Disciplina</th>
-              <th>Arancel Base</th>
-              <th>Bonificación</th>
-              <th>Arancel Final</th>
               <th>Docs</th>
-              <th>Estado Pago</th>
-              <th>Acción Admin</th>
             </tr>
           </thead>
           <tbody>
@@ -160,54 +145,12 @@
                 <td><span style="color: var(--gold-light); font-weight: 700; white-space: nowrap;"><%= r.datesLabel %></span></td>
                 <td><span class="badge badge-violet"><%= formatCategoryName(r.category_name, r.discipline) %></span></td>
                 <td><%= r.discipline %></td>
-                <td>$<%= r.original_fee %></td>
-                <td>
-                  <% if (r.discount_amount > 0) { %>
-                    <span class="badge badge-paid">-$<%= r.discount_amount %></span>
-                  <% } else { %>
-                    -
-                  <% } %>
-                </td>
-                <td style="font-weight: 800; color: var(--gold-light);">$<%= r.final_fee %></td>
                 <td>
                   <% if (r.doc_count > 0) { %>
                     <a href="/admin/alumnos/<%= r.student_id %>/documentos" class="btn btn-outline-gold btn-sm">📄 Docs (<%= r.doc_count %>)</a>
                   <% } else { %>
                     -
                   <% } %>
-                </td>
-                <td>
-                  <% if (r.payment_status === 'paid') { %>
-                    <span class="badge badge-paid">✅ PAGADO</span>
-                  <% } else { %>
-                    <span class="badge badge-pending">⏳ PENDIENTE</span>
-                  <% } %>
-                </td>
-                <td>
-                  <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                    <form action="/admin/inscripciones/<%= r.id %>/pago" method="POST">
-                      <button type="submit" class="btn <%= r.payment_status === 'paid' ? 'btn-secondary' : 'btn-gold' %> btn-sm" style="width: 100%;">
-                        <%= r.payment_status === 'paid' ? 'Pendiente' : 'Pagado' %>
-                      </button>
-                    </form>
-
-                    <button class="btn btn-outline-gold btn-sm" onclick="document.getElementById('discount_box_<%= r.id %>').style.display='block'">
-                      🎁 Beca
-                    </button>
-                  </div>
-
-                  <!-- Mini discount box -->
-                  <div id="discount_box_<%= r.id %>" style="display: none; background: rgba(18,6,28,0.95); border: 1px solid var(--gold-primary); padding: 0.75rem; border-radius: var(--radius-sm); position: absolute; z-index: 100; right: 2rem; width: 260px;">
-                    <strong style="color: var(--gold-light); font-size: 0.85rem;">Aplicar Bonificación / Beca:</strong>
-                    <form action="/admin/inscripciones/<%= r.id %>/descuento" method="POST" style="margin-top: 0.5rem;">
-                      <input type="number" name="discount_amount" class="form-control" placeholder="Monto Descuento $" value="<%= r.discount_amount %>" style="margin-bottom: 0.4rem;" required>
-                      <input type="text" name="discount_reason" class="form-control" placeholder="Motivo (Ej: BECA PROFE)" value="<%= r.discount_reason || '' %>" style="margin-bottom: 0.4rem; text-transform: uppercase;" required>
-                      <div style="display: flex; gap: 0.4rem;">
-                        <button type="submit" class="btn btn-gold btn-sm" style="flex: 1;">Guardar</button>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('discount_box_<%= r.id %>').style.display='none'">X</button>
-                      </div>
-                    </form>
-                  </div>
                 </td>
               </tr>
             <% }) %>

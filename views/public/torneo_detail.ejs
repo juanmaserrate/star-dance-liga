@@ -51,7 +51,6 @@
             <th>Edades</th>
             <th>Género</th>
             <th>Horario Estimado</th>
-            <th>Arancel</th>
           </tr>
         </thead>
         <tbody>
@@ -63,7 +62,6 @@
               <td><%= c.min_age %> - <%= c.max_age %> años</td>
               <td><%= c.gender %></td>
               <td>🕒 <%= c.schedule || 'A confirmar' %></td>
-              <td style="color: var(--gold-light); font-weight: 700;">$<%= c.fee ? c.fee.toLocaleString() : '0' %></td>
             </tr>
           <% }) %>
         </tbody>

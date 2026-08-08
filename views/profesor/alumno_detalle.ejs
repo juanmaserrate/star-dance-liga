@@ -81,8 +81,6 @@
                 <th>Torneo</th>
                 <th>Fecha Torneo</th>
                 <th>Categoría y Disciplina</th>
-                <th>Estado Pago</th>
-                <th>Arancel Net</th>
               </tr>
             </thead>
             <tbody>
@@ -94,14 +92,6 @@
                     <span class="badge badge-violet"><%= formatCategoryName(r.category_name, r.discipline) %></span>
                     <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.discipline %></div>
                   </td>
-                  <td>
-                    <% if (r.payment_status === 'paid') { %>
-                      <span class="badge badge-paid">✅ PAGADO</span>
-                    <% } else { %>
-                      <span class="badge badge-pending">⏳ PENDIENTE</span>
-                    <% } %>
-                  </td>
-                  <td style="font-weight: 700; color: var(--gold-light);">$<%= r.final_fee %></td>
                 </tr>
               <% }) %>
             </tbody>

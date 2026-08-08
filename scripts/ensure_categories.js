@@ -1,5 +1,5 @@
 // One-off: garantiza que TODOS los torneos tengan habilitado el catálogo completo
-// de categorías y disciplinas (aunque tengan arancel 0).
+// de categorías y disciplinas.
 // Ejecutar dentro del contenedor donde la base de datos sea alcanzable,
 // o el propio server.js lo ejecuta en cada arranque (idempotente).
 const db = require('../database');

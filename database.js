@@ -131,7 +131,6 @@ async function initDb() {
       max_age INTEGER DEFAULT 99,
       gender TEXT NOT NULL DEFAULT 'Mixto',
       schedule TEXT,
-      fee REAL DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -146,17 +145,20 @@ async function initDb() {
       group_name TEXT,
       group_type TEXT CHECK(group_type IN ('Individual', 'Dúo', 'Trío', 'Cuarteto', 'Small', 'Show', 'Precisión', 'Parejas Mixtas')),
       status TEXT NOT NULL DEFAULT 'registered' CHECK(status IN ('registered', 'confirmed', 'cancelled')),
-      payment_status TEXT NOT NULL DEFAULT 'pending' CHECK(payment_status IN ('pending', 'paid')),
-      original_fee REAL DEFAULT 0,
-      discount_amount REAL DEFAULT 0,
-      discount_reason TEXT,
-      final_fee REAL DEFAULT 0,
-      payment_date TIMESTAMP,
       notes TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS age_band TEXT;
+
+    -- Quita definitiva de aranceles y control de pagos
+    ALTER TABLE categories DROP COLUMN IF EXISTS fee;
+    ALTER TABLE registrations DROP COLUMN IF EXISTS payment_status;
+    ALTER TABLE registrations DROP COLUMN IF EXISTS original_fee;
+    ALTER TABLE registrations DROP COLUMN IF EXISTS discount_amount;
+    ALTER TABLE registrations DROP COLUMN IF EXISTS discount_reason;
+    ALTER TABLE registrations DROP COLUMN IF EXISTS final_fee;
+    ALTER TABLE registrations DROP COLUMN IF EXISTS payment_date;
 
     CREATE TABLE IF NOT EXISTS registration_members (
       id SERIAL PRIMARY KEY,

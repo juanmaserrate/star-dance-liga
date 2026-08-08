@@ -64,8 +64,8 @@ async function seed() {
 
   // 4. Insert Comprehensive Disciplines & Categories
   const insertCategory = db.prepare(`
-    INSERT INTO categories (id, tournament_id, name, discipline, division, min_age, max_age, gender, schedule, fee)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING
+    INSERT INTO categories (id, tournament_id, name, discipline, division, min_age, max_age, gender, schedule)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING
   `);
 
   let catId = 1;
@@ -73,14 +73,14 @@ async function seed() {
   // --- LIBRE (División C, B, A) ---
   const libreCDivs = ['EXHIBICIÓN', 'INICIACIÓN B', 'INICIACIÓN A', 'ESCUELA FORMATIVA', 'PRE 5TA C', '5TA C', 'CUARTA C', 'PRE 3ERA C', '3ERA C', 'SEGUNDA C', 'PRIMERA C'];
   for (const div of libreCDivs) {
-    await insertCategory.run(catId++, 1, `LIBRE C - ${div}`, 'LIBRE', 'C', 4, 18, 'MIXTO', 'SÁBADO MAÑANA', 15000);
+    await insertCategory.run(catId++, 1, `LIBRE C - ${div}`, 'LIBRE', 'C', 4, 18, 'MIXTO', 'SÁBADO MAÑANA');
   }
 
   const libreBDivs = ['PROMO B', 'TERCERA B', 'SEGUNDA B', 'PRIMERA B'];
   for (const div of libreBDivs) {
-    await insertCategory.run(catId++, 1, `LIBRE B - ${div}`, 'LIBRE', 'B', 8, 25, 'MIXTO', 'SÁBADO TARDE', 18000);
+    await insertCategory.run(catId++, 1, `LIBRE B - ${div}`, 'LIBRE', 'B', 8, 25, 'MIXTO', 'SÁBADO TARDE');
   }
-  await insertCategory.run(catId++, 1, 'LIBRE A - FEDERADAS', 'LIBRE', 'A', 12, 30, 'MIXTO', 'SÁBADO NOCHE', 22000);
+  await insertCategory.run(catId++, 1, 'LIBRE A - FEDERADAS', 'LIBRE', 'A', 12, 30, 'MIXTO', 'SÁBADO NOCHE');
 
   // --- FREE DANCE & SOLO DANCE ---
   const danceAges = [
@@ -98,27 +98,27 @@ async function seed() {
   ];
 
   for (const age of danceAges) {
-    await insertCategory.run(catId++, 1, `FREE DANCE - STAR DANCE ${age.name}`, 'FREE DANCE', 'STAR DANCE', age.min, age.max, 'MIXTO', 'DOMINGO MAÑANA', 16000);
-    await insertCategory.run(catId++, 1, `SOLO DANCE - STAR DANCE ${age.name}`, 'SOLO DANCE', 'STAR DANCE', age.min, age.max, 'MIXTO', 'DOMINGO MAÑANA', 16000);
+    await insertCategory.run(catId++, 1, `FREE DANCE - STAR DANCE ${age.name}`, 'FREE DANCE', 'STAR DANCE', age.min, age.max, 'MIXTO', 'DOMINGO MAÑANA');
+    await insertCategory.run(catId++, 1, `SOLO DANCE - STAR DANCE ${age.name}`, 'SOLO DANCE', 'STAR DANCE', age.min, age.max, 'MIXTO', 'DOMINGO MAÑANA');
   }
 
   // --- PAREJAS MIXTAS ---
-  await insertCategory.run(catId++, 1, 'PAREJAS MIXTAS - C CERO / INICIACIÓN', 'PAREJAS MIXTAS', 'C', 6, 18, 'MIXTO', 'DOMINGO TARDE', 20000);
-  await insertCategory.run(catId++, 1, 'PAREJAS MIXTAS - B PROMO / AVANZADO', 'PAREJAS MIXTAS', 'B', 10, 25, 'MIXTO', 'DOMINGO TARDE', 24000);
+  await insertCategory.run(catId++, 1, 'PAREJAS MIXTAS - C CERO / INICIACIÓN', 'PAREJAS MIXTAS', 'C', 6, 18, 'MIXTO', 'DOMINGO TARDE');
+  await insertCategory.run(catId++, 1, 'PAREJAS MIXTAS - B PROMO / AVANZADO', 'PAREJAS MIXTAS', 'B', 10, 25, 'MIXTO', 'DOMINGO TARDE');
 
   // --- DÚO, TRÍO, CUARTETO (COLORES) ---
   const colors = ['NARANJA', 'TURQUESA', 'VERDE', 'ROSA', 'AMARILLO', 'VIOLETA'];
   for (const col of colors) {
-    await insertCategory.run(catId++, 1, `DÚO - COLOR ${col}`, 'DÚO', col, 4, 30, 'MIXTO', 'SÁBADO TARDE', 22000);
-    await insertCategory.run(catId++, 1, `TRÍO - COLOR ${col}`, 'TRÍO', col, 4, 30, 'MIXTO', 'SÁBADO TARDE', 28000);
-    await insertCategory.run(catId++, 1, `CUARTETO - COLOR ${col}`, 'CUARTETO', col, 4, 30, 'MIXTO', 'SÁBADO TARDE', 34000);
+    await insertCategory.run(catId++, 1, `DÚO - COLOR ${col}`, 'DÚO', col, 4, 30, 'MIXTO', 'SÁBADO TARDE');
+    await insertCategory.run(catId++, 1, `TRÍO - COLOR ${col}`, 'TRÍO', col, 4, 30, 'MIXTO', 'SÁBADO TARDE');
+    await insertCategory.run(catId++, 1, `CUARTETO - COLOR ${col}`, 'CUARTETO', col, 4, 30, 'MIXTO', 'SÁBADO TARDE');
   }
 
   // --- SMALL (Hasta 6), SHOW (Hasta 30), PRECISIÓN (Hasta 30) ---
   for (const age of danceAges) {
-    await insertCategory.run(catId++, 1, `SMALL GROUP (HASTA 6) - ${age.name}`, 'SMALL', 'GRUPO', age.min, age.max, 'MIXTO', 'DOMINGO NOCHE', 40000);
-    await insertCategory.run(catId++, 1, `SHOW (HASTA 30) - ${age.name}`, 'SHOW', 'GRUPO', age.min, age.max, 'MIXTO', 'DOMINGO NOCHE', 60000);
-    await insertCategory.run(catId++, 1, `PRECISIÓN (HASTA 30) - ${age.name}`, 'PRECISIÓN', 'GRUPO', age.min, age.max, 'MIXTO', 'DOMINGO NOCHE', 60000);
+    await insertCategory.run(catId++, 1, `SMALL GROUP (HASTA 6) - ${age.name}`, 'SMALL', 'GRUPO', age.min, age.max, 'MIXTO', 'DOMINGO NOCHE');
+    await insertCategory.run(catId++, 1, `SHOW (HASTA 30) - ${age.name}`, 'SHOW', 'GRUPO', age.min, age.max, 'MIXTO', 'DOMINGO NOCHE');
+    await insertCategory.run(catId++, 1, `PRECISIÓN (HASTA 30) - ${age.name}`, 'PRECISIÓN', 'GRUPO', age.min, age.max, 'MIXTO', 'DOMINGO NOCHE');
   }
 
   // Habilitar el catálogo completo de categorías/disciplinas en TODOS los torneos
@@ -126,8 +126,8 @@ async function seed() {
   const otherTournaments = await db.prepare(`SELECT id FROM tournaments WHERE id <> 1`).all();
   for (const t of otherTournaments) {
     await db.prepare(`
-      INSERT INTO categories (tournament_id, name, discipline, division, level, min_age, max_age, gender, schedule, fee)
-      SELECT ?, name, discipline, division, level, min_age, max_age, gender, schedule, fee
+      INSERT INTO categories (tournament_id, name, discipline, division, level, min_age, max_age, gender, schedule)
+      SELECT ?, name, discipline, division, level, min_age, max_age, gender, schedule
       FROM categories WHERE tournament_id = 1
     `).run(t.id);
   }
@@ -151,23 +151,13 @@ async function seed() {
   const insertReg = db.prepare(`
     INSERT INTO registrations (
       id, tournament_id, category_id, student_id, club_id, teacher_id, is_group, group_name, group_type,
-      status, payment_status, original_fee, discount_amount, discount_reason, final_fee, payment_date, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING
+      status, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING
   `);
 
-  await insertReg.run(1, 1, 9, 101, 1, 3, false, null, 'Individual', 'registered', 'paid', 15000, 0, null, 15000, '2026-07-30 14:20:00', 'MÚSICA OK');
-  await insertReg.run(2, 1, 3, 102, 1, 3, false, null, 'Individual', 'registered', 'pending', 15000, 3000, 'BECA PROMOCIONAL PROFE', 12000, null, 'PENDIENTE PAGO');
-  await insertReg.run(3, 1, 14, 103, 1, 3, false, null, 'Individual', 'registered', 'paid', 18000, 0, null, 18000, '2026-07-31 09:10:00', 'PAGO TRANSFERENCIA');
-
-  // 7. Initial Tournament Expenses
-  const insertExpense = db.prepare(`
-    INSERT INTO tournament_expenses (id, tournament_id, expense_category, description, amount, expense_date)
-    VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING
-  `);
-
-  await insertExpense.run(1, 1, 'Medallas y Trofeos', 'MEDALLAS DE ORO, PLATA Y BRONCE APERTURA', 450000, '2026-08-01');
-  await insertExpense.run(2, 1, 'Alquiler de Polideportivo', 'ALQUILER ALDO CANTONI (2 DÍAS)', 1200000, '2026-08-01');
-  await insertExpense.run(3, 1, 'Sonido e Iluminación', 'EQUIPO DE SONIDO PROFESIONAL Y PANTALLA LED', 350000, '2026-08-01');
+  await insertReg.run(1, 1, 9, 101, 1, 3, false, null, 'Individual', 'registered', 'MÚSICA OK');
+  await insertReg.run(2, 1, 3, 102, 1, 3, false, null, 'Individual', 'registered', 'PENDIENTE DOCUMENTACIÓN');
+  await insertReg.run(3, 1, 14, 103, 1, 3, false, null, 'Individual', 'registered', 'PAGO TRANSFERENCIA');
 
   // 8. CMS Site Settings
   const setSetting = db.prepare(`INSERT INTO site_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`);

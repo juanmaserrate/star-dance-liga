@@ -121,7 +121,6 @@
               <th>Torneo</th>
               <th>Categoría</th>
               <th>Fecha Evento</th>
-              <th>Estado Pago</th>
               <th>Certificado</th>
             </tr>
           </thead>
@@ -137,13 +136,6 @@
                   <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.discipline %> - <%= r.level %></div>
                 </td>
                 <td><%= r.event_date %></td>
-                <td>
-                  <% if (r.payment_status === 'paid') { %>
-                    <span class="badge badge-paid">✅ PAGADO</span>
-                  <% } else { %>
-                    <span class="badge badge-pending">⏳ PENDIENTE</span>
-                  <% } %>
-                </td>
                 <td>
                   <a href="/profesor/certificado/<%= r.id %>" target="_blank" class="btn btn-outline-gold btn-sm">🖨️ Certificado</a>
                 </td>

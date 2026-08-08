@@ -5,7 +5,7 @@
     <div class="page-head">
       <span class="page-eyebrow">Módulo Administrador</span>
       <h1 class="page-title">Panel de Control — Star Dance</h1>
-      <p class="page-sub">Control general de estadísticas, padrón maestro de deportistas cargadas y finanzas.</p>
+      <p class="page-sub">Control general de estadísticas y padrón maestro de deportistas cargadas.</p>
     </div>
     <div class="page-head-actions">
       <a href="/admin/alumnos/nuevo" class="btn btn-gold">+ Nueva Patinadora</a>
@@ -28,22 +28,6 @@
       <div>
         <div class="admin-stat-val"><%= stats.totalRegistrations %></div>
         <div class="admin-stat-label">Inscripciones Totales</div>
-      </div>
-    </div>
-
-    <div class="admin-stat">
-      <div class="admin-stat-icon"><span class="material-symbols-outlined">payments</span></div>
-      <div>
-        <div class="admin-stat-val text-tertiary">$<%= stats.totalPaid.toLocaleString() %></div>
-        <div class="admin-stat-label">Recaudado (Pagado)</div>
-      </div>
-    </div>
-
-    <div class="admin-stat">
-      <div class="admin-stat-icon text-error"><span class="material-symbols-outlined">hourglass_empty</span></div>
-      <div>
-        <div class="admin-stat-val text-error">$<%= stats.totalPending.toLocaleString() %></div>
-        <div class="admin-stat-label">Saldo Pendiente</div>
       </div>
     </div>
   </div>
@@ -88,7 +72,6 @@
                 <th>Nombre</th>
                 <th>Apellido</th>
                 <th>Club</th>
-                <th>Estado Pago</th>
               </tr>
             </thead>
             <tbody>
@@ -97,13 +80,6 @@
                   <td><strong><%= r.first_name %></strong></td>
                   <td><strong><%= r.last_name %></strong></td>
                   <td><%= r.club_name %></td>
-                  <td>
-                    <% if (r.payment_status === 'paid') { %>
-                      <span class="badge badge-paid">✅ PAGADO</span>
-                    <% } else { %>
-                      <span class="badge badge-pending">⏳ PENDIENTE</span>
-                    <% } %>
-                  </td>
                 </tr>
               <% }) %>
             </tbody>

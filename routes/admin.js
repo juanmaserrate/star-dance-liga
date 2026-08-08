@@ -32,16 +32,6 @@ router.get('/dashboard', async (req, res) => {
   const totalClubs = (await db.prepare(`SELECT COUNT(*) as count FROM clubs`).get()).count;
   const totalTournaments = (await db.prepare(`SELECT COUNT(*) as count FROM tournaments`).get()).count;
 
-  const paidStats = await db.prepare(`
-    SELECT
-      SUM(CASE WHEN payment_status = 'paid' THEN final_fee ELSE 0 END) as total_paid,
-      SUM(CASE WHEN payment_status = 'pending' THEN final_fee ELSE 0 END) as total_pending,
-      SUM(discount_amount) as total_discounts
-    FROM registrations
-  `).get();
-
-  const totalExpenses = (await db.prepare(`SELECT SUM(amount) as sum FROM tournament_expenses`).get()).sum || 0;
-
   const registrationsByClub = await db.prepare(`
     SELECT cl.name as club_name, COUNT(r.id) as count
     FROM registrations r
@@ -84,11 +74,7 @@ router.get('/dashboard', async (req, res) => {
       totalSkaters,
       totalRegistrations,
       totalClubs,
-      totalTournaments,
-      totalPaid: paidStats.total_paid || 0,
-      totalPending: paidStats.total_pending || 0,
-      totalDiscounts: paidStats.total_discounts || 0,
-      totalExpenses
+      totalTournaments
     },
     registrationsByClub,
     recentRegistrations,
@@ -98,14 +84,14 @@ router.get('/dashboard', async (req, res) => {
   });
 });
 
-// Master Registrations Table (With Filters, Payment Toggle & Discount Manager)
+// Master Registrations Table (With Filters)
 router.get('/inscripciones', async (req, res) => {
-  const { payment_status, buscar, disciplina, categoria } = req.query;
+  const { buscar, disciplina, categoria } = req.query;
   const tournament_id = toInt(req.query.tournament_id);
   const club_id = toInt(req.query.club_id);
 
   const registrations = await insc.fetchRegistrations({
-    tournament_id, club_id, payment_status, buscar, disciplina, categoria
+    tournament_id, club_id, buscar, disciplina, categoria
   });
 
   const tournaments = await db.prepare(`SELECT * FROM tournaments ORDER BY COALESCE(date_from, event_date) DESC`).all();
@@ -120,7 +106,6 @@ router.get('/inscripciones', async (req, res) => {
     exportFields: insc.EXPORT_FIELDS,
     selectedTournament: tournament_id || '',
     selectedClub: club_id || '',
-    selectedPayment: payment_status || '',
     buscar: buscar || '',
     disciplina: disciplina || '',
     categoria: categoria || '',
@@ -129,73 +114,14 @@ router.get('/inscripciones', async (req, res) => {
   });
 });
 
-// Toggle Payment Status
-router.post('/inscripciones/:id/pago', async (req, res) => {
-  const regId = req.params.id;
-  const reg = await db.prepare(`
-    SELECT r.payment_status, r.teacher_id, r.student_id, r.group_name,
-    c.name as category_name,
-    t.name as tournament_name
-    FROM registrations r
-    JOIN categories c ON r.category_id = c.id
-    JOIN tournaments t ON r.tournament_id = t.id
-    WHERE r.id = ?
-  `).get(regId);
-
-  if (reg) {
-    const newStatus = reg.payment_status === 'paid' ? 'pending' : 'paid';
-    const paymentDate = newStatus === 'paid' ? new Date().toISOString() : null;
-    await db.prepare(`UPDATE registrations SET payment_status = ?, payment_date = ? WHERE id = ?`).run(newStatus, paymentDate, regId);
-
-    // Notificación en la campana del profesor cuando pasa a PAGADA
-    if (newStatus === 'paid' && reg.teacher_id) {
-      try {
-        let quien = 'TU GRUPO';
-        if (reg.student_id) {
-          const st = await db.prepare(`SELECT first_name, last_name FROM students WHERE id = ?`).get(reg.student_id);
-          if (st) quien = `${st.last_name} ${st.first_name}`.trim();
-        } else if (reg.group_name) {
-          quien = reg.group_name;
-        }
-        const msg = `La inscripción de ${quien} en ${reg.category_name} (${reg.tournament_name}) fue confirmada como PAGADA ✅`;
-        await db.prepare(`INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)`).run(reg.teacher_id, msg, '/profesor/dashboard');
-      } catch (e) {
-        console.error('Error creating notification:', e);
-      }
-    }
-  }
-
-  const referer = req.header('Referer') || '/admin/inscripciones';
-  res.redirect(referer);
-});
-
-// Apply Discount / Bonificación
-router.post('/inscripciones/:id/descuento', async (req, res) => {
-  const regId = req.params.id;
-  const { discount_amount, discount_reason } = req.body;
-
-  const reg = await db.prepare(`SELECT original_fee FROM registrations WHERE id = ?`).get(regId);
-  if (reg) {
-    const disc = parseFloat(discount_amount) || 0;
-    const finalFee = Math.max(0, reg.original_fee - disc);
-
-    await db.prepare(`
-      UPDATE registrations SET discount_amount = ?, discount_reason = ?, final_fee = ?
-      WHERE id = ?
-    `).run(disc, (discount_reason || '').toUpperCase(), finalFee, regId);
-  }
-
-  res.redirect('/admin/inscripciones?success=' + encodeURIComponent('Bonificación / Descuento aplicado correctamente.'));
-});
-
 // Export CSV (campos seleccionables, datos completos de la inscripción)
 router.get('/exportar/csv', async (req, res) => {
-  const { payment_status, buscar, disciplina, categoria, fields } = req.query;
+  const { buscar, disciplina, categoria, fields } = req.query;
   const tournament_id = toInt(req.query.tournament_id);
   const club_id = toInt(req.query.club_id);
   try {
     const selectedFields = insc.resolveFields(fields);
-    const registrations = await insc.fetchRegistrations({ tournament_id, club_id, payment_status, buscar, disciplina, categoria });
+    const registrations = await insc.fetchRegistrations({ tournament_id, club_id, buscar, disciplina, categoria });
     const csv = insc.buildCsv(registrations, selectedFields);
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -209,12 +135,12 @@ router.get('/exportar/csv', async (req, res) => {
 
 // Export Excel .xlsx (tabla dinámica estética con la paleta del sistema y campos seleccionables)
 router.get('/exportar/excel', async (req, res) => {
-  const { payment_status, buscar, disciplina, categoria, fields } = req.query;
+  const { buscar, disciplina, categoria, fields } = req.query;
   const tournament_id = toInt(req.query.tournament_id);
   const club_id = toInt(req.query.club_id);
   try {
     const selectedFields = insc.resolveFields(fields);
-    const filters = { tournament_id, club_id, payment_status, buscar, disciplina, categoria };
+    const filters = { tournament_id, club_id, buscar, disciplina, categoria };
 
     if (filters.tournament_id) {
       const t = await db.prepare(`SELECT name FROM tournaments WHERE id = ?`).get(filters.tournament_id);
@@ -235,72 +161,6 @@ router.get('/exportar/excel', async (req, res) => {
   } catch (err) {
     console.error('Error exporting Excel:', err);
     res.status(500).send('Error al exportar el Excel. Intente nuevamente.');
-  }
-});
-
-// Admin Financial Forecast & Expense Tracker Module
-router.get('/finanzas', async (req, res) => {
-  const tournaments = await db.prepare(`SELECT * FROM tournaments ORDER BY event_date DESC`).all();
-  const selectedTournamentId = toInt(req.query.tournament_id) || (tournaments.length > 0 ? tournaments[0].id : null);
-
-  let expenses = [];
-  let revenueStats = { total_gross: 0, total_discounts: 0, total_net: 0, total_paid: 0, total_pending: 0 };
-
-  if (selectedTournamentId) {
-    expenses = await db.prepare(`SELECT * FROM tournament_expenses WHERE tournament_id = ? ORDER BY expense_date DESC`).all(selectedTournamentId);
-
-    revenueStats = await db.prepare(`
-      SELECT
-        SUM(original_fee) as total_gross,
-        SUM(discount_amount) as total_discounts,
-        SUM(final_fee) as total_net,
-        SUM(CASE WHEN payment_status = 'paid' THEN final_fee ELSE 0 END) as total_paid,
-        SUM(CASE WHEN payment_status = 'pending' THEN final_fee ELSE 0 END) as total_pending
-      FROM registrations
-      WHERE tournament_id = ?
-    `).get(selectedTournamentId) || revenueStats;
-  }
-
-  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const projectedProfit = (revenueStats.total_net || 0) - totalExpenses;
-
-  res.render('admin/finanzas', {
-    user: req.session.user,
-    tournaments,
-    selectedTournamentId,
-    expenses,
-    revenueStats,
-    totalExpenses,
-    projectedProfit,
-    success: req.query.success || null,
-    error: req.query.error || null
-  });
-});
-
-// Add Tournament Expense
-router.post('/finanzas/gastos', async (req, res) => {
-  const { tournament_id, expense_category, description, amount, expense_date } = req.body;
-
-  if (!tournament_id || !expense_category || !description || !amount) {
-    return res.redirect('/admin/finanzas?error=' + encodeURIComponent('Todos los campos del gasto son requeridos.'));
-  }
-
-  try {
-    await db.prepare(`
-      INSERT INTO tournament_expenses (tournament_id, expense_category, description, amount, expense_date)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(
-      tournament_id,
-      expense_category,
-      description.trim().toUpperCase(),
-      parseFloat(amount) || 0,
-      expense_date || new Date().toISOString().split('T')[0]
-    );
-
-    res.redirect(`/admin/finanzas?tournament_id=${tournament_id}&success=` + encodeURIComponent('Gasto registrado en el presupuesto del torneo.'));
-  } catch (err) {
-    console.error('Error adding expense:', err);
-    res.redirect('/admin/finanzas?error=' + encodeURIComponent('Error al registrar gasto.'));
   }
 });
 
@@ -410,7 +270,7 @@ router.get('/torneos/:id/categorias', async (req, res) => {
 // Save Category
 router.post('/torneos/:id/categorias', async (req, res) => {
   const tournamentId = req.params.id;
-  const { name, discipline, division, level, min_age, max_age, gender, schedule, fee } = req.body;
+  const { name, discipline, division, level, min_age, max_age, gender, schedule } = req.body;
 
   if (!name || !discipline) {
     return res.redirect(`/admin/torneos/${tournamentId}/categorias?error=` + encodeURIComponent('Nombre y disciplina son requeridos.'));
@@ -418,8 +278,8 @@ router.post('/torneos/:id/categorias', async (req, res) => {
 
   try {
     await db.prepare(`
-      INSERT INTO categories (tournament_id, name, discipline, division, level, min_age, max_age, gender, schedule, fee)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO categories (tournament_id, name, discipline, division, level, min_age, max_age, gender, schedule)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       tournamentId,
       name.trim().toUpperCase(),
@@ -429,8 +289,7 @@ router.post('/torneos/:id/categorias', async (req, res) => {
       parseInt(min_age) || 0,
       parseInt(max_age) || 99,
       gender || 'MIXTO',
-      (schedule || '').toUpperCase(),
-      parseFloat(fee) || 0
+      (schedule || '').toUpperCase()
     );
 
     res.redirect(`/admin/torneos/${tournamentId}/categorias?success=` + encodeURIComponent('Categoría agregada correctamente al torneo.'));

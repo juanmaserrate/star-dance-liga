@@ -141,7 +141,7 @@ router.get('/dashboard', async (req, res) => {
     SELECT r.*,
     s.first_name, s.last_name, s.dni,
     t.name as tournament_name, t.event_date, t.date_from, t.date_to,
-    c.name as category_name, c.discipline, c.fee,
+    c.name as category_name, c.discipline,
     cl.name as club_name
     FROM registrations r
     LEFT JOIN students s ON r.student_id = s.id
@@ -598,14 +598,13 @@ router.post('/inscribir', async (req, res) => {
   if (!clubId) clubId = primaryStudent ? primaryStudent.club_id : (teacherClubIds[0] || req.session.user.club_id || 1);
 
   const isGroupReg = (is_group === '1' || selectedStudentIds.length > 1);
-  const fee = category.fee || 0;
 
   try {
     const info = await db.prepare(`
       INSERT INTO registrations (
         tournament_id, category_id, student_id, club_id, teacher_id, is_group, group_name, group_type,
-        status, payment_status, original_fee, discount_amount, final_fee, notes, age_band
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'registered', 'pending', ?, 0, ?, ?, ?) RETURNING id
+        status, notes, age_band
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'registered', ?, ?) RETURNING id
     `).run(
       tournament_id,
       category_id,
@@ -615,8 +614,6 @@ router.post('/inscribir', async (req, res) => {
       isGroupReg,
       isGroupReg ? ((group_name || 'GRUPO STAR DANCE').toUpperCase()) : null,
       group_type || 'Individual',
-      fee,
-      fee,
       (notes || '').toUpperCase(),
       (age_band || '').toUpperCase() || null
     );
@@ -677,7 +674,7 @@ router.get('/certificado/:id', async (req, res) => {
     SELECT r.*,
     s.first_name, s.last_name, s.dni, s.birth_date, s.health_insurance, s.policy_number,
     t.name as tournament_name, t.venue, t.event_date, t.date_from, t.date_to,
-    c.name as category_name, c.discipline, c.division as level, c.fee,
+    c.name as category_name, c.discipline, c.division as level,
     cl.name as club_name
     FROM registrations r
     LEFT JOIN students s ON r.student_id = s.id

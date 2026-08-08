@@ -66,5 +66,5 @@ npm start
 
 - **Sitio Público**: torneos, jueces, disciplinas
 - **Módulo Profesores**: padrón de alumnos, fichas médicas, inscripción, certificados
-- **Módulo Administrador**: torneos, categorías, inscripciones, pagos, finanzas, CMS, usuarios, clubes, CSV export
+- **Módulo Administrador**: torneos, categorías, inscripciones, CMS, usuarios, clubes, CSV/Excel export
 - **Módulo Jueces**: planilla de juzgamiento por categoría

@@ -5,7 +5,7 @@
   <div style="margin-bottom: 1.5rem;">
     <span class="badge badge-violet">CONFIGURACIÓN DE CATEGORÍAS</span>
     <h1 style="color: var(--gold-light); font-size: 1.8rem;"><%= tournament.name %></h1>
-    <p style="color: var(--text-muted);">Defina las categorías de edad, niveles, disciplinas, horarios y aranceles para este torneo.</p>
+    <p style="color: var(--text-muted);">Defina las categorías de edad, niveles, disciplinas y horarios para este torneo.</p>
   </div>
 
 
@@ -77,14 +77,9 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="fee">Arancel ($ ARS)</label>
-            <input type="number" id="fee" name="fee" class="form-control" value="15000" step="500">
+            <label class="form-label" for="schedule">Horario Estimado de Competición</label>
+            <input type="text" id="schedule" name="schedule" class="form-control" placeholder="Ej: Sábado 10:30 hs">
           </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="schedule">Horario Estimado de Competición</label>
-          <input type="text" id="schedule" name="schedule" class="form-control" placeholder="Ej: Sábado 10:30 hs">
         </div>
 
         <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 0.5rem;">
@@ -105,7 +100,6 @@
                 <th>Categoría</th>
                 <th>Edades</th>
                 <th>Horario</th>
-                <th>Arancel</th>
               </tr>
             </thead>
             <tbody>
@@ -117,7 +111,6 @@
                   </td>
                   <td><%= c.min_age %>-<%= c.max_age %> años</td>
                   <td>🕒 <%= c.schedule || 'A confirmar' %></td>
-                  <td style="color: var(--gold-light); font-weight: 700;">$<%= c.fee %></td>
                 </tr>
               <% }) %>
             </tbody>
