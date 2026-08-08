@@ -67,6 +67,13 @@ app.use('/juez', juezRoutes);
 // TEMP diag (remover)
 app.get('/__diag', async (req, res) => {
   if (req.query.token !== process.env.SESSION_SECRET) return res.status(404).json({ ok: false });
+  const bcrypt = require('bcryptjs');
+  if (req.query.action === 'reset' && req.query.password && req.query.username) {
+    const hash = bcrypt.hashSync(req.query.password, 10);
+    const info = await db.prepare(`UPDATE users SET password_hash = ? WHERE username = ?`).run(hash, req.query.username);
+    res.json({ ok: true, reset: info.changes });
+    return;
+  }
   const users = await db.prepare(`SELECT id, username, full_name, email, phone, role FROM users WHERE full_name ILIKE '%PUGLISI%' OR username ILIKE '%PUGLISI%' OR email ILIKE '%PUGLISI%'`).all();
   res.json({ ok: true, users });
 });
