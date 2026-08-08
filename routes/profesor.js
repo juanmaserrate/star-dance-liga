@@ -524,12 +524,12 @@ router.get('/inscribir', async (req, res) => {
 
   const disciplines = [...new Set(categories.map(c => c.discipline).filter(Boolean))];
 
-  // Franjas de edad oficiales por disciplina (del catálogo), para mostrarlas como referencia.
+  // Franjas de edad oficiales por disciplina (del catálogo) para el desplegable "Edad".
   const catalogo = require('../data/catalogo_categorias.json');
   const ageBandsByDiscipline = {};
   for (const g of catalogo) {
     if (g.ages && g.ages.length) {
-      ageBandsByDiscipline[g.discipline] = g.ages.map(a => `${a.name} (${a.min}-${a.max})`).join(', ');
+      ageBandsByDiscipline[g.discipline] = g.ages.map(a => ({ name: a.name, min: a.min, max: a.max }));
     }
   }
 
@@ -551,7 +551,7 @@ router.get('/inscribir', async (req, res) => {
 router.post('/inscribir', async (req, res) => {
   const teacherId = req.session.user.id;
   const ajax = isAjax(req);
-  const { tournament_id, category_id, is_group, group_name, group_type, student_ids, notes, club_id } = req.body;
+  const { tournament_id, category_id, is_group, group_name, group_type, student_ids, notes, club_id, age_band } = req.body;
 
   if (!tournament_id || !category_id) {
     if (ajax) return res.status(400).json({ ok: false, message: 'Debe seleccionar torneo y categoría.' });
@@ -604,8 +604,8 @@ router.post('/inscribir', async (req, res) => {
     const info = await db.prepare(`
       INSERT INTO registrations (
         tournament_id, category_id, student_id, club_id, teacher_id, is_group, group_name, group_type,
-        status, payment_status, original_fee, discount_amount, final_fee, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'registered', 'pending', ?, 0, ?, ?) RETURNING id
+        status, payment_status, original_fee, discount_amount, final_fee, notes, age_band
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'registered', 'pending', ?, 0, ?, ?, ?) RETURNING id
     `).run(
       tournament_id,
       category_id,
@@ -617,7 +617,8 @@ router.post('/inscribir', async (req, res) => {
       group_type || 'Individual',
       fee,
       fee,
-      (notes || '').toUpperCase()
+      (notes || '').toUpperCase(),
+      (age_band || '').toUpperCase() || null
     );
 
     const regId = info.lastInsertRowid;

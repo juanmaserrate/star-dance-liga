@@ -156,6 +156,8 @@ async function initDb() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS age_band TEXT;
+
     CREATE TABLE IF NOT EXISTS registration_members (
       id SERIAL PRIMARY KEY,
       registration_id INTEGER NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
