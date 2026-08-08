@@ -53,8 +53,12 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="club_city">Barrio / Localidad</label>
-          <input type="text" id="club_city" name="club_city" class="form-control" placeholder="EJ: VILLA CAROLINA" style="text-transform: uppercase;" value="<%= typeof form !== 'undefined' && form && form.club_city ? form.club_city : '' %>">
+          <label class="form-label" for="club_city">Zona</label>
+          <select id="club_city" name="club_city" class="form-select">
+            <option value="">-- Seleccionar Zona --</option>
+            <option value="GBA" <%= typeof form !== 'undefined' && form && form.club_city === 'GBA' ? 'selected' : '' %>>GBA</option>
+            <option value="CABA" <%= typeof form !== 'undefined' && form && form.club_city === 'CABA' ? 'selected' : '' %>>CABA</option>
+          </select>
         </div>
 
         <div class="form-group">
