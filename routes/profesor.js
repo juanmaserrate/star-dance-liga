@@ -139,9 +139,9 @@ router.get('/dashboard', async (req, res) => {
 
   const myRegistrations = await db.prepare(`
     SELECT r.*,
-    s.first_name, s.last_name, s.dni,
+    s.first_name, s.last_name, s.dni, s.birth_date,
     t.name as tournament_name, t.event_date, t.date_from, t.date_to,
-    c.name as category_name, c.discipline,
+    c.name as category_name, c.discipline, c.level,
     cl.name as club_name
     FROM registrations r
     LEFT JOIN students s ON r.student_id = s.id
@@ -152,7 +152,36 @@ router.get('/dashboard', async (req, res) => {
     ORDER BY r.created_at DESC
   `).all(teacherId, ...regFilterParams);
 
-  myRegistrations.forEach(r => { r.datesLabel = formatEventDates(r.date_from || r.event_date, r.date_to); });
+  // En las inscripciones grupales se muestra cada patinadora con su propia edad.
+  const registrationRows = [];
+  for (const r of myRegistrations) {
+    r.datesLabel = formatEventDates(r.date_from || r.event_date, r.date_to);
+    if (r.is_group) {
+      const members = await db.prepare(`
+        SELECT s.first_name, s.last_name, s.birth_date
+        FROM students s
+        JOIN registration_members rm ON s.id = rm.student_id
+        WHERE rm.registration_id = ?
+      `).all(r.id);
+      if (members.length === 0) {
+        registrationRows.push({ ...r, age: getCalendarAge(r.birth_date), member_count: 0 });
+      } else {
+        members.forEach((m, idx) => {
+          registrationRows.push({
+            ...r,
+            first_name: m.first_name,
+            last_name: m.last_name,
+            birth_date: m.birth_date,
+            age: getCalendarAge(m.birth_date),
+            member_index: idx,
+            member_count: members.length
+          });
+        });
+      }
+    } else {
+      registrationRows.push({ ...r, age: getCalendarAge(r.birth_date), member_count: 1 });
+    }
+  }
 
   // Datos del módulo "Mis alumnas"
   const activeTournaments = await db.prepare(`SELECT * FROM tournaments WHERE status != 'finished' ORDER BY COALESCE(date_from, event_date) ASC`).all();
@@ -170,7 +199,7 @@ router.get('/dashboard', async (req, res) => {
     selectedClubId,
     myClubs,
     students,
-    myRegistrations,
+    myRegistrations: registrationRows,
     activeTournaments,
     allCategories,
     categoryOptions,

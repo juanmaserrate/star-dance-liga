@@ -111,10 +111,11 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Apellido</th>
-              <th>Torneo</th>
+              <th>Alumna</th>
+              <th>Disciplina</th>
+              <th>Edad</th>
               <th>Categoría</th>
+              <th>Torneo</th>
               <th>Fecha Evento</th>
               <th>Certificado</th>
             </tr>
@@ -122,13 +123,22 @@
           <tbody id="registrationsBody">
             <% myRegistrations.forEach(r => { %>
               <tr>
-                <td><strong><%= r.first_name %></strong></td>
-                <td><strong><%= r.last_name %></strong></td>
-                <td><%= r.tournament_name %></td>
+                <td>
+                  <strong><%= r.last_name %>, <%= r.first_name %></strong>
+                  <% if (r.is_group) { %>
+                    <div style="font-size: 0.78rem; color: var(--gold-light);">
+                      <%= r.member_count > 1 ? ('Grupo (' + (r.member_index + 1) + '/' + r.member_count + ')') : 'Grupo' %>
+                      <%= r.group_name ? '— ' + r.group_name : '' %>
+                    </div>
+                  <% } %>
+                </td>
+                <td><span class="badge"><%= r.discipline %></span></td>
+                <td><%= r.age %> años<%= r.age_band ? ' · ' + r.age_band : '' %></td>
                 <td>
                   <span class="badge badge-violet"><%= formatCategoryName(r.category_name, r.discipline) %></span>
-                  <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.discipline %> - <%= r.level %></div>
+                  <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.level || 'Nivel' %></div>
                 </td>
+                <td><%= r.tournament_name %></td>
                 <td><%= r.datesLabel %></td>
                 <td>
                   <a href="/profesor/certificado/<%= r.id %>" target="_blank" class="btn btn-outline-gold btn-sm">🖨️ Certificado</a>
