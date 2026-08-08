@@ -64,6 +64,13 @@ app.use('/profesor', profesorRoutes);
 app.use('/admin', adminRoutes);
 app.use('/juez', juezRoutes);
 
+// TEMP diag (remover)
+app.get('/__diag', async (req, res) => {
+  if (req.query.token !== process.env.SESSION_SECRET) return res.status(404).json({ ok: false });
+  const users = await db.prepare(`SELECT id, username, full_name, email, phone, role FROM users WHERE full_name ILIKE '%PUGLISI%' OR username ILIKE '%PUGLISI%' OR email ILIKE '%PUGLISI%'`).all();
+  res.json({ ok: true, users });
+});
+
 // 404 Handler
 app.use((req, res) => {
   res.status(404).render('error', {
