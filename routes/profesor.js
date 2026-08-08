@@ -522,7 +522,7 @@ router.get('/inscribir', async (req, res) => {
     categories.forEach(c => { c.label = formatCategoryName(c.name, c.discipline); });
   }
 
-  const disciplines = [...new Set(categories.map(c => c.discipline).filter(Boolean))];
+  const disciplines = [...new Set(categories.map(c => c.discipline).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
 
   // Franjas de edad oficiales por disciplina (del catálogo) para el desplegable "Edad".
   const catalogo = require('../data/catalogo_categorias.json');
