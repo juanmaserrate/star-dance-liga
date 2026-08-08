@@ -58,6 +58,22 @@ function getCalendarAge(birthDateStr) {
   return Math.max(0, currentYear - birthYear);
 }
 
+// Helper: resuelve el rango de años de la banda de edad elegida en la
+// confirmación de inscripción (ej: "INFANTIL" → "6-8") usando el catálogo.
+function getBandRange(discipline, bandName) {
+  if (!bandName) return null;
+  const norm = (s) => String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const target = norm(bandName);
+  const catalogo = require('../data/catalogo_categorias.json');
+  for (const g of catalogo) {
+    if (norm(g.discipline) !== norm(discipline)) continue;
+    if (!Array.isArray(g.ages)) continue;
+    const band = g.ages.find(a => norm(a.name) === target);
+    if (band) return `${band.min}-${band.max}`;
+  }
+  return null;
+}
+
 // Helper: separa "MARTINEZ SOFIA" / "MARTINEZ, SOFIA" en apellido y nombre
 function splitFullName(raw) {
   let s = String(raw || '').trim().toUpperCase().replace(/\s+/g, ' ');
@@ -156,6 +172,7 @@ router.get('/dashboard', async (req, res) => {
   const registrationRows = [];
   for (const r of myRegistrations) {
     r.datesLabel = formatEventDates(r.date_from || r.event_date, r.date_to);
+    r.bandRange = getBandRange(r.discipline, r.age_band);
     if (r.is_group) {
       const members = await db.prepare(`
         SELECT s.first_name, s.last_name, s.birth_date

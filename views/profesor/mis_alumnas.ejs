@@ -115,8 +115,9 @@
               <th>Disciplina</th>
               <th>Edad</th>
               <th>Categoría</th>
+              <th>Tipo</th>
+              <th>Club</th>
               <th>Torneo</th>
-              <th>Fecha Evento</th>
               <th>Certificado</th>
             </tr>
           </thead>
@@ -125,21 +126,27 @@
               <tr>
                 <td>
                   <strong><%= r.last_name %>, <%= r.first_name %></strong>
-                  <% if (r.is_group) { %>
-                    <div style="font-size: 0.78rem; color: var(--gold-light);">
-                      <%= r.member_count > 1 ? ('Grupo (' + (r.member_index + 1) + '/' + r.member_count + ')') : 'Grupo' %>
-                      <%= r.group_name ? '— ' + r.group_name : '' %>
-                    </div>
-                  <% } %>
+                  <div style="font-size: 0.78rem; color: var(--text-muted);">
+                    DNI: <%= r.dni %><%= r.club_name ? ' · ' + r.club_name : '' %>
+                    <% if (r.is_group) { %>
+                      · <%= r.member_count > 1 ? ('Grupo (' + (r.member_index + 1) + '/' + r.member_count + ')') : 'Grupo' %><%= r.group_name ? ' — ' + r.group_name : '' %>
+                    <% } %>
+                  </div>
                 </td>
                 <td><span class="badge"><%= r.discipline %></span></td>
-                <td><%= r.age %> años<%= r.age_band ? ' · ' + r.age_band : '' %></td>
+                <td>
+                  <%= r.age_band ? (r.age_band + (r.bandRange ? ' (' + r.bandRange + ')' : '')) : (r.age + ' años') %>
+                  <% if (r.age_band) { %>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.age %> años</div>
+                  <% } %>
+                </td>
                 <td>
                   <span class="badge badge-violet"><%= formatCategoryName(r.category_name, r.discipline) %></span>
                   <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.level || 'Nivel' %></div>
                 </td>
-                <td><%= r.tournament_name %></td>
-                <td><%= r.datesLabel %></td>
+                <td><%= r.group_type || 'Individual' %></td>
+                <td><%= r.club_name %></td>
+                <td><%= r.tournament_name %><div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.datesLabel %></div></td>
                 <td>
                   <a href="/profesor/certificado/<%= r.id %>" target="_blank" class="btn btn-outline-gold btn-sm">🖨️ Certificado</a>
                 </td>
