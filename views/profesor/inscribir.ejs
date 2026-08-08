@@ -42,8 +42,8 @@
         <% } %>
       </div>
 
-      <!-- Select Age (visible solo para disciplinas con franjas de edad) -->
-      <div class="form-group" id="age_band_group" style="display: none;">
+      <!-- Select Age (solo se habilita para disciplinas con franjas de edad) -->
+      <div class="form-group" id="age_band_group">
         <label class="form-label" for="age_band">3. Seleccionar Edad *</label>
         <select id="age_band" name="age_band" class="form-select" required disabled>
           <option value="">-- Seleccionar Edad --</option>
@@ -227,6 +227,14 @@
 
   const AGE_BANDS = <%- typeof ageBandsByDiscipline !== 'undefined' ? JSON.stringify(ageBandsByDiscipline).replace(/</g, '\\u003c') : '{}' %>;
 
+  // Normaliza el nombre de la disciplina (mayúsculas y sin tildes) para emparejar
+  // de forma tolerante los valores de la base con las claves del catálogo.
+  function normalizeDisc(s) {
+    return String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  }
+  const AGE_BANDS_NORM = {};
+  Object.keys(AGE_BANDS).forEach(k => { AGE_BANDS_NORM[normalizeDisc(k)] = AGE_BANDS[k]; });
+
   function filterCategoriesByDiscipline() {
     const discSelect = document.getElementById('discipline_select');
     const catSelect = document.getElementById('category_id');
@@ -238,19 +246,31 @@
     const allCategories = catSelect.dataset.allCategories ? JSON.parse(catSelect.dataset.allCategories) : [];
 
     // Poblar el desplegable de Edad según la disciplina (si tiene franjas de edad)
-    const bands = (AGE_BANDS && selectedDisc && AGE_BANDS[selectedDisc]) ? AGE_BANDS[selectedDisc] : [];
+    const bands = selectedDisc ? (AGE_BANDS_NORM[normalizeDisc(selectedDisc)] || []) : [];
     if (ageSelect) {
-      ageSelect.innerHTML = '<option value="">-- Seleccionar Edad --</option>';
-      bands.forEach(b => {
-        const opt = document.createElement('option');
-        opt.value = b.name;
-        opt.textContent = `${b.name} (${b.min}-${b.max})`;
-        ageSelect.appendChild(opt);
-      });
-      ageSelect.disabled = bands.length === 0;
+      ageSelect.innerHTML = '';
+      if (bands.length > 0) {
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '-- Seleccionar Edad --';
+        ageSelect.appendChild(placeholder);
+        bands.forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b.name;
+          opt.textContent = `${b.name} (${b.min}-${b.max})`;
+          ageSelect.appendChild(opt);
+        });
+        ageSelect.disabled = false;
+      } else {
+        const note = document.createElement('option');
+        note.value = '';
+        note.textContent = '-- Sin franjas de edad para esta disciplina --';
+        ageSelect.appendChild(note);
+        ageSelect.disabled = true;
+      }
       ageSelect.value = '';
     }
-    if (ageGroup) ageGroup.style.display = bands.length > 0 ? 'block' : 'none';
+    if (ageGroup) ageGroup.style.display = 'block';
 
     catSelect.innerHTML = '';
 
