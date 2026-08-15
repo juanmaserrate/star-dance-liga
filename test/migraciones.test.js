@@ -102,9 +102,31 @@ async function main() {
   check('STAR DANCE y STYLE ya no son disciplinas ofrecidas',
     !discs.some(d => ['STAR DANCE', 'STYLE'].includes(d.discipline)));
 
+  // El desplegable de FREE DANCE tiene que respetar el orden oficial, no el alfabético
+  const freeOrdenadas = await pglite.query(`
+    SELECT division FROM categories
+    WHERE tournament_id = ${zonaSur} AND discipline = 'FREE DANCE' AND COALESCE(is_active, true) = true
+    ORDER BY order_index ASC, division ASC`);
+  const ordenEsperado = ['DEBUTANTE', 'INICIAL', 'BÁSICO', 'AVANZADO', 'STAR DANCE', 'STYLE',
+    'EFICIENCIA C BÁSICO', 'EFICIENCIA C AVANZADO', 'NACIONAL BÁSICO', 'NACIONAL INTERMEDIO'];
+  check('FREE DANCE: el desplegable respeta el orden pedido',
+    JSON.stringify(freeOrdenadas.rows.map(r => r.division)) === JSON.stringify(ordenEsperado),
+    freeOrdenadas.rows.map(r => r.division).join(' | '));
+
+  // LIBRE es una progresión, tampoco puede salir alfabética
+  const libreOrdenadas = await pglite.query(`
+    SELECT division FROM categories
+    WHERE tournament_id = ${zonaSur} AND discipline = 'LIBRE' AND COALESCE(is_active, true) = true
+    ORDER BY order_index ASC, division ASC`);
+  const libreEsperado = ['EXHIBICIÓN', 'INICIACIÓN B', 'INICIACIÓN A', 'ESCUELA FORMATIVA',
+    'PRE 5TA C', '5TA C', '4TA', 'PRE 3ERA C', '3ERA C', '2DA C', 'PRIMERA C',
+    'PROMO B', 'TERCERA B', 'SEGUNDA B', 'PRIMERA B'];
+  check('LIBRE: el desplegable respeta la progresión oficial',
+    JSON.stringify(libreOrdenadas.rows.map(r => r.division)) === JSON.stringify(libreEsperado),
+    libreOrdenadas.rows.map(r => r.division).join(' | '));
+
   const freeCats = await pglite.query(`
-    SELECT division FROM categories WHERE tournament_id = ? AND discipline = 'FREE DANCE' ORDER BY division`
-    .replace('?', zonaSur));
+    SELECT division FROM categories WHERE tournament_id = ${zonaSur} AND discipline = 'FREE DANCE' ORDER BY division`);
   const freeNames = freeCats.rows.map(r => r.division);
   check('FREE DANCE tiene STAR DANCE y STYLE como categorías',
     freeNames.includes('STAR DANCE') && freeNames.includes('STYLE'), freeNames.join(', '));

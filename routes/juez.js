@@ -24,7 +24,7 @@ router.get('/planilla', async (req, res) => {
     categories = await db.prepare(`
       SELECT * FROM categories
       WHERE tournament_id = ? AND COALESCE(is_active, true) = true
-      ORDER BY min_age ASC, division ASC
+      ORDER BY order_index ASC, division ASC
     `).all(selectedTournamentId);
   }
 

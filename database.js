@@ -154,6 +154,11 @@ async function initDb() {
     -- pero ya no se ofrecen en el formulario de inscripción.
     ALTER TABLE categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 
+    -- Orden en que se muestran las categorías dentro de cada disciplina. Sin
+    -- esto salían alfabéticas (LIBRE arrancaba en "2DA C" y FREE DANCE en
+    -- "AVANZADO"), y el orden de estas categorías es una progresión.
+    ALTER TABLE categories ADD COLUMN IF NOT EXISTS order_index INTEGER DEFAULT 0;
+
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS age_band TEXT;
 
     -- Edad de la patinadora al momento de inscribirse. Se precarga desde la

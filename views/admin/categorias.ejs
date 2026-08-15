@@ -97,7 +97,7 @@
               <div class="table-responsive" style="margin-bottom: 0.75rem;">
                 <table class="table">
                   <thead>
-                    <tr><th>Categoría</th><th>Estado</th><th style="width: 170px;">Acciones</th></tr>
+                    <tr><th>Orden y nombre</th><th>Estado</th><th style="width: 170px;">Acciones</th></tr>
                   </thead>
                   <tbody>
                     <% g.categories.forEach(c => { %>
@@ -105,8 +105,9 @@
                       <tr style="<%= vigente ? '' : 'opacity: 0.7;' %>">
                         <td>
                           <form action="/admin/torneos/<%= tournament.id %>/categorias/<%= c.id %>/editar" method="POST" style="display: flex; gap: 0.4rem; align-items: center; margin: 0;">
-                            <input type="text" name="name" class="form-control" value="<%= c.label %>" style="text-transform: uppercase; min-width: 140px;">
-                            <input type="text" name="schedule" class="form-control" value="<%= c.schedule || '' %>" placeholder="Horario" style="max-width: 130px;">
+                            <input type="number" name="order_index" class="form-control" value="<%= c.order_index || 0 %>" min="0" max="999" style="width: 62px;" title="Orden en el desplegable">
+                            <input type="text" name="name" class="form-control" value="<%= c.label %>" style="text-transform: uppercase; min-width: 130px;">
+                            <input type="text" name="schedule" class="form-control" value="<%= c.schedule || '' %>" placeholder="Horario" style="max-width: 120px;">
                             <button type="submit" class="btn btn-ghost btn-sm" title="Guardar">💾</button>
                           </form>
                         </td>

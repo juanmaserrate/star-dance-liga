@@ -72,7 +72,7 @@ router.get('/torneos/:id', async (req, res) => {
   const categories = await db.prepare(`
     SELECT * FROM categories
     WHERE tournament_id = ? AND COALESCE(is_active, true) = true
-    ORDER BY min_age ASC, division ASC
+    ORDER BY order_index ASC, division ASC
   `).all(tournamentId);
   const totalRegistrations = (await db.prepare(`SELECT COUNT(*) as count FROM registrations WHERE tournament_id = ?`).get(tournamentId)).count;
 

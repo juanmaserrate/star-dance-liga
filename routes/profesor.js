@@ -122,7 +122,7 @@ async function getCategoryOptions() {
   const cats = await db.prepare(`
     SELECT * FROM categories
     WHERE COALESCE(is_active, true) = true
-    ORDER BY discipline ASC, min_age ASC, name ASC
+    ORDER BY discipline ASC, order_index ASC, name ASC
   `).all();
   const seen = new Set();
   const opts = [];
@@ -132,7 +132,8 @@ async function getCategoryOptions() {
       opts.push({ discipline: c.discipline, name: c.name, label: formatCategoryName(c.name, c.discipline) });
     }
   }
-  opts.sort((a, b) => a.discipline.localeCompare(b.discipline) || a.name.localeCompare(b.name));
+  // Se respeta el orden que trae la consulta (disciplina + order_index): si se
+  // reordenara por nombre, el desplegable volvería a salir alfabético.
   return opts;
 }
 
@@ -235,7 +236,7 @@ router.get('/dashboard', async (req, res) => {
   activeTournaments.forEach(t => { t.datesLabel = formatEventDates(t.date_from || t.event_date, t.date_to); });
 
   const allCategories = activeTournaments.length > 0
-    ? await db.prepare(`SELECT * FROM categories ORDER BY discipline ASC, min_age ASC, name ASC`).all()
+    ? await db.prepare(`SELECT * FROM categories ORDER BY discipline ASC, order_index ASC, name ASC`).all()
     : [];
 
   // Opciones únicas de categoría/disciplina para la carga de alumna
@@ -640,7 +641,7 @@ router.get('/inscribir', async (req, res) => {
     categories = await db.prepare(`
       SELECT * FROM categories
       WHERE tournament_id = ? AND COALESCE(is_active, true) = true
-      ORDER BY discipline ASC, min_age ASC, name ASC
+      ORDER BY discipline ASC, order_index ASC, name ASC
     `).all(selectedTournamentId);
     categories.forEach(c => { c.label = formatCategoryName(c.name, c.discipline); });
   }
@@ -808,7 +809,7 @@ router.get('/inscripciones/:id/editar', async (req, res) => {
     categories = await db.prepare(`
       SELECT * FROM categories
       WHERE tournament_id = ? AND (COALESCE(is_active, true) = true OR id = ?)
-      ORDER BY discipline ASC, min_age ASC, name ASC
+      ORDER BY discipline ASC, order_index ASC, name ASC
     `).all(destId, reg.category_id);
     categories.forEach(c => { c.label = formatCategoryName(c.name, c.discipline); });
   }

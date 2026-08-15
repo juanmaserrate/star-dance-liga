@@ -222,7 +222,7 @@ router.get('/inscripciones/:id/editar', async (req, res) => {
     categories = await db.prepare(`
       SELECT * FROM categories
       WHERE tournament_id = ? AND (COALESCE(is_active, true) = true OR id = ?)
-      ORDER BY discipline ASC, min_age ASC, name ASC
+      ORDER BY discipline ASC, order_index ASC, name ASC
     `).all(destId, reg.category_id);
     categories.forEach(c => { c.label = formatCategoryName(c.name, c.discipline); });
   }
@@ -621,7 +621,7 @@ router.get('/torneos/:id/categorias', async (req, res) => {
       (SELECT COUNT(*) FROM registrations r WHERE r.category_id = c.id) AS reg_count
     FROM categories c
     WHERE c.tournament_id = ?
-    ORDER BY c.discipline ASC, c.name ASC
+    ORDER BY c.discipline ASC, c.order_index ASC, c.name ASC
   `).all(tournament.id);
   categories.forEach(c => { c.label = formatCategoryName(c.name, c.discipline); });
 
@@ -771,11 +771,16 @@ router.post('/torneos/:id/categorias', async (req, res) => {
     return backToConfig(res, tournament.id, { error: `La categoría ${bare} ya existe en ${disc}.` });
   }
 
+  // Va al final de su disciplina; después se puede reordenar.
+  const last = await db.prepare(`
+    SELECT COALESCE(MAX(order_index), -1) AS max FROM categories WHERE tournament_id = ? AND discipline = ?
+  `).get(tournament.id, disc);
+
   try {
     await db.prepare(`
-      INSERT INTO categories (tournament_id, name, discipline, division, min_age, max_age, gender, schedule)
-      VALUES (?, ?, ?, ?, 0, 99, 'MIXTO', ?)
-    `).run(tournament.id, fullName, disc, bare, (schedule || 'A CONFIRMAR').toUpperCase());
+      INSERT INTO categories (tournament_id, name, discipline, division, min_age, max_age, gender, schedule, is_active, order_index)
+      VALUES (?, ?, ?, ?, 0, 99, 'MIXTO', ?, true, ?)
+    `).run(tournament.id, fullName, disc, bare, (schedule || 'A CONFIRMAR').toUpperCase(), Number(last.max) + 1);
 
     // Si la disciplina no estaba en la configuración del torneo, se agrega.
     const last = await db.prepare(`
@@ -806,10 +811,15 @@ router.post('/torneos/:id/categorias/:catId/editar', async (req, res) => {
   if (!bare) return backToConfig(res, tournament.id, { error: 'El nombre de la categoría no puede quedar vacío.' });
 
   const fullName = `${category.discipline} - ${bare}`;
+  const orden = toInt(req.body.order_index);
+
   try {
     await db.prepare(`
-      UPDATE categories SET name = ?, division = ?, schedule = ? WHERE id = ?
-    `).run(fullName, bare, (req.body.schedule || category.schedule || '').toUpperCase(), catId);
+      UPDATE categories SET name = ?, division = ?, schedule = ?, order_index = COALESCE(?, order_index)
+      WHERE id = ?
+    `).run(fullName, bare, (req.body.schedule || category.schedule || '').toUpperCase(),
+      req.body.order_index === undefined || req.body.order_index === '' ? null : (orden === null ? 0 : orden),
+      catId);
     backToConfig(res, tournament.id, { success: `Categoría actualizada a ${bare}.` });
   } catch (err) {
     console.error('Error updating category:', err);
