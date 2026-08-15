@@ -81,7 +81,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-db.initPromise.then(async () => {
+// Tareas de mantenimiento del arranque (idempotentes y controladas por revisión).
+// Se ejecutan DESPUÉS de abrir el puerto: la primera vez pueden tardar bastante
+// (alinean el catálogo y siembran la configuración de cada torneo) y, si se
+// hicieran antes de escuchar, la plataforma podía quedar marcada como caída.
+async function runStartupMaintenance() {
   // Seed automático SOLO en base realmente vacía (sin usuarios), para que no
   // vuelva a crear torneos demo cuando una limpieza borra registraciones.
   const usersCount = await db.prepare('SELECT COUNT(*) as count FROM users').get();
@@ -138,10 +142,22 @@ db.initPromise.then(async () => {
     }
   }
 
-  app.listen(PORT, () => {
-    console.log(`✨ Plataforma Liga Star Dance ejecutándose en puerto ${PORT}`);
+}
+
+db.initPromise
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`✨ Plataforma Liga Star Dance ejecutándose en puerto ${PORT}`);
+    });
+
+    // El mantenimiento corre en segundo plano; si algo falla se registra pero
+    // NO se cae el servidor, porque son tareas idempotentes que se reintentan
+    // en el próximo arranque.
+    runStartupMaintenance()
+      .then(() => console.log('🔧 Mantenimiento de arranque completado.'))
+      .catch(err => console.error('Error en el mantenimiento de arranque:', err));
+  })
+  .catch(err => {
+    console.error('Error inicializando base de datos:', err);
+    process.exit(1);
   });
-}).catch(err => {
-  console.error('Error inicializando base de datos:', err);
-  process.exit(1);
-});
