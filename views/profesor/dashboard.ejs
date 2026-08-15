@@ -122,6 +122,7 @@
               <th>Categoría</th>
               <th>Fecha Evento</th>
               <th>Certificado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -138,6 +139,9 @@
                 <td><%= r.event_date %></td>
                 <td>
                   <a href="/profesor/certificado/<%= r.id %>" target="_blank" class="btn btn-outline-gold btn-sm">🖨️ Certificado</a>
+                </td>
+                <td>
+                  <a href="/profesor/inscripciones/<%= r.id %>/editar" class="btn btn-outline-gold btn-sm" title="Editar o mover de torneo">✏️ Editar</a>
                 </td>
               </tr>
             <% }) %>

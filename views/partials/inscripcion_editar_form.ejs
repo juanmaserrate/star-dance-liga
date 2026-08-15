@@ -1,0 +1,199 @@
+<% if (typeof success !== 'undefined' && success) { %>
+  <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
+<% } %>
+<% if (typeof error !== 'undefined' && error) { %>
+  <div class="alert alert-danger">⚠️ <%= error %></div>
+<% } %>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">📋 Datos de la Inscripción</h2>
+  </div>
+  <div style="padding: 1.25rem;">
+    <% if (reg.is_group) { %>
+      <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+        <div>
+          <strong style="color: var(--gold-light); font-size: 1.1rem;"><%= reg.group_name || 'GRUPO' %></strong>
+          <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">
+            <%= reg.group_type %> · Inscripción grupal (<%= reg.members.length %> patinadoras)
+          </div>
+        </div>
+        <div style="color: var(--text-muted); font-size: 0.85rem; text-align: right;">
+          <div><strong>Club:</strong> <%= reg.club_name %></div>
+          <div><strong>Profesora:</strong> <%= reg.teacher_name %></div>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1.25rem;">
+        <% reg.members.forEach(m => { %>
+          <span class="badge badge-violet"><%= m.last_name %>, <%= m.first_name %><% if (m.dni) { %> (DNI <%= m.dni %>)<% } %></span>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+        <div>
+          <strong style="color: var(--gold-light); font-size: 1.1rem;"><%= reg.last_name %>, <%= reg.first_name %></strong>
+          <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">
+            DNI: <%= reg.dni || '-' %> · Edad: <%= reg.age || 0 %> años
+          </div>
+        </div>
+        <div style="color: var(--text-muted); font-size: 0.85rem; text-align: right;">
+          <div><strong>Club:</strong> <%= reg.club_name %></div>
+          <div><strong>Profesora:</strong> <%= reg.teacher_name %></div>
+        </div>
+      </div>
+    <% } %>
+
+    <div style="background: rgba(18,6,28,0.55); border: 1px solid var(--border-gold); border-radius: var(--radius-sm); padding: 0.9rem 1.1rem; margin-bottom: 1.5rem;">
+      <strong style="color: var(--gold-light);">Inscripción actual:</strong>
+      <span class="badge badge-violet"><%= formatCategoryName(reg.category_name, reg.discipline) %></span>
+      <span class="badge"><%= reg.discipline %></span>
+      <span style="color: var(--text-muted);">· <%= reg.tournament_name %></span>
+      <% if (reg.age_band) { %><span style="color: var(--text-muted);">· Banda: <%= reg.age_band %></span><% } %>
+    </div>
+
+    <form method="POST" action="<%= formAction %>">
+      <div class="form-group">
+        <label class="form-label" for="tournament_id">Torneo *</label>
+        <select id="tournament_id" name="tournament_id" class="form-select" required
+          onchange="location.href='<%= baseUrl %>?tournament_id=' + encodeURIComponent(this.value);">
+          <% tournaments.forEach(t => { %>
+            <option value="<%= t.id %>" <%= destId == t.id ? 'selected' : '' %>>
+              <%= t.name %><% if (t.category_count > 0) { %> (<%= t.category_count %> categorías)<% } else { %> (sin categorías)<% } %>
+            </option>
+          <% }) %>
+        </select>
+        <small style="color: var(--text-muted);">Al cambiar el torneo se recargan las categorías disponibles. Solo se permiten torneos con categorías cargadas.</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="category_id">Categoría *</label>
+        <select id="category_id" name="category_id" class="form-select" required>
+          <% if (categories.length === 0) { %>
+            <option value="">-- El torneo seleccionado no tiene categorías cargadas --</option>
+          <% } else { %>
+            <option value="">-- Seleccionar categoría --</option>
+            <% categories.forEach(c => { %>
+              <option value="<%= c.id %>" <%= suggestedId == c.id ? 'selected' : '' %> data-discipline="<%= c.discipline %>">
+                <%= c.label %> (<%= c.discipline %>)
+              </option>
+            <% }) %>
+          <% } %>
+        </select>
+        <% if (suggestedId) { %>
+          <small style="color: var(--gold-light);">⭐ Categoría sugerida automáticamente según la inscripción actual y la edad/banda.</small>
+        <% } %>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="age">Edad</label>
+        <input type="number" id="age" name="age" class="form-control" min="1" max="120"
+               value="<%= reg.age || '' %>" placeholder="Edad de la patinadora">
+        <small style="color: var(--text-muted);">Al cambiarla se vuelve a asignar la categoría de edad.</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="age_band">Categoría de Edad</label>
+        <select id="age_band" name="age_band" class="form-select">
+          <option value="">-- Sin categoría de edad --</option>
+        </select>
+        <small style="color: var(--text-muted);">Se asigna sola según la edad y la disciplina de la categoría elegida. Podés elegir otra.</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="notes">Notas</label>
+        <textarea id="notes" name="notes" class="form-control" rows="2" placeholder="Notas internas (opcional)"><%= reg.notes || '' %></textarea>
+      </div>
+
+      <% if (typeof showStatus !== 'undefined' && showStatus) { %>
+        <div class="form-group">
+          <label class="form-label" for="status">Estado</label>
+          <select id="status" name="status" class="form-select">
+            <option value="registered" <%= reg.status === 'registered' ? 'selected' : '' %>>Registrada</option>
+            <option value="confirmed" <%= reg.status === 'confirmed' ? 'selected' : '' %>>Confirmada</option>
+            <option value="cancelled" <%= reg.status === 'cancelled' ? 'selected' : '' %>>Cancelada</option>
+          </select>
+        </div>
+      <% } %>
+
+      <div style="display: flex; gap: 0.6rem; margin-top: 1.25rem; flex-wrap: wrap;">
+        <button type="submit" class="btn btn-gold">💾 Guardar Cambios</button>
+        <a href="<%= backUrl %>" class="btn btn-secondary">Volver</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Categorías de edad configuradas para el torneo destino, por disciplina.
+  const EDIT_AGE_BANDS = <%- JSON.stringify(typeof ageBandsByDiscipline !== 'undefined' ? ageBandsByDiscipline : {}).replace(/</g, '\\u003c') %>;
+  const CURRENT_BAND = <%- JSON.stringify(reg.age_band || '').replace(/</g, '\\u003c') %>;
+
+  function normDisc(s) {
+    return String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  }
+
+  const BANDS_NORM = {};
+  Object.keys(EDIT_AGE_BANDS).forEach(k => { BANDS_NORM[normDisc(k)] = EDIT_AGE_BANDS[k]; });
+
+  function selectedDiscipline() {
+    const cat = document.getElementById('category_id');
+    if (!cat) return '';
+    const opt = cat.options[cat.selectedIndex];
+    return opt ? (opt.getAttribute('data-discipline') || '') : '';
+  }
+
+  function bandLabel(b) {
+    if (b.max >= 99) return b.name + ' (' + b.min + ' años y más)';
+    if (b.min === b.max) return b.name + ' (' + b.min + ' años)';
+    return b.name + ' (' + b.min + ' a ' + b.max + ' años)';
+  }
+
+  // Rellena el desplegable con las franjas de la disciplina elegida,
+  // conservando la selección previa si sigue existiendo.
+  function refreshBands(autoAssign) {
+    const sel = document.getElementById('age_band');
+    if (!sel) return;
+    const previous = sel.value || CURRENT_BAND;
+    const bands = BANDS_NORM[normDisc(selectedDiscipline())] || [];
+
+    sel.innerHTML = '';
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = bands.length ? '-- Sin categoría de edad --' : '-- Esta disciplina no usa categorías de edad --';
+    sel.appendChild(empty);
+
+    bands.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.name;
+      opt.textContent = bandLabel(b);
+      sel.appendChild(opt);
+    });
+
+    sel.disabled = bands.length === 0;
+
+    if (previous && bands.some(b => b.name === previous)) {
+      sel.value = previous;
+    } else if (autoAssign) {
+      assignFromAge();
+    }
+  }
+
+  function assignFromAge() {
+    const ageInput = document.getElementById('age');
+    const sel = document.getElementById('age_band');
+    if (!ageInput || !sel || sel.disabled) return;
+    const age = parseInt(ageInput.value, 10);
+    if (!Number.isFinite(age)) return;
+    const bands = BANDS_NORM[normDisc(selectedDiscipline())] || [];
+    const band = bands.find(b => age >= b.min && age <= b.max);
+    sel.value = band ? band.name : '';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    refreshBands(false);
+    const cat = document.getElementById('category_id');
+    if (cat) cat.addEventListener('change', () => refreshBands(true));
+    const ageInput = document.getElementById('age');
+    if (ageInput) ageInput.addEventListener('input', assignFromAge);
+  });
+</script>

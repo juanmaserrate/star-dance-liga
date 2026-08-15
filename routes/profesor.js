@@ -6,6 +6,7 @@ const multer = require('multer');
 const db = require('../database');
 const { formatEventDates } = require('../lib/dates');
 const { formatCategoryName } = require('../lib/categories');
+const inscEdit = require('../lib/inscripcion_editar');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 // True cuando la petición viene de un fetch del frontend (wizards) y espera JSON.
@@ -58,12 +59,23 @@ function getCalendarAge(birthDateStr) {
   return Math.max(0, currentYear - birthYear);
 }
 
-// Helper: resuelve el rango de años de la banda de edad elegida en la
-// confirmación de inscripción (ej: "INFANTIL" → "6-8") usando el catálogo.
-function getBandRange(discipline, bandName) {
+// Helper: resuelve el rango de años de la categoría de edad elegida en la
+// inscripción (ej: "INFANTIL" → "12-13"). Usa primero las franjas configuradas
+// para ese torneo y, si el torneo no las tiene, cae al catálogo oficial.
+function getBandRange(bandsByDiscipline, discipline, bandName) {
   if (!bandName) return null;
   const norm = (s) => String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   const target = norm(bandName);
+
+  // 1) Franjas configuradas para el torneo (lo que edita el administrador).
+  const key = Object.keys(bandsByDiscipline || {}).find(k => norm(k) === norm(discipline));
+  const configured = key ? bandsByDiscipline[key] : null;
+  if (configured) {
+    const band = configured.find(a => norm(a.name) === target);
+    if (band) return `${band.min}-${band.max}`;
+  }
+
+  // 2) Catálogo oficial como respaldo.
   const catalogo = require('../data/catalogo_categorias.json');
   for (const g of catalogo) {
     if (norm(g.discipline) !== norm(discipline)) continue;
@@ -107,7 +119,11 @@ function deriveBirthDate(edad, birthDate) {
 
 // Helper: Lista única de categorías/disciplinas (para elegir la categoría de la alumna)
 async function getCategoryOptions() {
-  const cats = await db.prepare(`SELECT * FROM categories ORDER BY discipline ASC, min_age ASC, name ASC`).all();
+  const cats = await db.prepare(`
+    SELECT * FROM categories
+    WHERE COALESCE(is_active, true) = true
+    ORDER BY discipline ASC, min_age ASC, name ASC
+  `).all();
   const seen = new Set();
   const opts = [];
   for (const c of cats) {
@@ -168,11 +184,25 @@ router.get('/dashboard', async (req, res) => {
     ORDER BY r.created_at DESC
   `).all(teacherId, ...regFilterParams);
 
+  // Franjas de edad configuradas por torneo, para mostrar el rango junto a la
+  // categoría de edad de cada inscripción (se cachean por torneo).
+  const tc = require('../lib/tournament_config');
+  const bandsCache = {};
+  const bandsFor = async (tournamentId) => {
+    if (!bandsCache[tournamentId]) {
+      bandsCache[tournamentId] = await tc.getAgeBandsByDiscipline(tournamentId);
+    }
+    return bandsCache[tournamentId];
+  };
+
   // En las inscripciones grupales se muestra cada patinadora con su propia edad.
   const registrationRows = [];
   for (const r of myRegistrations) {
     r.datesLabel = formatEventDates(r.date_from || r.event_date, r.date_to);
-    r.bandRange = getBandRange(r.discipline, r.age_band);
+    r.bandRange = getBandRange(await bandsFor(r.tournament_id), r.discipline, r.age_band);
+    // Edad guardada en la inscripción (la que cargó la profesora); si es una
+    // inscripción vieja sin edad, se calcula de la fecha de nacimiento.
+    r.reg_age = r.age;
     if (r.is_group) {
       const members = await db.prepare(`
         SELECT s.first_name, s.last_name, s.birth_date
@@ -181,7 +211,7 @@ router.get('/dashboard', async (req, res) => {
         WHERE rm.registration_id = ?
       `).all(r.id);
       if (members.length === 0) {
-        registrationRows.push({ ...r, age: getCalendarAge(r.birth_date), member_count: 0 });
+        registrationRows.push({ ...r, age: r.reg_age || getCalendarAge(r.birth_date), member_count: 0 });
       } else {
         members.forEach((m, idx) => {
           registrationRows.push({
@@ -196,7 +226,7 @@ router.get('/dashboard', async (req, res) => {
         });
       }
     } else {
-      registrationRows.push({ ...r, age: getCalendarAge(r.birth_date), member_count: 1 });
+      registrationRows.push({ ...r, age: r.reg_age || getCalendarAge(r.birth_date), member_count: 1 });
     }
   }
 
@@ -534,12 +564,53 @@ router.post('/alumnos/masiva', async (req, res) => {
   }
 });
 
+// Helper: elimina patinadoras propias (una o varias) junto con sus inscripciones,
+// documentos y archivos subidos. La base de datos se encarga del resto con
+// ON DELETE CASCADE (student_documents, registrations y registration_members).
+async function deleteOwnStudents(teacherId, ids) {
+  const arr = Array.isArray(ids) ? ids : [ids];
+  let removed = 0;
+  for (const raw of arr) {
+    const id = parseInt(raw);
+    if (!id) continue;
+    const s = await db.prepare(`SELECT id FROM students WHERE id = ? AND teacher_id = ?`).get(id, teacherId);
+    if (!s) continue;
+    const docs = await db.prepare(`SELECT file_path FROM student_documents WHERE student_id = ?`).all(id);
+    await db.prepare(`DELETE FROM students WHERE id = ?`).run(id);
+    docs.forEach((d) => {
+      if (!d || !d.file_path) return;
+      try { fs.unlinkSync(path.join(uploadsDir, path.basename(d.file_path))); } catch (e) { /* archivo ya no existe */ }
+    });
+    removed++;
+  }
+  return removed;
+}
+
+// Borrar varias patinadoras seleccionadas (checkboxes del padrón)
+router.post('/alumnos/eliminar', async (req, res) => {
+  const removed = await deleteOwnStudents(req.session.user.id, req.body.student_ids);
+  if (removed === 0) {
+    return res.redirect('/profesor/dashboard?error=' + encodeURIComponent('No se pudo eliminar: seleccioná patinadoras de tu padrón.'));
+  }
+  res.redirect('/profesor/dashboard?success=' + encodeURIComponent(removed === 1 ? '1 patinadora eliminada.' : removed + ' patinadoras eliminadas.'));
+});
+
+// Borrar una sola patinadora
+router.post('/alumnos/:id/eliminar', async (req, res) => {
+  const removed = await deleteOwnStudents(req.session.user.id, [req.params.id]);
+  if (removed === 0) {
+    return res.redirect('/profesor/dashboard?error=' + encodeURIComponent('No se encontró la patinadora en tu padrón.'));
+  }
+  res.redirect('/profesor/dashboard?success=' + encodeURIComponent('Patinadora eliminada.'));
+});
+
 // Form: Enrollment Wizard (Individual & Group Registrations)
 router.get('/inscribir', async (req, res) => {
   const teacherId = req.session.user.id;
 
   const students = await db.prepare(`SELECT s.*, c.name AS club_name FROM students s JOIN clubs c ON c.id = s.club_id WHERE s.teacher_id = ? ORDER BY s.last_name ASC`).all(teacherId);
   students.forEach(s => { s.age = getCalendarAge(s.birth_date); });
+  const tc = require('../lib/tournament_config');
 
   const activeTournaments = await db.prepare(`SELECT * FROM tournaments WHERE status != 'finished' ORDER BY COALESCE(date_from, event_date) ASC`).all();
   activeTournaments.forEach(t => { t.datesLabel = formatEventDates(t.date_from || t.event_date, t.date_to); });
@@ -564,20 +635,30 @@ router.get('/inscribir', async (req, res) => {
 
   let categories = [];
   if (selectedTournamentId) {
-    categories = await db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY discipline ASC, min_age ASC, name ASC`).all(selectedTournamentId);
+    // Solo las categorías vigentes: las históricas (is_active = false) se
+    // conservan para las inscripciones ya hechas, pero no se ofrecen más.
+    categories = await db.prepare(`
+      SELECT * FROM categories
+      WHERE tournament_id = ? AND COALESCE(is_active, true) = true
+      ORDER BY discipline ASC, min_age ASC, name ASC
+    `).all(selectedTournamentId);
     categories.forEach(c => { c.label = formatCategoryName(c.name, c.discipline); });
   }
 
-  const disciplines = [...new Set(categories.map(c => c.discipline).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+  // Disciplinas habilitadas del torneo, en el orden configurado por el admin
+  // (LIBRE, FREE DANCE, SOLO DANCE, DÚO, TRÍO, CUARTETO, SMALL, SHOW,
+  // PRECISIÓN, PAREJAS MIXTAS, ADULTOS). Solo se ofrecen las que ya tienen
+  // categorías cargadas en este torneo; si no, el profesor no podría confirmar.
+  const withCategories = new Set(categories.map(c => c.discipline).filter(Boolean));
+  const configured = selectedTournamentId ? await tc.getDisciplines(selectedTournamentId) : [];
+  const disciplines = configured
+    .map(d => d.discipline)
+    .filter(d => withCategories.has(d));
 
-  // Franjas de edad oficiales por disciplina (del catálogo) para el desplegable "Edad".
-  const catalogo = require('../data/catalogo_categorias.json');
-  const ageBandsByDiscipline = {};
-  for (const g of catalogo) {
-    if (g.ages && g.ages.length) {
-      ageBandsByDiscipline[g.discipline] = g.ages.map(a => ({ name: a.name, min: a.min, max: a.max }));
-    }
-  }
+  // Categorías de edad (franjas) por disciplina, configurables por torneo.
+  const ageBandsByDiscipline = selectedTournamentId
+    ? await tc.getAgeBandsByDiscipline(selectedTournamentId)
+    : {};
 
   res.render('profesor/inscribir', {
     user: req.session.user,
@@ -597,7 +678,7 @@ router.get('/inscribir', async (req, res) => {
 router.post('/inscribir', async (req, res) => {
   const teacherId = req.session.user.id;
   const ajax = isAjax(req);
-  const { tournament_id, category_id, is_group, group_name, group_type, student_ids, notes, club_id, age_band } = req.body;
+  const { tournament_id, category_id, is_group, group_name, group_type, student_ids, notes, club_id, age_band, age } = req.body;
 
   if (!tournament_id || !category_id) {
     if (ajax) return res.status(400).json({ ok: false, message: 'Debe seleccionar torneo y categoría.' });
@@ -645,12 +726,20 @@ router.post('/inscribir', async (req, res) => {
 
   const isGroupReg = (is_group === '1' || selectedStudentIds.length > 1);
 
+  // Edad de la inscripción: la que mandó el formulario (precargada de la ficha
+  // de la alumna y editable a mano); si no viene, se calcula de la fecha de nacimiento.
+  let regAge = parseInt(age, 10);
+  if (!Number.isFinite(regAge) || regAge <= 0 || regAge > 120) {
+    regAge = primaryStudent ? getCalendarAge(primaryStudent.birth_date) : null;
+  }
+  if (!regAge) regAge = null;
+
   try {
     const info = await db.prepare(`
       INSERT INTO registrations (
         tournament_id, category_id, student_id, club_id, teacher_id, is_group, group_name, group_type,
-        status, notes, age_band
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'registered', ?, ?) RETURNING id
+        status, notes, age_band, age
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'registered', ?, ?, ?) RETURNING id
     `).run(
       tournament_id,
       category_id,
@@ -661,7 +750,8 @@ router.post('/inscribir', async (req, res) => {
       isGroupReg ? ((group_name || 'GRUPO STAR DANCE').toUpperCase()) : null,
       group_type || 'Individual',
       (notes || '').toUpperCase(),
-      (age_band || '').toUpperCase() || null
+      (age_band || '').toUpperCase() || null,
+      regAge
     );
 
     const regId = info.lastInsertRowid;
@@ -692,6 +782,101 @@ router.post('/inscribir', async (req, res) => {
     if (ajax) return res.status(400).json({ ok: false, message: errorMsg });
     res.redirect('/profesor/inscribir?error=' + encodeURIComponent(errorMsg));
   }
+});
+
+// Formulario de edición / movimiento de una inscripción propia (profesor)
+router.get('/inscripciones/:id/editar', async (req, res) => {
+  const regId = parseInt(req.params.id, 10);
+  const reg = await inscEdit.getRegistration(regId);
+  if (!reg || reg.teacher_id !== req.session.user.id) {
+    return res.status(404).render('error', { title: 'Inscripción No Encontrada', message: 'La inscripción no existe o no pertenece a tu padrón.' });
+  }
+
+  const tournaments = await db.prepare(`
+    SELECT t.*, (SELECT COUNT(*) FROM categories c WHERE c.tournament_id = t.id) AS category_count
+    FROM tournaments t
+    WHERE t.status != 'finished' OR t.id = ?
+    ORDER BY COALESCE(t.date_from, t.event_date) DESC
+  `).all(reg.tournament_id);
+  tournaments.forEach(t => { t.datesLabel = formatEventDates(t.date_from || t.event_date, t.date_to); });
+
+  const destId = req.query.tournament_id ? parseInt(req.query.tournament_id) || null : reg.tournament_id;
+  let categories = [];
+  if (destId) {
+    // Se ofrecen las categorias vigentes y, ademas, la que ya tiene esta
+    // inscripcion (aunque sea historica), para que se siga viendo bien.
+    categories = await db.prepare(`
+      SELECT * FROM categories
+      WHERE tournament_id = ? AND (COALESCE(is_active, true) = true OR id = ?)
+      ORDER BY discipline ASC, min_age ASC, name ASC
+    `).all(destId, reg.category_id);
+    categories.forEach(c => { c.label = formatCategoryName(c.name, c.discipline); });
+  }
+  const suggested = inscEdit.findSuitableCategory(categories, {
+    currentName: reg.category_name,
+    discipline: reg.discipline,
+    ageBand: reg.age_band,
+    age: reg.age
+  });
+
+  const tcEdit = require('../lib/tournament_config');
+  const ageBandsByDiscipline = destId ? await tcEdit.getAgeBandsByDiscipline(destId) : {};
+
+  res.render('profesor/inscripcion_editar', {
+    user: req.session.user,
+    reg,
+    tournaments,
+    categories,
+    destId,
+    ageBandsByDiscipline,
+    suggestedId: suggested ? suggested.id : null,
+    error: req.query.error || null,
+    success: req.query.success || null
+  });
+});
+
+// Guarda la edición / movimiento de una inscripción propia (profesor)
+router.post('/inscripciones/:id/editar', async (req, res) => {
+  const regId = parseInt(req.params.id, 10);
+  const reg = await inscEdit.getRegistration(regId);
+  if (!reg || reg.teacher_id !== req.session.user.id) {
+    return res.status(404).render('error', { title: 'Inscripción No Encontrada', message: 'La inscripción no existe o no pertenece a tu padrón.' });
+  }
+
+  const tournament_id = req.body.tournament_id ? parseInt(req.body.tournament_id) || null : null;
+  const category_id = req.body.category_id ? parseInt(req.body.category_id) || null : null;
+  const notes = String(req.body.notes || '').toUpperCase();
+
+  const back = (error) => res.redirect(`/profesor/inscripciones/${regId}/editar?tournament_id=${tournament_id || ''}&error=${encodeURIComponent(error)}`);
+
+  if (!tournament_id || !category_id) {
+    return back('Debe seleccionar torneo y categoría.');
+  }
+
+  const category = await db.prepare(`SELECT * FROM categories WHERE id = ?`).get(category_id);
+  if (!category || category.tournament_id !== tournament_id) {
+    return back('La categoría elegida no pertenece al torneo seleccionado.');
+  }
+
+  if (tournament_id !== reg.tournament_id) {
+    const conflicts = await inscEdit.findConflicts(reg, tournament_id);
+    if (conflicts.length) {
+      return back('No se puede mover: alguna de las patinadoras ya está inscripta en el torneo de destino.');
+    }
+  }
+
+  // Edad y categoría de edad: manda lo que eligió la profesora en el formulario.
+  let age = parseInt(req.body.age, 10);
+  if (!Number.isFinite(age) || age <= 0 || age > 120) age = reg.age || null;
+
+  const age_band = req.body.age_band !== undefined
+    ? (String(req.body.age_band).trim().toUpperCase() || null)
+    : inscEdit.resolveAgeBand(category.discipline, category.name);
+
+  await db.prepare(`UPDATE registrations SET tournament_id = ?, category_id = ?, notes = ?, age_band = ?, age = ? WHERE id = ?`)
+    .run(tournament_id, category_id, notes, age_band, age, regId);
+
+  res.redirect('/profesor/dashboard?success=' + encodeURIComponent('Inscripción actualizada correctamente.'));
 });
 
 // Notificaciones de la campana (JSON para el dropdown)

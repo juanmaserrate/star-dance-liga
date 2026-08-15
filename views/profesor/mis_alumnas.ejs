@@ -52,6 +52,7 @@
             <input type="text" id="bulk_value" name="value" class="form-control" style="text-transform: uppercase;" placeholder="EJ: OSDE 310">
           </div>
           <button type="submit" class="btn btn-gold" onclick="return confirm('¿Aplicar este cambio a las patinadoras seleccionadas?');">Aplicar a seleccionadas</button>
+          <button type="submit" formaction="/profesor/alumnos/eliminar" class="btn btn-danger" onclick="return confirm('¿Eliminar las patinadoras seleccionadas?\nSe borran también sus inscripciones y documentos.');">🗑️ Eliminar seleccionadas</button>
         </div>
 
         <div class="table-responsive">
@@ -83,6 +84,7 @@
                       <a href="/profesor/alumnos/<%= s.id %>/ver" class="btn btn-outline-gold btn-sm" title="Ver ficha técnica completa">🔍 Ver</a>
                       <a href="/profesor/alumnos/<%= s.id %>/editar" class="btn btn-secondary btn-sm" title="Editar datos">✏️ Editar</a>
                       <a href="/profesor/inscribir?student_id=<%= s.id %>" class="btn btn-gold btn-sm" title="Inscribir a torneo">✍️ Inscribir</a>
+                      <button type="submit" formaction="/profesor/alumnos/<%= s.id %>/eliminar" class="btn btn-danger btn-sm" title="Eliminar patinadora" onclick="return confirm('¿Eliminar a <%= s.last_name %>, <%= s.first_name %>?\nSe borran también sus inscripciones y documentos.');">🗑️ Eliminar</button>
                     </div>
                   </td>
                 </tr>
@@ -113,12 +115,14 @@
             <tr>
               <th>Alumna</th>
               <th>Disciplina</th>
-              <th>Edad</th>
               <th>Categoría</th>
+              <th>Edad</th>
+              <th>Categoría de Edad</th>
               <th>Tipo</th>
               <th>Club</th>
               <th>Torneo</th>
               <th>Certificado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="registrationsBody">
@@ -135,20 +139,28 @@
                 </td>
                 <td><span class="badge"><%= r.discipline %></span></td>
                 <td>
-                  <%= r.age_band ? (r.age_band + (r.bandRange ? ' (' + r.bandRange + ')' : '')) : (r.age + ' años') %>
-                  <% if (r.age_band) { %>
-                    <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.age %> años</div>
-                  <% } %>
-                </td>
-                <td>
                   <span class="badge badge-violet"><%= formatCategoryName(r.category_name, r.discipline) %></span>
                   <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.level || 'Nivel' %></div>
+                </td>
+                <td><%= r.age ? r.age + ' años' : '-' %></td>
+                <td>
+                  <% if (r.age_band) { %>
+                    <span class="badge"><%= r.age_band %></span>
+                    <% if (r.bandRange) { %>
+                      <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.bandRange %> años</div>
+                    <% } %>
+                  <% } else { %>
+                    <span style="color: var(--text-muted);">-</span>
+                  <% } %>
                 </td>
                 <td><%= r.group_type || 'Individual' %></td>
                 <td><%= r.club_name %></td>
                 <td><%= r.tournament_name %><div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.datesLabel %></div></td>
                 <td>
                   <a href="/profesor/certificado/<%= r.id %>" target="_blank" class="btn btn-outline-gold btn-sm">🖨️ Certificado</a>
+                </td>
+                <td>
+                  <a href="/profesor/inscripciones/<%= r.id %>/editar" class="btn btn-outline-gold btn-sm" title="Editar o mover de torneo">✏️ Editar</a>
                 </td>
               </tr>
             <% }) %>

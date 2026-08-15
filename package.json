@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "test": "node test/sintaxis.js && node test/migraciones.test.js && node test/rutas.test.js",
+    "preview": "node test/preview.js"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -19,5 +21,9 @@
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^9.0.3",
     "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
+    "supertest": "^7.1.4"
   }
 }

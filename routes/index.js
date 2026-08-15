@@ -69,7 +69,11 @@ router.get('/torneos/:id', async (req, res) => {
   tournament.datesLabel = formatEventDates(tournament.date_from || tournament.event_date, tournament.date_to);
   tournament.deadlineLabel = formatDeadline(tournament.registration_deadline);
 
-  const categories = await db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY min_age ASC, division ASC`).all(tournamentId);
+  const categories = await db.prepare(`
+    SELECT * FROM categories
+    WHERE tournament_id = ? AND COALESCE(is_active, true) = true
+    ORDER BY min_age ASC, division ASC
+  `).all(tournamentId);
   const totalRegistrations = (await db.prepare(`SELECT COUNT(*) as count FROM registrations WHERE tournament_id = ?`).get(tournamentId)).count;
 
   res.render('public/torneo_detail', {

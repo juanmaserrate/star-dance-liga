@@ -57,6 +57,7 @@
           <label class="form-label" for="role">Rol asignado *</label>
           <select id="role" name="role" class="form-select" required>
             <option value="profesor">Profesor/a</option>
+            <option value="profesor_admin">Profesor/a + Administrador/a</option>
             <option value="juez">Juez / Evaluador</option>
             <option value="admin">Administrador</option>
           </select>
@@ -71,6 +72,12 @@
             <% }) %>
           </select>
         </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="admin_scope">Alcance de administración</label>
+        <input type="text" id="admin_scope" name="admin_scope" class="form-control" placeholder="Vacío = todos los torneos. EJ: CABA" style="text-transform: uppercase;">
+        <small style="color: var(--text-muted);">Si escribís una zona (ej: <strong>CABA</strong>), esa persona solo puede ver y editar los torneos cuyo nombre la contenga.</small>
       </div>
 
       <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
@@ -96,10 +103,12 @@
             let roleBadgeClass = 'role-badge-profesor';
             if (u.role === 'admin') roleBadgeClass = 'role-badge-admin';
             else if (u.role === 'juez') roleBadgeClass = 'role-badge-juez';
+            else if (u.role === 'profesor_admin') roleBadgeClass = 'role-badge-admin';
 
             let roleLabel = 'Profe';
             if (u.role === 'admin') roleLabel = 'Admin';
             else if (u.role === 'juez') roleLabel = 'Juez';
+            else if (u.role === 'profesor_admin') roleLabel = 'Profe + Admin';
           %>
 
           <div class="admin-user-card">
@@ -137,7 +146,32 @@
                   <span><%= u.phone %></span>
                 </div>
               <% } %>
+
+              <% if (u.admin_scope) { %>
+                <div class="row">
+                  <span class="material-symbols-outlined">shield</span>
+                  <span>Solo torneos de <strong><%= u.admin_scope %></strong></span>
+                </div>
+              <% } %>
             </div>
+
+            <!-- Rol y alcance de administración -->
+            <form action="/admin/usuarios/<%= u.id %>/rol" method="POST" style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 0.75rem;">
+              <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 130px;">
+                <label class="form-label" style="font-size: 0.75rem;">Rol</label>
+                <select name="role" class="form-select" style="padding: 0.35rem 0.5rem; font-size: 0.82rem;">
+                  <option value="profesor" <%= u.role === 'profesor' ? 'selected' : '' %>>Profesor/a</option>
+                  <option value="profesor_admin" <%= u.role === 'profesor_admin' ? 'selected' : '' %>>Profe + Admin</option>
+                  <option value="admin" <%= u.role === 'admin' ? 'selected' : '' %>>Administrador/a</option>
+                  <option value="juez" <%= u.role === 'juez' ? 'selected' : '' %>>Juez</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0; width: 110px;">
+                <label class="form-label" style="font-size: 0.75rem;">Zona</label>
+                <input type="text" name="admin_scope" class="form-control" value="<%= u.admin_scope || '' %>" placeholder="Todas" style="text-transform: uppercase; padding: 0.35rem 0.5rem; font-size: 0.82rem;">
+              </div>
+              <button type="submit" class="btn btn-outline-gold btn-sm" title="Guardar rol y alcance">💾</button>
+            </form>
 
             <div class="admin-user-actions">
               <form action="/admin/usuarios/<%= u.id %>/restablecer" method="POST" style="margin: 0; width: 100%;">
@@ -146,6 +180,16 @@
                   Enviar Acceso por Mail
                 </button>
               </form>
+              <% if (!user || u.id !== user.id) { %>
+                <form action="/admin/usuarios/<%= u.id %>/eliminar" method="POST"
+                      onsubmit="return confirm('¿Eliminar esta cuenta y TODOS sus datos (alumnas, inscripciones, documentos)? Esta acción no se puede deshacer.');"
+                      style="margin: 0; width: 100%;">
+                  <button type="submit" class="btn btn-danger btn-sm" title="Eliminar cuenta y todos sus datos">
+                    <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 0.25rem;">delete</span>
+                    Eliminar
+                  </button>
+                </form>
+              <% } %>
               <% if (!u.email_verified) { %>
                 <div class="btn-row">
                   <form action="/admin/usuarios/<%= u.id %>/verificar" method="POST">

@@ -5,12 +5,36 @@
     <div class="page-head">
       <span class="page-eyebrow">Módulo Administrador</span>
       <h1 class="page-title">Panel de Control — Star Dance</h1>
-      <p class="page-sub">Control general de estadísticas y padrón maestro de deportistas cargadas.</p>
+      <% if (selectedTournament) { %>
+        <p class="page-sub">Mostrando solo los datos de <strong style="color: var(--gold-light);"><%= selectedTournament.name %></strong> (<%= selectedTournament.datesLabel %> · <%= selectedTournament.venue %>).</p>
+      <% } else { %>
+        <p class="page-sub">Control general de estadísticas y padrón maestro de deportistas cargadas.</p>
+      <% } %>
     </div>
     <div class="page-head-actions">
       <a href="/admin/alumnos/nuevo" class="btn btn-gold">+ Nueva Patinadora</a>
       <a href="/admin/torneos/nuevo" class="btn btn-ghost">+ Nuevo Torneo</a>
     </div>
+  </div>
+
+  <!-- Filtro por torneo -->
+  <div class="admin-card" style="margin-bottom: 1.5rem;">
+    <form action="/admin/dashboard" method="GET" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; padding: 1rem 1.25rem;">
+      <div class="form-group" style="margin-bottom: 0; min-width: 280px; flex: 1;">
+        <label class="form-label" for="dash_tournament">Filtrar por Torneo</label>
+        <select id="dash_tournament" name="tournament_id" class="form-select" onchange="this.form.submit()">
+          <option value="">-- Todos los torneos --</option>
+          <% (tournaments || []).forEach(t => { %>
+            <option value="<%= t.id %>" <%= selectedTournamentId == t.id ? 'selected' : '' %>>
+              <%= t.name %> (<%= t.datesLabel %>)
+            </option>
+          <% }) %>
+        </select>
+      </div>
+      <% if (selectedTournamentId) { %>
+        <a href="/admin/dashboard" class="btn btn-secondary" style="height: 40px; display: flex; align-items: center;">Ver todos</a>
+      <% } %>
+    </form>
   </div>
 
   <!-- Summary Stat Tiles -->
@@ -19,7 +43,7 @@
       <div class="admin-stat-icon"><span class="material-symbols-outlined">roller_skating</span></div>
       <div>
         <div class="admin-stat-val"><%= stats.totalSkaters %></div>
-        <div class="admin-stat-label">Total Patinadoras Cargadas</div>
+        <div class="admin-stat-label"><%= selectedTournament ? 'Patinadoras en este Torneo' : 'Total Patinadoras Cargadas' %></div>
       </div>
     </div>
 
@@ -27,7 +51,7 @@
       <div class="admin-stat-icon"><span class="material-symbols-outlined">assignment</span></div>
       <div>
         <div class="admin-stat-val"><%= stats.totalRegistrations %></div>
-        <div class="admin-stat-label">Inscripciones Totales</div>
+        <div class="admin-stat-label"><%= selectedTournament ? 'Inscripciones del Torneo' : 'Inscripciones Totales' %></div>
       </div>
     </div>
   </div>
@@ -48,6 +72,28 @@
             <div class="admin-list-row">
               <span style="font-weight: 600; text-transform: uppercase; color: var(--text-main);"><%= c.club_name %></span>
               <span class="count-chip"><%= c.count %> inscripciones</span>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <p style="color: var(--text-muted); padding: 1.5rem; text-align: center;">Sin datos registrados aún.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Inscripciones por Disciplina -->
+    <div class="admin-card" style="margin: 0; display: flex; flex-direction: column;">
+      <div class="admin-card-head">
+        <div class="head-left">
+          <span class="material-symbols-outlined">category</span>
+          <h3 class="admin-card-title">Inscripciones por Disciplina</h3>
+        </div>
+      </div>
+      <div style="flex: 1;">
+        <% if (registrationsByDiscipline && registrationsByDiscipline.length > 0) { %>
+          <% registrationsByDiscipline.forEach(d => { %>
+            <div class="admin-list-row">
+              <span style="font-weight: 600; text-transform: uppercase; color: var(--text-main);"><%= d.discipline %></span>
+              <span class="count-chip"><%= d.count %> inscripciones</span>
             </div>
           <% }) %>
         <% } else { %>
@@ -96,7 +142,10 @@
     <div class="admin-card-head">
       <div class="head-left">
         <span class="material-symbols-outlined">group</span>
-        <h2 class="admin-card-title">Datos de Patinadoras Cargadas en el Sistema (<%= studentsList.length %>)</h2>
+        <h2 class="admin-card-title">
+          <%= selectedTournament ? 'Patinadoras Inscriptas en ' + selectedTournament.name : 'Datos de Patinadoras Cargadas en el Sistema' %>
+          (<%= studentsList.length %>)
+        </h2>
       </div>
       <a href="/admin/alumnos/nuevo" class="btn btn-gold btn-sm">+ Nueva Patinadora</a>
     </div>

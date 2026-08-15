@@ -111,6 +111,7 @@ router.post('/login', async (req, res) => {
       username: user.username,
       full_name: user.full_name,
       role: user.role,
+      admin_scope: user.admin_scope || null,
       club_id: user.club_id,
       club_name: clubName,
       email: user.email
@@ -487,7 +488,9 @@ router.get('/logout', (req, res) => {
 
 function redirectRole(role, res) {
   if (role === 'admin') return res.redirect('/admin/dashboard');
-  if (role === 'profesor') return res.redirect('/profesor/dashboard');
+  // El rol combinado entra primero por el módulo de profesora; desde ahí tiene
+  // el acceso al panel de administración en el menú.
+  if (role === 'profesor' || role === 'profesor_admin') return res.redirect('/profesor/dashboard');
   if (role === 'juez') return res.redirect('/juez/planilla');
   res.redirect('/');
 }

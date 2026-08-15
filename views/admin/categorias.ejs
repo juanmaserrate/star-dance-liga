@@ -1,126 +1,227 @@
-<%- include('../partials/header', { title: 'Categorías - ' + tournament.name }) %>
+<%- include('../partials/header', { title: 'Configuración - ' + tournament.name }) %>
 <%- include('admin_shell', { activeNav: 'torneos', topbarSection: 'Torneos' }) %>
 
 
-  <div style="margin-bottom: 1.5rem;">
-    <span class="badge badge-violet">CONFIGURACIÓN DE CATEGORÍAS</span>
-    <h1 style="color: var(--gold-light); font-size: 1.8rem;"><%= tournament.name %></h1>
-    <p style="color: var(--text-muted);">Defina las categorías de edad, niveles, disciplinas y horarios para este torneo.</p>
+  <div class="page-head-row">
+    <div class="page-head">
+      <span class="page-eyebrow">Configuración del Torneo</span>
+      <h1 class="page-title"><%= tournament.name %></h1>
+      <p class="page-sub">Definí qué disciplinas, categorías y categorías de edad se ofrecen en este torneo. Todo lo que configures acá es lo que ven las profesoras al inscribir.</p>
+    </div>
+    <div class="page-head-actions">
+      <a href="/admin/torneos/<%= tournament.id %>/editar" class="btn btn-ghost">✏️ Editar datos del torneo</a>
+      <a href="/admin/torneos" class="btn btn-secondary">&larr; Volver</a>
+    </div>
   </div>
-
 
   <% if (typeof success !== 'undefined' && success) { %>
     <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
   <% } %>
-
   <% if (typeof error !== 'undefined' && error) { %>
-    <div class="alert alert-danger alert-auto-dismiss">⚠️ <%= error %></div>
+    <div class="alert alert-danger">⚠️ <%= error %></div>
   <% } %>
 
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
-    <!-- Form: Add Category -->
-    <div class="card" style="margin: 0;">
-      <h2 class="card-title" style="margin-bottom: 1rem;">➕ Nueva Categoría</h2>
-      
-      <form action="/admin/torneos/<%= tournament.id %>/categorias" method="POST">
-        <div class="form-group">
-          <label class="form-label" for="name">Nombre de Categoría *</label>
-          <input type="text" id="name" name="name" class="form-control" placeholder="Ej: Infantil A / C2 / Promocional" required>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="discipline">Disciplina *</label>
-            <select id="discipline" name="discipline" class="form-select" required>
-              <option value="Libre">Libre</option>
-              <option value="Escuela">Escuela / Figuras</option>
-              <option value="Danza">Danza Solo / Parejas</option>
-              <option value="Show">Show / Precision</option>
-              <option value="Iniciación">Iniciación / Formativo</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="level">Nivel / División *</label>
-            <select id="level" name="level" class="form-select" required>
-              <option value="Iniciación">Iniciación</option>
-              <option value="C Cero">C Cero</option>
-              <option value="C Tercera">C Tercera</option>
-              <option value="C Segunda">C Segunda</option>
-              <option value="C Primera">C Primera</option>
-              <option value="B Avanzado">B Avanzado</option>
-              <option value="A / Elite">A / Elite</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="min_age">Edad Mínima</label>
-            <input type="number" id="min_age" name="min_age" class="form-control" value="6" min="3" max="99">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="max_age">Edad Máxima</label>
-            <input type="number" id="max_age" name="max_age" class="form-control" value="12" min="3" max="99">
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="gender">Género</label>
-            <select id="gender" name="gender" class="form-select">
-              <option value="Mixto">Mixto</option>
-              <option value="Femenino">Femenino</option>
-              <option value="Masculino">Masculino</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="schedule">Horario Estimado de Competición</label>
-            <input type="text" id="schedule" name="schedule" class="form-control" placeholder="Ej: Sábado 10:30 hs">
-          </div>
-        </div>
-
-        <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 0.5rem;">
-          ✨ Guardar Categoría
-        </button>
-      </form>
+  <!-- Alta de disciplina -->
+  <div class="admin-card" style="margin-bottom: 1.5rem;">
+    <div class="admin-card-head">
+      <div class="head-left">
+        <span class="material-symbols-outlined">add_circle</span>
+        <h2 class="admin-card-title">Agregar Disciplina a este Torneo</h2>
+      </div>
+      <span class="count-chip"><%= totalCategories %> categorías en total</span>
     </div>
-
-    <!-- Categories List -->
-    <div class="card" style="margin: 0;">
-      <h2 class="card-title" style="margin-bottom: 1rem;">📋 Categorías Creadas (<%= categories.length %>)</h2>
-
-      <% if (categories && categories.length > 0) { %>
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Categoría</th>
-                <th>Edades</th>
-                <th>Horario</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% categories.forEach(c => { %>
-                <tr>
-                  <td>
-                    <strong><%= c.name %></strong>
-                    <div style="font-size: 0.78rem; color: var(--text-muted);"><%= c.discipline %> - <%= c.level %></div>
-                  </td>
-                  <td><%= c.min_age %>-<%= c.max_age %> años</td>
-                  <td>🕒 <%= c.schedule || 'A confirmar' %></td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
-      <% } else { %>
-        <p style="color: var(--text-muted); text-align: center; padding: 2rem;">Aún no hay categorías en este torneo.</p>
-      <% } %>
-    </div>
+    <form action="/admin/torneos/<%= tournament.id %>/disciplinas" method="POST" style="display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: flex-end; padding: 1rem 1.25rem;">
+      <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 260px;">
+        <label class="form-label" for="new_discipline">Nombre de la disciplina</label>
+        <input type="text" id="new_discipline" name="discipline" class="form-control" placeholder="EJ: ADULTOS" style="text-transform: uppercase;" required>
+      </div>
+      <button type="submit" class="btn btn-gold" style="height: 40px;">Agregar disciplina</button>
+    </form>
   </div>
+
+  <% groups.forEach(g => { %>
+    <details class="admin-card" style="margin-bottom: 1.5rem; <%= g.is_enabled ? '' : 'opacity: 0.75;' %>">
+      <summary class="admin-card-head" style="cursor: pointer; list-style: none;">
+        <div class="head-left">
+          <span class="material-symbols-outlined">category</span>
+          <h2 class="admin-card-title">
+            <%= g.discipline %>
+            <% if (!g.is_enabled) { %>
+              <span class="badge" style="margin-left: 0.5rem;">
+                <%= g.isLegacy ? 'HISTÓRICA (no se ofrece)' : 'DESHABILITADA' %>
+              </span>
+            <% } %>
+          </h2>
+        </div>
+        <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+          <span class="count-chip"><%= g.categories.length %> categorías</span>
+          <span class="count-chip"><%= g.bands.length %> categorías de edad</span>
+          <span class="material-symbols-outlined" style="color: var(--gold-light);">expand_more</span>
+        </div>
+      </summary>
+
+      <div style="padding: 1rem 1.25rem;">
+        <% if (g.isLegacy) { %>
+          <div class="alert alert-danger" style="margin-bottom: 1rem;">
+            ⚠️ Disciplina histórica: ya no forma parte del catálogo, pero se conserva porque tiene inscripciones cargadas. No aparece en el formulario de inscripción.
+          </div>
+        <% } else { %>
+          <!-- Estado y orden de la disciplina -->
+          <form action="/admin/torneos/<%= tournament.id %>/disciplinas/actualizar" method="POST" style="display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border-gold);">
+            <input type="hidden" name="discipline" value="<%= g.discipline %>">
+            <div class="form-group" style="margin-bottom: 0; width: 180px;">
+              <label class="form-label">Estado</label>
+              <select name="is_enabled" class="form-select">
+                <option value="1" <%= g.is_enabled ? 'selected' : '' %>>Habilitada</option>
+                <option value="0" <%= !g.is_enabled ? 'selected' : '' %>>Deshabilitada</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0; width: 140px;">
+              <label class="form-label">Orden</label>
+              <input type="number" name="order_index" class="form-control" value="<%= g.order_index %>" min="0" max="999">
+            </div>
+            <button type="submit" class="btn btn-outline-gold" style="height: 40px;">Guardar</button>
+            <button type="submit" formaction="/admin/torneos/<%= tournament.id %>/disciplinas/eliminar" class="btn btn-danger" style="height: 40px;"
+              onclick="return confirm('¿Quitar la disciplina <%= g.discipline %> de este torneo?\nSe borran sus categorías y categorías de edad. Solo funciona si no tiene inscripciones.');">
+              🗑️ Quitar del torneo
+            </button>
+          </form>
+        <% } %>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem;">
+          <!-- Categorías -->
+          <div>
+            <h3 style="color: var(--gold-light); font-size: 1rem; margin-bottom: 0.75rem;">Categorías</h3>
+
+            <% if (g.categories.length > 0) { %>
+              <div class="table-responsive" style="margin-bottom: 0.75rem;">
+                <table class="table">
+                  <thead>
+                    <tr><th>Categoría</th><th>Estado</th><th style="width: 170px;">Acciones</th></tr>
+                  </thead>
+                  <tbody>
+                    <% g.categories.forEach(c => { %>
+                      <% const vigente = (c.is_active !== false); %>
+                      <tr style="<%= vigente ? '' : 'opacity: 0.7;' %>">
+                        <td>
+                          <form action="/admin/torneos/<%= tournament.id %>/categorias/<%= c.id %>/editar" method="POST" style="display: flex; gap: 0.4rem; align-items: center; margin: 0;">
+                            <input type="text" name="name" class="form-control" value="<%= c.label %>" style="text-transform: uppercase; min-width: 140px;">
+                            <input type="text" name="schedule" class="form-control" value="<%= c.schedule || '' %>" placeholder="Horario" style="max-width: 130px;">
+                            <button type="submit" class="btn btn-ghost btn-sm" title="Guardar">💾</button>
+                          </form>
+                        </td>
+                        <td>
+                          <% if (!vigente) { %>
+                            <span class="badge" title="Se conserva por sus inscripciones, pero no se ofrece al inscribir">HISTÓRICA</span>
+                          <% } %>
+                          <% if (Number(c.reg_count) > 0) { %>
+                            <span class="badge badge-violet"><%= c.reg_count %> inscriptas</span>
+                          <% } else if (vigente) { %>
+                            <span style="color: var(--text-muted);">sin inscriptas</span>
+                          <% } %>
+                        </td>
+                        <td>
+                          <div style="display: flex; gap: 0.3rem;">
+                            <form action="/admin/torneos/<%= tournament.id %>/categorias/<%= c.id %>/estado" method="POST" style="margin: 0;">
+                              <input type="hidden" name="is_active" value="<%= vigente ? '0' : '1' %>">
+                              <button type="submit" class="btn btn-outline-gold btn-sm" title="<%= vigente ? 'Dejar de ofrecerla al inscribir' : 'Volver a ofrecerla al inscribir' %>">
+                                <%= vigente ? '🚫' : '✅' %>
+                              </button>
+                            </form>
+                            <form action="/admin/torneos/<%= tournament.id %>/categorias/<%= c.id %>/eliminar" method="POST" style="margin: 0;">
+                              <button type="submit" class="btn btn-danger btn-sm"
+                                onclick="return confirm('¿Eliminar la categoría <%= c.label %>?');"
+                                <%= Number(c.reg_count) > 0 ? 'disabled title="Tiene inscripciones"' : '' %>>🗑️</button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            <% } else { %>
+              <p style="color: var(--text-muted); padding: 1rem 0;">Todavía no hay categorías en esta disciplina.</p>
+            <% } %>
+
+            <form action="/admin/torneos/<%= tournament.id %>/categorias" method="POST" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end;">
+              <input type="hidden" name="discipline" value="<%= g.discipline %>">
+              <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
+                <label class="form-label">Nueva categoría</label>
+                <input type="text" name="name" class="form-control" placeholder="EJ: DEBUTANTE" style="text-transform: uppercase;" required>
+              </div>
+              <div class="form-group" style="margin-bottom: 0; width: 130px;">
+                <label class="form-label">Horario</label>
+                <input type="text" name="schedule" class="form-control" placeholder="A CONFIRMAR">
+              </div>
+              <button type="submit" class="btn btn-gold" style="height: 40px;">+ Agregar</button>
+            </form>
+          </div>
+
+          <!-- Categorías de edad -->
+          <div>
+            <h3 style="color: var(--gold-light); font-size: 1rem; margin-bottom: 0.75rem;">Categorías de Edad (franjas)</h3>
+
+            <% if (g.bands.length > 0) { %>
+              <div class="table-responsive" style="margin-bottom: 0.75rem;">
+                <table class="table">
+                  <thead>
+                    <tr><th>Nombre</th><th style="width: 170px;">Edades</th><th style="width: 90px;">Acciones</th></tr>
+                  </thead>
+                  <tbody>
+                    <% g.bands.forEach(b => { %>
+                      <tr>
+                        <td colspan="2">
+                          <form action="/admin/torneos/<%= tournament.id %>/franjas/<%= b.id %>/editar" method="POST" style="display: flex; gap: 0.4rem; align-items: center; margin: 0;">
+                            <input type="text" name="name" class="form-control" value="<%= b.name %>" style="text-transform: uppercase; min-width: 130px;">
+                            <input type="number" name="min_age" class="form-control" value="<%= b.min_age %>" min="0" max="120" style="width: 75px;" title="Edad mínima">
+                            <input type="number" name="max_age" class="form-control" value="<%= b.max_age %>" min="0" max="120" style="width: 75px;" title="Edad máxima">
+                            <button type="submit" class="btn btn-ghost btn-sm" title="Guardar">💾</button>
+                          </form>
+                        </td>
+                        <td>
+                          <form action="/admin/torneos/<%= tournament.id %>/franjas/<%= b.id %>/eliminar" method="POST" style="margin: 0;">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar la categoría de edad <%= b.name %>?');">🗑️</button>
+                          </form>
+                        </td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            <% } else { %>
+              <p style="color: var(--text-muted); padding: 1rem 0;">Esta disciplina no usa categorías de edad. Si agregás franjas acá, el formulario de inscripción va a asignarlas sola según la edad de la patinadora.</p>
+            <% } %>
+
+            <form action="/admin/torneos/<%= tournament.id %>/franjas" method="POST" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end;">
+              <input type="hidden" name="discipline" value="<%= g.discipline %>">
+              <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 130px;">
+                <label class="form-label">Nueva categoría de edad</label>
+                <input type="text" name="name" class="form-control" placeholder="EJ: BABY" style="text-transform: uppercase;" required>
+              </div>
+              <div class="form-group" style="margin-bottom: 0; width: 90px;">
+                <label class="form-label">Desde</label>
+                <input type="number" name="min_age" class="form-control" min="0" max="120" required>
+              </div>
+              <div class="form-group" style="margin-bottom: 0; width: 90px;">
+                <label class="form-label">Hasta</label>
+                <input type="number" name="max_age" class="form-control" min="0" max="120" required>
+              </div>
+              <button type="submit" class="btn btn-gold" style="height: 40px;">+ Agregar</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </details>
+  <% }) %>
+
+<style>
+  /* Tarjetas de disciplina colapsables */
+  details.admin-card > summary::-webkit-details-marker { display: none; }
+  details.admin-card > summary { display: flex; }
+  details.admin-card[open] > summary .material-symbols-outlined:last-child { transform: rotate(180deg); }
+</style>
+
 </main>
 
 <%- include('../partials/footer') %>

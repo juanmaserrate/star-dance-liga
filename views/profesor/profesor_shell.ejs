@@ -18,6 +18,24 @@
     <a href="/profesor/inscribir" class="admin-nav-link <%= activeNav === 'inscribir' ? 'active' : '' %>">
       <span class="material-symbols-outlined">assignment</span> Inscribir a Torneo
     </a>
+
+    <%# Rol combinado: primero el módulo de profesora (arriba) y después el panel de administración %>
+    <% if (user && user.role === 'profesor_admin') { %>
+      <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid rgba(212,175,55,0.25);">
+        <p style="font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); padding: 0 0.9rem 0.5rem;">
+          Administración<% if (user.admin_scope) { %> · <%= user.admin_scope %><% } %>
+        </p>
+        <a href="/admin/dashboard" class="admin-nav-link">
+          <span class="material-symbols-outlined">dashboard</span> Panel de Administración
+        </a>
+        <a href="/admin/torneos" class="admin-nav-link">
+          <span class="material-symbols-outlined">emoji_events</span> Torneos
+        </a>
+        <a href="/admin/inscripciones" class="admin-nav-link">
+          <span class="material-symbols-outlined">fact_check</span> Todas las Inscripciones
+        </a>
+      </div>
+    <% } %>
   </nav>
 
   <div class="admin-sidebar-footer">

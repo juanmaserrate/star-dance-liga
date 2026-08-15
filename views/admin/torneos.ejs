@@ -4,7 +4,11 @@
   <div class="page-head-row">
     <div class="page-head">
       <h1 class="page-title">Gestión de Torneos de la Liga</h1>
-      <p class="page-sub">Armado de competencias, fechas y configuración de categorías.</p>
+      <% if (typeof adminScope !== 'undefined' && adminScope) { %>
+        <p class="page-sub">Estás viendo solo los torneos de <strong style="color: var(--gold-light);"><%= adminScope %></strong>, que son los que podés administrar.</p>
+      <% } else { %>
+        <p class="page-sub">Armado de competencias, fechas y configuración de disciplinas, categorías y categorías de edad.</p>
+      <% } %>
     </div>
     <div class="page-head-actions">
       <a href="/admin/torneos/nuevo" class="btn btn-gold">
@@ -72,19 +76,35 @@
                   <strong><%= t.reg_count %></strong> <span style="color: var(--text-muted);">patinadores</span>
                 </td>
                 <td style="text-align: center;">
-                  <% if (t.status === 'active') { %>
-                    <span class="badge badge-gold">ACTIVO</span>
-                  <% } else if (t.status === 'upcoming') { %>
-                    <span class="badge badge-violet">PRÓXIMO</span>
-                  <% } else { %>
-                    <span class="badge badge-pending"><%= (t.status || 'CERRADO').toUpperCase() %></span>
-                  <% } %>
+                  <form action="/admin/torneos/<%= t.id %>/estado" method="POST" style="display: flex; align-items: center; gap: 0.4rem; justify-content: center; margin: 0;">
+                    <select name="status" class="form-select" style="width: auto; padding: 0.3rem 0.5rem; font-size: 0.8rem;">
+                      <option value="upcoming" <%= t.status === 'upcoming' ? 'selected' : '' %>>PRÓXIMO</option>
+                      <option value="active" <%= t.status === 'active' ? 'selected' : '' %>>ACTIVO</option>
+                      <option value="finished" <%= t.status === 'finished' ? 'selected' : '' %>>FINALIZADO</option>
+                    </select>
+                    <button type="submit" class="btn btn-ghost btn-sm" title="Guardar estado">
+                      <span class="material-symbols-outlined" style="font-size: 1rem;">save</span>
+                    </button>
+                  </form>
                 </td>
                 <td style="text-align: right;">
-                  <a href="/admin/torneos/<%= t.id %>/categorias" class="btn btn-outline-gold btn-sm">
-                    <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 0.3rem;">settings</span>
-                    Categorías y Horarios
-                  </a>
+                  <div style="display: flex; gap: 0.4rem; justify-content: flex-end; flex-wrap: wrap;">
+                    <a href="/admin/torneos/<%= t.id %>/editar" class="btn btn-gold btn-sm">
+                      <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 0.3rem;">edit</span>
+                      Editar Torneo
+                    </a>
+                    <a href="/admin/torneos/<%= t.id %>/categorias" class="btn btn-outline-gold btn-sm">
+                      <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 0.3rem;">settings</span>
+                      Disciplinas y Categorías
+                    </a>
+                    <form action="/admin/torneos/<%= t.id %>/eliminar" method="POST" style="margin: 0;">
+                      <button type="submit" class="btn btn-danger btn-sm"
+                        onclick="return confirm('¿Eliminar el torneo <%= t.name %>?\nSolo se puede si no tiene inscripciones.');"
+                        <%= Number(t.reg_count) > 0 ? 'disabled title="Tiene inscripciones cargadas"' : '' %>>
+                        🗑️
+                      </button>
+                    </form>
+                  </div>
                 </td>
               </tr>
             <% }) %>

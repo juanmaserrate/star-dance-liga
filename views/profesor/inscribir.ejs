@@ -13,10 +13,10 @@
     <% } %>
 
     <form action="/profesor/inscribir" method="POST" id="enrollmentForm">
-      
-      <!-- Select Tournament -->
+
+      <!-- Torneo -->
       <div class="form-group">
-        <label class="form-label" for="tournament_select">1. Seleccionar Torneo *</label>
+        <label class="form-label" for="tournament_select">Torneo *</label>
         <select id="tournament_select" class="form-select" onchange="window.location.href='/profesor/inscribir?tournament_id=' + this.value + '<%= preselectedStudentId ? '&student_id=' + preselectedStudentId : '' %>'" required>
           <% activeTournaments.forEach(t => { %>
             <option value="<%= t.id %>" <%= (selectedTournamentId == t.id) ? 'selected' : '' %>>
@@ -27,9 +27,9 @@
         <input type="hidden" name="tournament_id" value="<%= selectedTournamentId %>">
       </div>
 
-      <!-- Select Discipline -->
+      <!-- 1. Disciplina (define si es una sola patinadora o varias) -->
       <div class="form-group">
-        <label class="form-label" for="discipline_select">2. Seleccionar Disciplina *</label>
+        <label class="form-label" for="discipline_select">1. Seleccionar Disciplina *</label>
         <% if (typeof disciplines !== 'undefined' && disciplines && disciplines.length > 0) { %>
           <select id="discipline_select" class="form-select" required>
             <option value="">-- Seleccionar Disciplina --</option>
@@ -37,32 +37,15 @@
               <option value="<%= d %>"><%= d %></option>
             <% }) %>
           </select>
+          <small style="color: var(--text-muted);">La disciplina define si se inscribe una sola patinadora o un grupo.</small>
         <% } else { %>
           <p style="color: var(--text-muted); font-size: 0.9rem;">No hay categorías creadas para este torneo.</p>
         <% } %>
       </div>
 
-      <!-- Select Age (solo se habilita para disciplinas con franjas de edad) -->
-      <div class="form-group" id="age_band_group">
-        <label class="form-label" for="age_band">3. Seleccionar Edad *</label>
-        <select id="age_band" name="age_band" class="form-select" required disabled>
-          <option value="">-- Seleccionar Edad --</option>
-        </select>
-      </div>
-
-      <!-- Select Category (filtered by discipline) -->
-      <div class="form-group">
-        <label class="form-label" for="category_id">4. Seleccionar Categoría *</label>
-        <% if (categories && categories.length > 0) { %>
-          <select id="category_id" name="category_id" class="form-select" onchange="autoDetectDisciplineType(this)" required disabled data-all-categories='<%- JSON.stringify(categories.map(c => ({ id: c.id, label: c.label || c.name, discipline: c.discipline }))) %>'></select>
-        <% } else { %>
-          <p style="color: var(--text-muted); font-size: 0.9rem;">No hay categorías creadas para este torneo.</p>
-        <% } %>
-      </div>
-
-      <!-- Registration Type -->
-      <div class="form-group">
-        <label class="form-label" for="group_type">5. Tipo de Inscripción *</label>
+      <!-- Tipo de inscripción: se oculta en LIBRE y FREE DANCE (siempre individual) -->
+      <div class="form-group" id="group_type_box">
+        <label class="form-label" for="group_type">Tipo de Inscripción *</label>
         <select id="group_type" name="group_type" class="form-select" onchange="updateRowVisibility()">
           <option value="Individual">Individual (1 Patinadora)</option>
           <option value="Dúo">Dúo (2 Patinadoras)</option>
@@ -75,9 +58,9 @@
         </select>
       </div>
 
-      <!-- Select Students Line-by-Line -->
+      <!-- 2. Seleccionar alumna(s) -->
       <div class="form-group" id="student_selection_box">
-        <label class="form-label" id="participants_label">6. Seleccionar Patinadora *</label>
+        <label class="form-label" id="participants_label">2. Seleccionar Alumna *</label>
         <small id="group_info_help" style="color: var(--gold-light); display: none; margin-bottom: 0.5rem;">
           ℹ️ En disciplinas grupales o parejas, la categoría y edad del grupo se evalúan según la participante de mayor categoría o edad.
         </small>
@@ -91,9 +74,35 @@
         <% } %>
       </div>
 
-      <!-- Club de la Inscripción -->
+      <!-- 3. Categoría -->
       <div class="form-group">
-        <label class="form-label" for="club_id">7. Club de la Inscripción *</label>
+        <label class="form-label" for="category_id">3. Seleccionar Categoría *</label>
+        <% if (categories && categories.length > 0) { %>
+          <select id="category_id" name="category_id" class="form-select" required disabled data-all-categories='<%- JSON.stringify(categories.map(c => ({ id: c.id, label: c.label || c.name, discipline: c.discipline }))) %>'></select>
+        <% } else { %>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">No hay categorías creadas para este torneo.</p>
+        <% } %>
+      </div>
+
+      <!-- 4. Edad: se trae sola de la ficha de la alumna y se puede corregir -->
+      <div class="form-group">
+        <label class="form-label" for="age">4. Edad *</label>
+        <input type="number" id="age" name="age" class="form-control" min="1" max="120" placeholder="Se completa al elegir la alumna">
+        <small style="color: var(--text-muted);">Se toma automáticamente de la ficha de la patinadora. Podés corregirla si hace falta.</small>
+      </div>
+
+      <!-- 5. Categoría de edad: la asigna la franja donde cae la edad; editable -->
+      <div class="form-group" id="age_band_group">
+        <label class="form-label" for="age_band">5. Categoría de Edad</label>
+        <select id="age_band" name="age_band" class="form-select" disabled>
+          <option value="">-- Seleccioná primero una disciplina --</option>
+        </select>
+        <small id="age_band_help" style="color: var(--text-muted);">Se asigna sola según la edad. Podés elegir otra del desplegable.</small>
+      </div>
+
+      <!-- 6. Club: se trae del de la alumna -->
+      <div class="form-group">
+        <label class="form-label" for="club_id">6. Club de la Inscripción *</label>
         <select id="club_id" name="club_id" class="form-select">
           <% if (typeof myClubs !== 'undefined' && myClubs && myClubs.length > 0) { %>
             <% myClubs.forEach(c => { %>
@@ -103,7 +112,7 @@
             <option value="">-- No tenés clubes asignados --</option>
           <% } %>
         </select>
-        <small style="color: var(--text-muted);">Se usa el club de la patinadora seleccionada si no lo cambiás.</small>
+        <small style="color: var(--text-muted);">Se completa con el club de la patinadora seleccionada. Podés cambiarlo.</small>
       </div>
 
       <!-- Group Fantasy Name (Hidden when Individual) -->
@@ -128,8 +137,13 @@
 </main>
 
 <script>
-  const STUDENTS = <%- JSON.stringify(students.map(s => ({ id: s.id, first_name: s.first_name, last_name: s.last_name, dni: s.dni, age: s.age, club_name: s.club_name }))).replace(/</g, '\\u003c') %>;
+  const STUDENTS = <%- JSON.stringify(students.map(s => ({ id: s.id, first_name: s.first_name, last_name: s.last_name, dni: s.dni, age: s.age, club_id: s.club_id, club_name: s.club_name }))).replace(/</g, '\\u003c') %>;
   const PRESELECTED_ID = <%- JSON.stringify(preselectedStudentId || null) %>;
+  const AGE_BANDS = <%- typeof ageBandsByDiscipline !== 'undefined' ? JSON.stringify(ageBandsByDiscipline).replace(/</g, '\\u003c') : '{}' %>;
+
+  // Disciplinas que siempre son individuales y por lo tanto NO muestran el
+  // desplegable de tipo de inscripción.
+  const HIDE_TYPE_DISCIPLINES = ['LIBRE', 'FREE DANCE'];
 
   const MAX_BY_TYPE = {
     'Individual': 1,
@@ -142,9 +156,34 @@
     'Precisión': 30
   };
 
+  // Normaliza el nombre de la disciplina (mayúsculas y sin tildes) para emparejar
+  // de forma tolerante los valores de la base con las claves del catálogo.
+  function normalizeDisc(s) {
+    return String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  }
+
+  const AGE_BANDS_NORM = {};
+  Object.keys(AGE_BANDS).forEach(k => { AGE_BANDS_NORM[normalizeDisc(k)] = AGE_BANDS[k]; });
+
+  function currentDiscipline() {
+    const sel = document.getElementById('discipline_select');
+    return sel ? sel.value : '';
+  }
+
+  function currentBands() {
+    return AGE_BANDS_NORM[normalizeDisc(currentDiscipline())] || [];
+  }
+
   function ordinal(n) {
     const map = { 1: '1ra', 2: '2da', 3: '3ra', 4: '4ta', 5: '5ta', 6: '6ta', 7: '7ma', 8: '8va', 9: '9na', 10: '10ma' };
     return map[n] || (n + '°');
+  }
+
+  // Etiqueta legible de la franja de edad: "6 y 7 años", "18 años", "78 años y más"
+  function ageBandLabel(b) {
+    if (b.max >= 99) return b.name + ' (' + b.min + ' años y más)';
+    if (b.min === b.max) return b.name + ' (' + b.min + ' años)';
+    return b.name + ' (' + b.min + ' a ' + b.max + ' años)';
   }
 
   // Genera los renglones de patinadoras según el máximo que permite el tipo (hasta 30)
@@ -165,7 +204,7 @@
 
       const label = document.createElement('span');
       label.style.cssText = 'font-weight: 700; color: var(--gold-primary); min-width: 90px;';
-      label.textContent = max === 1 ? 'Patinadora:' : 'Renglón ' + i + ':';
+      label.textContent = max === 1 ? 'Alumna:' : 'Renglón ' + i + ':';
 
       const sel = document.createElement('select');
       sel.name = 'student_ids';
@@ -176,7 +215,7 @@
       const placeholder = document.createElement('option');
       placeholder.value = '';
       placeholder.textContent = max === 1
-        ? '-- Seleccionar Patinadora --'
+        ? '-- Seleccionar Alumna --'
         : (i === 1 ? '-- Seleccionar 1ra Patinadora --' : '-- Seleccionar ' + ordinal(i) + ' Patinadora --');
       sel.appendChild(placeholder);
 
@@ -195,84 +234,114 @@
       container.appendChild(row);
     }
     filterSelectedStudents();
+    applyStudentDefaults();
   }
 
-  function autoDetectDisciplineType(selectElem) {
-    const selectedOption = selectElem.options[selectElem.selectedIndex];
-    if (!selectedOption) return;
+  // Patinadora principal: la del primer renglón. En grupos, la de mayor edad.
+  function primaryStudent() {
+    const container = document.getElementById('student_rows');
+    if (!container) return null;
+    const ids = Array.from(container.querySelectorAll('select[name="student_ids"]'))
+      .map(s => s.value).filter(Boolean);
+    if (!ids.length) return null;
 
-    const disc = (selectedOption.getAttribute('data-discipline') || '').toUpperCase();
-    const groupSelect = document.getElementById('group_type');
+    const chosen = ids.map(id => STUDENTS.find(s => String(s.id) === String(id))).filter(Boolean);
+    if (!chosen.length) return null;
+    return chosen.reduce((a, b) => (Number(b.age) > Number(a.age) ? b : a));
+  }
 
-    if (disc.includes('DÚO')) {
-      groupSelect.value = 'Dúo';
-    } else if (disc.includes('TRÍO')) {
-      groupSelect.value = 'Trío';
-    } else if (disc.includes('CUARTETO')) {
-      groupSelect.value = 'Cuarteto';
-    } else if (disc.includes('PAREJA')) {
-      groupSelect.value = 'Parejas Mixtas';
-    } else if (disc.includes('SMALL')) {
-      groupSelect.value = 'Small';
-    } else if (disc.includes('SHOW')) {
-      groupSelect.value = 'Show';
-    } else if (disc.includes('PRECISIÓN')) {
-      groupSelect.value = 'Precisión';
-    } else {
-      groupSelect.value = 'Individual';
+  // Al elegir la alumna: se traen su edad y su club automáticamente.
+  function applyStudentDefaults() {
+    const student = primaryStudent();
+    if (!student) return;
+
+    const ageInput = document.getElementById('age');
+    if (ageInput) {
+      ageInput.value = student.age || '';
+      applyAgeBandFromAge();
     }
 
-    updateRowVisibility();
+    const clubSelect = document.getElementById('club_id');
+    if (clubSelect && student.club_id) {
+      const match = Array.from(clubSelect.options).find(o => String(o.value) === String(student.club_id));
+      if (match) clubSelect.value = String(student.club_id);
+    }
   }
 
-  const AGE_BANDS = <%- typeof ageBandsByDiscipline !== 'undefined' ? JSON.stringify(ageBandsByDiscipline).replace(/</g, '\\u003c') : '{}' %>;
+  // Rellena el desplegable de Categoría de Edad con las franjas de la disciplina.
+  function populateAgeBands() {
+    const ageSelect = document.getElementById('age_band');
+    const help = document.getElementById('age_band_help');
+    if (!ageSelect) return;
 
-  // Normaliza el nombre de la disciplina (mayúsculas y sin tildes) para emparejar
-  // de forma tolerante los valores de la base con las claves del catálogo.
-  function normalizeDisc(s) {
-    return String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const disc = currentDiscipline();
+    const bands = currentBands();
+    ageSelect.innerHTML = '';
+
+    if (!bands.length) {
+      const note = document.createElement('option');
+      note.value = '';
+      note.textContent = disc
+        ? '-- Esta disciplina no usa categorías de edad --'
+        : '-- Seleccioná primero una disciplina --';
+      ageSelect.appendChild(note);
+      ageSelect.disabled = true;
+      if (help) {
+        help.textContent = disc
+          ? 'Esta disciplina no tiene categorías de edad configuradas.'
+          : 'Se completa sola cuando elijas la disciplina y la alumna.';
+      }
+      return;
+    }
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '-- Seleccionar Categoría de Edad --';
+    ageSelect.appendChild(placeholder);
+
+    bands.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.name;
+      opt.textContent = ageBandLabel(b);
+      ageSelect.appendChild(opt);
+    });
+    ageSelect.disabled = false;
+    if (help) help.textContent = 'Se asigna sola según la edad. Podés elegir otra del desplegable.';
   }
-  const AGE_BANDS_NORM = {};
-  Object.keys(AGE_BANDS).forEach(k => { AGE_BANDS_NORM[normalizeDisc(k)] = AGE_BANDS[k]; });
+
+  // Asigna la categoría de edad según en qué franja cae la edad cargada.
+  function applyAgeBandFromAge() {
+    const ageInput = document.getElementById('age');
+    const ageSelect = document.getElementById('age_band');
+    if (!ageInput || !ageSelect || ageSelect.disabled) return;
+
+    const age = parseInt(ageInput.value, 10);
+    if (!Number.isFinite(age)) return;
+
+    const band = currentBands().find(b => age >= b.min && age <= b.max);
+    ageSelect.value = band ? band.name : '';
+  }
 
   function filterCategoriesByDiscipline() {
     const discSelect = document.getElementById('discipline_select');
     const catSelect = document.getElementById('category_id');
-    const ageGroup = document.getElementById('age_band_group');
-    const ageSelect = document.getElementById('age_band');
     if (!discSelect || !catSelect) return;
 
     const selectedDisc = discSelect.value;
     const allCategories = catSelect.dataset.allCategories ? JSON.parse(catSelect.dataset.allCategories) : [];
 
-    // Poblar el desplegable de Edad según la disciplina (si tiene franjas de edad)
-    const bands = selectedDisc ? (AGE_BANDS_NORM[normalizeDisc(selectedDisc)] || []) : [];
-    if (ageSelect) {
-      ageSelect.innerHTML = '';
-      if (bands.length > 0) {
-        const placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = '-- Seleccionar Edad --';
-        ageSelect.appendChild(placeholder);
-        bands.forEach(b => {
-          const opt = document.createElement('option');
-          opt.value = b.name;
-          opt.textContent = `${b.name} (${b.min}-${b.max})`;
-          ageSelect.appendChild(opt);
-        });
-        ageSelect.disabled = false;
-      } else {
-        const note = document.createElement('option');
-        note.value = '';
-        note.textContent = '-- Sin franjas de edad para esta disciplina --';
-        ageSelect.appendChild(note);
-        ageSelect.disabled = true;
-      }
-      ageSelect.value = '';
-    }
-    if (ageGroup) ageGroup.style.display = 'block';
-
     catSelect.innerHTML = '';
+
+    if (!selectedDisc) {
+      catSelect.innerHTML = '<option value="">-- Primero elegí una disciplina --</option>';
+      catSelect.disabled = true;
+      return;
+    }
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '-- Seleccionar Categoría --';
+    catSelect.appendChild(placeholder);
 
     (allCategories || []).forEach(c => {
       if (!selectedDisc || c.discipline === selectedDisc) {
@@ -284,7 +353,7 @@
       }
     });
 
-    if (catSelect.options.length > 0) {
+    if (catSelect.options.length > 1) {
       catSelect.disabled = false;
     } else {
       catSelect.disabled = true;
@@ -293,19 +362,21 @@
     catSelect.value = '';
   }
 
-  // Acopla la disciplina con el tipo de inscripción permitido
+  // Acopla la disciplina con el tipo de inscripción permitido y decide si el
+  // desplegable de tipo se muestra (LIBRE y FREE DANCE lo ocultan).
   function filterGroupTypesByDiscipline(disc) {
-    const d = (disc || '').toUpperCase();
+    const d = normalizeDisc(disc);
     let allowed = ['Individual'];
-    if (d.includes('DÚO')) allowed = ['Dúo'];
-    else if (d.includes('TRÍO')) allowed = ['Trío'];
-    else if (d.includes('CUARTETO')) allowed = ['Cuarteto'];
-    else if (d.includes('PAREJA')) allowed = ['Parejas Mixtas'];
-    else if (d.includes('SMALL')) allowed = ['Small'];
-    else if (d.includes('SHOW')) allowed = ['Show'];
-    else if (d.includes('PRECISIÓN')) allowed = ['Precisión'];
+    if (d.indexOf('DUO') > -1) allowed = ['Dúo'];
+    else if (d.indexOf('TRIO') > -1) allowed = ['Trío'];
+    else if (d.indexOf('CUARTETO') > -1) allowed = ['Cuarteto'];
+    else if (d.indexOf('PAREJA') > -1) allowed = ['Parejas Mixtas'];
+    else if (d.indexOf('SMALL') > -1) allowed = ['Small'];
+    else if (d.indexOf('SHOW') > -1) allowed = ['Show'];
+    else if (d.indexOf('PRECISION') > -1) allowed = ['Precisión'];
 
     const groupSelect = document.getElementById('group_type');
+    const groupBox = document.getElementById('group_type_box');
     const labels = {
       'Individual': 'Individual (1 Patinadora)',
       'Dúo': 'Dúo (2 Patinadoras)',
@@ -325,6 +396,12 @@
       groupSelect.appendChild(opt);
     });
     groupSelect.value = allowed[0];
+
+    // LIBRE y FREE DANCE ocultan el tipo de inscripción (siempre individual).
+    // Tampoco se muestra hasta que haya una disciplina elegida.
+    const hide = !d || HIDE_TYPE_DISCIPLINES.some(x => normalizeDisc(x) === d);
+    if (groupBox) groupBox.style.display = hide ? 'none' : 'block';
+
     updateRowVisibility();
   }
 
@@ -337,11 +414,11 @@
     const mainLabel = document.getElementById('participants_label');
 
     if (type === 'Individual') {
-      mainLabel.innerText = '6. Seleccionar Patinadora *';
+      mainLabel.innerText = '2. Seleccionar Alumna *';
       helpText.style.display = 'none';
       groupNameBox.style.display = 'none';
     } else {
-      mainLabel.innerText = '6. Seleccionar Patinadoras del Grupo (Línea por Línea) *';
+      mainLabel.innerText = '2. Seleccionar Alumnas del Grupo (Línea por Línea) *';
       helpText.style.display = 'block';
       groupNameBox.style.display = 'block';
     }
@@ -373,19 +450,32 @@
 
   // Attach event listeners (delegación: no hace falta re-adjuntar por renglón)
   document.addEventListener('DOMContentLoaded', () => {
-    updateRowVisibility();
-
     const disciplineSelect = document.getElementById('discipline_select');
     if (disciplineSelect) {
-      disciplineSelect.addEventListener('change', filterCategoriesByDiscipline);
-      disciplineSelect.addEventListener('change', () => filterGroupTypesByDiscipline(disciplineSelect.value));
+      disciplineSelect.addEventListener('change', () => {
+        filterCategoriesByDiscipline();
+        populateAgeBands();
+        filterGroupTypesByDiscipline(disciplineSelect.value);
+        applyStudentDefaults();
+      });
+      populateAgeBands();
       filterGroupTypesByDiscipline(disciplineSelect.value);
+    } else {
+      updateRowVisibility();
+    }
+
+    const ageInput = document.getElementById('age');
+    if (ageInput) {
+      ageInput.addEventListener('input', applyAgeBandFromAge);
     }
 
     const container = document.getElementById('student_rows');
     if (container) {
       container.addEventListener('change', (e) => {
-        if (e.target && e.target.name === 'student_ids') filterSelectedStudents();
+        if (e.target && e.target.name === 'student_ids') {
+          filterSelectedStudents();
+          applyStudentDefaults();
+        }
       });
     }
   });

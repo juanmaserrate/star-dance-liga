@@ -1,10 +1,11 @@
-<%- include('../partials/header', { title: 'Nuevo Torneo' }) %>
+<% const editing = (typeof isEdit !== 'undefined' && isEdit); %>
+<%- include('../partials/header', { title: editing ? 'Editar Torneo' : 'Nuevo Torneo' }) %>
 <%- include('admin_shell', { activeNav: 'torneos', topbarSection: 'Torneos' }) %>
 
 
   <div class="card" style="max-width: 700px; margin: 0 auto;">
     <div class="card-header">
-      <h1 class="card-title">🏆 Crear Nuevo Torneo</h1>
+      <h1 class="card-title"><%= editing ? '✏️ Editar Torneo' : '🏆 Crear Nuevo Torneo' %></h1>
       <a href="/admin/torneos" class="btn btn-secondary btn-sm">&larr; Volver</a>
     </div>
 
@@ -12,7 +13,13 @@
       <div class="alert alert-danger">⚠️ <%= error %></div>
     <% } %>
 
-    <form action="/admin/torneos/nuevo" method="POST">
+    <% if (editing) { %>
+      <div class="alert alert-success" style="margin-bottom: 1.25rem;">
+        ℹ️ Los cambios (incluido el nombre) se reflejan automáticamente en el formulario de inscripción y en todas las inscripciones ya realizadas.
+      </div>
+    <% } %>
+
+    <form action="<%= editing ? '/admin/torneos/' + tournament.id + '/editar' : '/admin/torneos/nuevo' %>" method="POST">
       <div class="form-group">
         <label class="form-label" for="name">Nombre del Torneo *</label>
         <input type="text" id="name" name="name" class="form-control" placeholder="Ej: Torneo Apertura 2026 - Liga Star Dance" value="<%= tournament ? tournament.name : '' %>" required>
@@ -25,7 +32,7 @@
 
       <div class="form-group">
         <label class="form-label" for="venue">Sede / Polideportivo / Lugar *</label>
-        <input type="text" id="venue" name="venue" class="form-control" placeholder="Ej: Club Polideportivo San Martín, San Juan" value="<%= tournament ? tournament.venue : '' %>" required>
+        <input type="text" id="venue" name="venue" class="form-control" placeholder="Ej: Argentinos Juniors" value="<%= tournament ? tournament.venue : '' %>" required>
       </div>
 
       <div class="form-row">
@@ -57,10 +64,13 @@
       </div>
       <input type="hidden" id="event_date" name="event_date" value="<%= tournament ? (tournament.date_from || tournament.event_date) : '' %>">
 
-      <div style="margin-top: 2rem;">
-        <button type="submit" class="btn btn-gold" style="width: 100%;">
-          ✨ Crear Torneo y Continuar a Categorías &rarr;
+      <div style="margin-top: 2rem; display: flex; gap: 0.6rem; flex-wrap: wrap;">
+        <button type="submit" class="btn btn-gold" style="flex: 1; min-width: 240px;">
+          <%= editing ? '💾 Guardar Cambios' : '✨ Crear Torneo y Continuar a Categorías →' %>
         </button>
+        <% if (editing) { %>
+          <a href="/admin/torneos/<%= tournament.id %>/categorias" class="btn btn-outline-gold">⚙️ Configurar Disciplinas y Categorías</a>
+        <% } %>
       </div>
     </form>
   </div>

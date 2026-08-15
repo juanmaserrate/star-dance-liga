@@ -2,12 +2,29 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const db = require('../database');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { requireAuth, requireRole, scopeFilter, canManageTournament, getAdminScope, ROLES } = require('../middleware/auth');
 const { formatEventDates, formatDeadline } = require('../lib/dates');
+const { formatCategoryName } = require('../lib/categories');
 const insc = require('../lib/inscripciones_export');
+const inscEdit = require('../lib/inscripcion_editar');
+const tcfg = require('../lib/tournament_config');
 
-// All routes require role 'admin'
+// All routes require role 'admin' (o el combinado 'profesor_admin')
 router.use(requireAuth, requireRole('admin'));
+
+// Un administrador con alcance limitado a una zona (ej: Giselle → CABA) gestiona
+// los torneos de su zona, pero no las cuentas de usuario ni el sitio público.
+const SCOPED_FORBIDDEN = ['/usuarios', '/cms'];
+router.use((req, res, next) => {
+  const scope = getAdminScope(req.session.user);
+  if (scope && SCOPED_FORBIDDEN.some(p => req.path === p || req.path.startsWith(p + '/'))) {
+    return res.status(403).render('error', {
+      title: 'Acceso Denegado',
+      message: `Tu acceso de administración está limitado a los torneos de ${scope}. La gestión de usuarios y del sitio público queda a cargo de la administración general.`
+    });
+  }
+  next();
+});
 
 // Helper: Calculate age from birth date in calendar year
 function getCalendarAge(birthDateStr) {
@@ -25,20 +42,69 @@ function toInt(v) {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-// Admin Dashboard
+// Admin Dashboard — con filtro por torneo: al elegir uno, todas las cifras y
+// listados de abajo muestran solo los datos de las inscripciones de ese torneo.
 router.get('/dashboard', async (req, res) => {
-  const totalSkaters = (await db.prepare(`SELECT COUNT(*) as count FROM students`).get()).count;
-  const totalRegistrations = (await db.prepare(`SELECT COUNT(*) as count FROM registrations`).get()).count;
+  const tournamentId = toInt(req.query.tournament_id);
+
+  // Torneos que puede ver este usuario (Giselle solo ve los de su zona).
+  const scope = scopeFilter(req.session.user, 't.name');
+  const tournaments = await db.prepare(`
+    SELECT t.* FROM tournaments t WHERE 1=1${scope.sql}
+    ORDER BY COALESCE(t.date_from, t.event_date) DESC
+  `).all(...scope.params);
+  tournaments.forEach(t => { t.datesLabel = formatEventDates(t.date_from || t.event_date, t.date_to); });
+
+  // Si eligió un torneo fuera de su alcance, se ignora el filtro.
+  const selectedTournament = tournamentId
+    ? tournaments.find(t => t.id === tournamentId) || null
+    : null;
+  const filterId = selectedTournament ? selectedTournament.id : null;
+
+  // Filtros reutilizables según haya o no torneo seleccionado.
+  const regWhere = filterId ? ` AND r.tournament_id = ?` : '';
+  const regParams = filterId ? [filterId] : [];
+  // Patinadoras: si hay torneo, solo las que tienen alguna inscripción en él.
+  const studentWhere = filterId
+    ? ` AND EXISTS (
+          SELECT 1 FROM registrations r
+          WHERE r.tournament_id = ?
+            AND (r.student_id = s.id OR EXISTS (
+              SELECT 1 FROM registration_members rm
+              WHERE rm.registration_id = r.id AND rm.student_id = s.id
+            ))
+        )`
+    : '';
+  const studentParams = filterId ? [filterId] : [];
+
+  const totalSkaters = (await db.prepare(`
+    SELECT COUNT(*) as count FROM students s WHERE 1=1${studentWhere}
+  `).get(...studentParams)).count;
+
+  const totalRegistrations = (await db.prepare(`
+    SELECT COUNT(*) as count FROM registrations r WHERE 1=1${regWhere}
+  `).get(...regParams)).count;
+
   const totalClubs = (await db.prepare(`SELECT COUNT(*) as count FROM clubs`).get()).count;
-  const totalTournaments = (await db.prepare(`SELECT COUNT(*) as count FROM tournaments`).get()).count;
+  const totalTournaments = tournaments.length;
 
   const registrationsByClub = await db.prepare(`
     SELECT cl.name as club_name, COUNT(r.id) as count
     FROM registrations r
     JOIN clubs cl ON r.club_id = cl.id
+    WHERE 1=1${regWhere}
     GROUP BY cl.id
     ORDER BY count DESC
-  `).all();
+  `).all(...regParams);
+
+  const registrationsByDiscipline = await db.prepare(`
+    SELECT c.discipline, COUNT(r.id) as count
+    FROM registrations r
+    JOIN categories c ON r.category_id = c.id
+    WHERE 1=1${regWhere}
+    GROUP BY c.discipline
+    ORDER BY count DESC
+  `).all(...regParams);
 
   const recentRegistrations = await db.prepare(`
     SELECT r.*,
@@ -52,8 +118,9 @@ router.get('/dashboard', async (req, res) => {
     JOIN clubs cl ON r.club_id = cl.id
     JOIN tournaments t ON r.tournament_id = t.id
     JOIN categories c ON r.category_id = c.id
+    WHERE 1=1${regWhere}
     ORDER BY r.created_at DESC LIMIT 10
-  `).all();
+  `).all(...regParams);
 
   const studentsList = await db.prepare(`
     SELECT s.*,
@@ -64,8 +131,9 @@ router.get('/dashboard', async (req, res) => {
     FROM students s
     JOIN clubs c ON s.club_id = c.id
     JOIN users u ON s.teacher_id = u.id
+    WHERE 1=1${studentWhere}
     ORDER BY s.last_name ASC, s.first_name ASC
-  `).all();
+  `).all(...studentParams);
   studentsList.forEach(s => { s.age = getCalendarAge(s.birth_date); });
 
   res.render('admin/dashboard', {
@@ -76,7 +144,11 @@ router.get('/dashboard', async (req, res) => {
       totalClubs,
       totalTournaments
     },
+    tournaments,
+    selectedTournament,
+    selectedTournamentId: filterId || '',
     registrationsByClub,
+    registrationsByDiscipline,
     recentRegistrations,
     studentsList,
     success: req.query.success || null,
@@ -90,11 +162,17 @@ router.get('/inscripciones', async (req, res) => {
   const tournament_id = toInt(req.query.tournament_id);
   const club_id = toInt(req.query.club_id);
 
+  const tournament_scope = getAdminScope(req.session.user);
+
   const registrations = await insc.fetchRegistrations({
-    tournament_id, club_id, buscar, disciplina, categoria
+    tournament_id, club_id, buscar, disciplina, categoria, tournament_scope
   });
 
-  const tournaments = await db.prepare(`SELECT * FROM tournaments ORDER BY COALESCE(date_from, event_date) DESC`).all();
+  const scope = scopeFilter(req.session.user, 't.name');
+  const tournaments = await db.prepare(`
+    SELECT t.* FROM tournaments t WHERE 1=1${scope.sql}
+    ORDER BY COALESCE(t.date_from, t.event_date) DESC
+  `).all(...scope.params);
   tournaments.forEach(t => { t.datesLabel = formatEventDates(t.date_from || t.event_date, t.date_to); });
   const clubs = await db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
 
@@ -114,6 +192,114 @@ router.get('/inscripciones', async (req, res) => {
   });
 });
 
+// Formulario de edición / movimiento de una inscripción (admin)
+router.get('/inscripciones/:id/editar', async (req, res) => {
+  const regId = parseInt(req.params.id, 10);
+  const reg = await inscEdit.getRegistration(regId);
+  if (!reg) return res.status(404).render('error', { title: 'Inscripción No Encontrada', message: 'La inscripción solicitada no existe.' });
+
+  if (!canManageTournament(req.session.user, { name: reg.tournament_name })) {
+    return res.status(403).render('error', {
+      title: 'Acceso Denegado',
+      message: 'Esta inscripción pertenece a un torneo fuera de tu alcance de administración.'
+    });
+  }
+
+  const scope = scopeFilter(req.session.user, 't.name');
+  const tournaments = await db.prepare(`
+    SELECT t.*, (SELECT COUNT(*) FROM categories c WHERE c.tournament_id = t.id) AS category_count
+    FROM tournaments t
+    WHERE 1=1${scope.sql}
+    ORDER BY COALESCE(t.date_from, t.event_date) DESC
+  `).all(...scope.params);
+  tournaments.forEach(t => { t.datesLabel = formatEventDates(t.date_from || t.event_date, t.date_to); });
+
+  const destId = toInt(req.query.tournament_id) || reg.tournament_id;
+  let categories = [];
+  if (destId) {
+    // Se ofrecen las categorias vigentes y, ademas, la que ya tiene esta
+    // inscripcion (aunque sea historica), para que se siga viendo bien.
+    categories = await db.prepare(`
+      SELECT * FROM categories
+      WHERE tournament_id = ? AND (COALESCE(is_active, true) = true OR id = ?)
+      ORDER BY discipline ASC, min_age ASC, name ASC
+    `).all(destId, reg.category_id);
+    categories.forEach(c => { c.label = formatCategoryName(c.name, c.discipline); });
+  }
+  const suggested = inscEdit.findSuitableCategory(categories, {
+    currentName: reg.category_name,
+    discipline: reg.discipline,
+    ageBand: reg.age_band,
+    age: reg.age
+  });
+
+  const tc = require('../lib/tournament_config');
+  const ageBandsByDiscipline = destId ? await tc.getAgeBandsByDiscipline(destId) : {};
+
+  res.render('admin/inscripcion_editar', {
+    user: req.session.user,
+    reg,
+    tournaments,
+    categories,
+    destId,
+    ageBandsByDiscipline,
+    suggestedId: suggested ? suggested.id : null,
+    error: req.query.error || null,
+    success: req.query.success || null
+  });
+});
+
+// Guarda la edición / movimiento de una inscripción (admin)
+router.post('/inscripciones/:id/editar', async (req, res) => {
+  const regId = parseInt(req.params.id, 10);
+  const reg = await inscEdit.getRegistration(regId);
+  if (!reg) return res.status(404).render('error', { title: 'Inscripción No Encontrada', message: 'La inscripción solicitada no existe.' });
+
+  if (!canManageTournament(req.session.user, { name: reg.tournament_name })) {
+    return res.status(403).render('error', {
+      title: 'Acceso Denegado',
+      message: 'Esta inscripción pertenece a un torneo fuera de tu alcance de administración.'
+    });
+  }
+
+  const tournament_id = toInt(req.body.tournament_id);
+  const category_id = toInt(req.body.category_id);
+  const notes = String(req.body.notes || '').toUpperCase();
+  const status = ['registered', 'confirmed', 'cancelled'].includes(req.body.status) ? req.body.status : reg.status;
+
+  const back = (error) => res.redirect(`/admin/inscripciones/${regId}/editar?tournament_id=${tournament_id || ''}&error=${encodeURIComponent(error)}`);
+
+  if (!tournament_id || !category_id) {
+    return back('Debe seleccionar torneo y categoría.');
+  }
+
+  const category = await db.prepare(`SELECT * FROM categories WHERE id = ?`).get(category_id);
+  if (!category || category.tournament_id !== tournament_id) {
+    return back('La categoría elegida no pertenece al torneo seleccionado.');
+  }
+
+  if (tournament_id !== reg.tournament_id) {
+    const conflicts = await inscEdit.findConflicts(reg, tournament_id);
+    if (conflicts.length) {
+      return back('No se puede mover: alguna de las patinadoras ya está inscripta en el torneo de destino.');
+    }
+  }
+
+  // Edad y categoría de edad: manda lo que se eligió en el formulario. Si no
+  // vino nada, se resuelve por la categoría (comportamiento anterior).
+  let age = parseInt(req.body.age, 10);
+  if (!Number.isFinite(age) || age <= 0 || age > 120) age = reg.age || null;
+
+  const age_band = req.body.age_band !== undefined
+    ? (String(req.body.age_band).trim().toUpperCase() || null)
+    : inscEdit.resolveAgeBand(category.discipline, category.name);
+
+  await db.prepare(`UPDATE registrations SET tournament_id = ?, category_id = ?, notes = ?, status = ?, age_band = ?, age = ? WHERE id = ?`)
+    .run(tournament_id, category_id, notes, status, age_band, age, regId);
+
+  res.redirect('/admin/inscripciones?success=' + encodeURIComponent('Inscripción actualizada correctamente.'));
+});
+
 // Export CSV (campos seleccionables, datos completos de la inscripción)
 router.get('/exportar/csv', async (req, res) => {
   const { buscar, disciplina, categoria, fields } = req.query;
@@ -121,7 +307,10 @@ router.get('/exportar/csv', async (req, res) => {
   const club_id = toInt(req.query.club_id);
   try {
     const selectedFields = insc.resolveFields(fields);
-    const registrations = await insc.fetchRegistrations({ tournament_id, club_id, buscar, disciplina, categoria });
+    const registrations = await insc.fetchRegistrations({
+      tournament_id, club_id, buscar, disciplina, categoria,
+      tournament_scope: getAdminScope(req.session.user)
+    });
     const csv = insc.buildCsv(registrations, selectedFields);
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -140,7 +329,10 @@ router.get('/exportar/excel', async (req, res) => {
   const club_id = toInt(req.query.club_id);
   try {
     const selectedFields = insc.resolveFields(fields);
-    const filters = { tournament_id, club_id, buscar, disciplina, categoria };
+    const filters = {
+      tournament_id, club_id, buscar, disciplina, categoria,
+      tournament_scope: getAdminScope(req.session.user)
+    };
 
     if (filters.tournament_id) {
       const t = await db.prepare(`SELECT name FROM tournaments WHERE id = ?`).get(filters.tournament_id);
@@ -182,23 +374,157 @@ router.get('/posiciones', async (req, res) => {
   });
 });
 
+// Carga un torneo verificando que el usuario tenga alcance sobre él.
+// Devuelve null si no existe o si está fuera de su zona (ej: Giselle y CABA).
+async function loadTournamentForUser(req, id) {
+  const tournament = await db.prepare(`SELECT * FROM tournaments WHERE id = ?`).get(id);
+  if (!tournament) return null;
+  if (!canManageTournament(req.session.user, tournament)) return null;
+  return tournament;
+}
+
 // Manage Tournaments List
 router.get('/torneos', async (req, res) => {
+  const scope = scopeFilter(req.session.user, 't.name');
   const tournaments = await db.prepare(`
     SELECT t.*,
     (SELECT COUNT(*) FROM categories c WHERE c.tournament_id = t.id) as category_count,
     (SELECT COUNT(*) FROM registrations r WHERE r.tournament_id = t.id) as reg_count
     FROM tournaments t
-    ORDER BY t.event_date DESC
-  `).all();
+    WHERE 1=1${scope.sql}
+    ORDER BY COALESCE(t.date_from, t.event_date) DESC
+  `).all(...scope.params);
   tournaments.forEach(t => { t.datesLabel = formatEventDates(t.date_from || t.event_date, t.date_to); t.deadlineLabel = formatDeadline(t.registration_deadline); });
 
   res.render('admin/torneos', {
     user: req.session.user,
     tournaments,
+    adminScope: getAdminScope(req.session.user),
     success: req.query.success || null,
     error: req.query.error || null
   });
+});
+
+// Form: Edit Tournament (todos los campos)
+router.get('/torneos/:id/editar', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) {
+    return res.status(404).render('error', {
+      title: 'Torneo No Encontrado',
+      message: 'El torneo no existe o no está dentro de tu alcance de administración.'
+    });
+  }
+
+  res.render('admin/torneo_form', {
+    user: req.session.user,
+    tournament,
+    isEdit: true,
+    error: req.query.error || null
+  });
+});
+
+// Save Edited Tournament. Al renombrarlo, el cambio se ve en todos lados
+// (inscripciones a realizar y ya hechas) porque todo referencia el id del torneo.
+router.post('/torneos/:id/editar', async (req, res) => {
+  const tournamentId = toInt(req.params.id);
+  const tournament = await loadTournamentForUser(req, tournamentId);
+  if (!tournament) {
+    return res.status(404).render('error', {
+      title: 'Torneo No Encontrado',
+      message: 'El torneo no existe o no está dentro de tu alcance de administración.'
+    });
+  }
+
+  const { name, description, venue, event_date, date_from, date_to, registration_deadline, status } = req.body;
+  const fechaDesde = date_from || event_date;
+  const fechaHasta = date_to || fechaDesde;
+
+  const rerender = (error) => res.render('admin/torneo_form', {
+    user: req.session.user,
+    tournament: { ...tournament, ...req.body },
+    isEdit: true,
+    error
+  });
+
+  if (!name || !venue || !fechaDesde || !registration_deadline) {
+    return rerender('Nombre, sede, fecha de inicio y cierre de inscripciones son obligatorios.');
+  }
+
+  const allowedStatus = ['upcoming', 'active', 'finished'];
+  const newStatus = allowedStatus.includes(status) ? status : tournament.status;
+
+  try {
+    await db.prepare(`
+      UPDATE tournaments SET
+        name = ?, description = ?, venue = ?,
+        event_date = ?, date_from = ?, date_to = ?,
+        registration_deadline = ?, status = ?
+      WHERE id = ?
+    `).run(
+      name.trim().toUpperCase(),
+      (description || '').toUpperCase(),
+      venue.trim().toUpperCase(),
+      fechaDesde,
+      fechaDesde,
+      fechaHasta,
+      registration_deadline,
+      newStatus,
+      tournamentId
+    );
+
+    res.redirect('/admin/torneos?success=' + encodeURIComponent(`Torneo "${name.trim().toUpperCase()}" actualizado. El cambio se refleja en las inscripciones nuevas y en las ya realizadas.`));
+  } catch (err) {
+    console.error('Error updating tournament:', err);
+    rerender('Error al guardar los cambios del torneo.');
+  }
+});
+
+// Delete Tournament. Se bloquea si tiene inscripciones, para no perder datos.
+router.post('/torneos/:id/eliminar', async (req, res) => {
+  const tournamentId = toInt(req.params.id);
+  const tournament = await loadTournamentForUser(req, tournamentId);
+  if (!tournament) {
+    return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado o fuera de tu alcance.'));
+  }
+
+  const regs = await db.prepare(`SELECT COUNT(*) as count FROM registrations WHERE tournament_id = ?`).get(tournamentId);
+  if (Number(regs.count) > 0) {
+    return res.redirect('/admin/torneos?error=' + encodeURIComponent(
+      `No se puede eliminar "${tournament.name}": tiene ${regs.count} inscripción(es). Mové o cancelá esas inscripciones primero.`
+    ));
+  }
+
+  try {
+    await db.prepare(`DELETE FROM tournaments WHERE id = ?`).run(tournamentId);
+    res.redirect('/admin/torneos?success=' + encodeURIComponent(`Torneo "${tournament.name}" eliminado.`));
+  } catch (err) {
+    console.error('Error deleting tournament:', err);
+    res.redirect('/admin/torneos?error=' + encodeURIComponent('Error al eliminar el torneo.'));
+  }
+});
+
+// Update Tournament Status (upcoming / active / finished)
+router.post('/torneos/:id/estado', async (req, res) => {
+  const tournamentId = req.params.id;
+  const { status } = req.body;
+
+  const allowed = ['upcoming', 'active', 'finished'];
+  if (!allowed.includes(status)) {
+    return res.redirect('/admin/torneos?error=' + encodeURIComponent('Estado de torneo inválido.'));
+  }
+
+  const tournament = await db.prepare(`SELECT * FROM tournaments WHERE id = ?`).get(tournamentId);
+  if (!tournament) {
+    return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+  }
+
+  try {
+    await db.prepare(`UPDATE tournaments SET status = ? WHERE id = ?`).run(status, tournamentId);
+    res.redirect('/admin/torneos?success=' + encodeURIComponent(`Estado del torneo "${tournament.name}" actualizado a ${status.toUpperCase()}.`));
+  } catch (err) {
+    console.error('Error updating tournament status:', err);
+    res.redirect('/admin/torneos?error=' + encodeURIComponent('Error al actualizar el estado del torneo.'));
+  }
 });
 
 // Form: New Tournament
@@ -206,6 +532,7 @@ router.get('/torneos/nuevo', (req, res) => {
   res.render('admin/torneo_form', {
     user: req.session.user,
     tournament: null,
+    isEdit: false,
     error: null
   });
 });
@@ -221,6 +548,7 @@ router.post('/torneos/nuevo', async (req, res) => {
     return res.render('admin/torneo_form', {
       user: req.session.user,
       tournament: req.body,
+      isEdit: false,
       error: 'Por favor complete los campos obligatorios del torneo.'
     });
   }
@@ -240,62 +568,374 @@ router.post('/torneos/nuevo', async (req, res) => {
       status || 'upcoming'
     );
 
-    res.redirect(`/admin/torneos/${info.lastInsertRowid}/categorias?success=` + encodeURIComponent('Torneo creado. Configure las categorías.'));
+    // El torneo nuevo arranca con el catálogo oficial completo cargado, para
+    // que las profesoras puedan inscribir desde el primer momento.
+    const newId = info.lastInsertRowid;
+    await tcfg.seedTournament(newId);
+    await tcfg.seedCategories(newId);
+
+    res.redirect(`/admin/torneos/${newId}/categorias?success=` + encodeURIComponent('Torneo creado con el catálogo oficial de disciplinas y categorías. Ajustá lo que necesites.'));
   } catch (err) {
     console.error('Error creating tournament:', err);
     res.render('admin/torneo_form', {
       user: req.session.user,
       tournament: req.body,
+      isEdit: false,
       error: 'Error al guardar el torneo.'
     });
   }
 });
 
-// Category Builder for a Tournament
-router.get('/torneos/:id/categorias', async (req, res) => {
-  const tournament = await db.prepare(`SELECT * FROM tournaments WHERE id = ?`).get(req.params.id);
-  if (!tournament) return res.status(404).render('error', { title: 'Torneo No Encontrado' });
+// ---------------------------------------------------------------------------
+// Configuración de un torneo: disciplinas, categorías y categorías de edad.
+// Todo es por torneo, así cada fecha puede tener su propia grilla.
+// ---------------------------------------------------------------------------
 
-  const categories = await db.prepare(`SELECT * FROM categories WHERE tournament_id = ? ORDER BY discipline ASC, min_age ASC, division ASC`).all(tournament.id);
+// Vuelve a la pantalla de configuración con un mensaje.
+function backToConfig(res, tournamentId, { success, error } = {}) {
+  const qs = success
+    ? '?success=' + encodeURIComponent(success)
+    : (error ? '?error=' + encodeURIComponent(error) : '');
+  return res.redirect(`/admin/torneos/${tournamentId}/categorias${qs}`);
+}
+
+router.get('/torneos/:id/categorias', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) {
+    return res.status(404).render('error', {
+      title: 'Torneo No Encontrado',
+      message: 'El torneo no existe o no está dentro de tu alcance de administración.'
+    });
+  }
+
+  // Si es un torneo nuevo, se le siembra la configuración del catálogo oficial
+  // (disciplinas, categorías de edad y, si está vacío, también las categorías).
+  await tcfg.seedTournament(tournament.id);
+  const catCount = await db.prepare(`SELECT COUNT(*) AS count FROM categories WHERE tournament_id = ?`).get(tournament.id);
+  if (Number(catCount.count) === 0) await tcfg.seedCategories(tournament.id);
+
+  const disciplines = await tcfg.getDisciplines(tournament.id, { includeDisabled: true });
+
+  const categories = await db.prepare(`
+    SELECT c.*,
+      (SELECT COUNT(*) FROM registrations r WHERE r.category_id = c.id) AS reg_count
+    FROM categories c
+    WHERE c.tournament_id = ?
+    ORDER BY c.discipline ASC, c.name ASC
+  `).all(tournament.id);
+  categories.forEach(c => { c.label = formatCategoryName(c.name, c.discipline); });
+
+  const ageBands = await db.prepare(`
+    SELECT * FROM tournament_age_bands WHERE tournament_id = ?
+    ORDER BY discipline ASC, order_index ASC, min_age ASC
+  `).all(tournament.id);
+
+  // Agrupa por disciplina para armar una tarjeta por cada una.
+  const configuredNames = new Set(disciplines.map(d => d.discipline));
+  const extraNames = [...new Set(categories.map(c => c.discipline))]
+    .filter(d => d && !configuredNames.has(d));
+
+  const groups = disciplines.map(d => ({
+    discipline: d.discipline,
+    order_index: d.order_index,
+    is_enabled: d.is_enabled,
+    isLegacy: false,
+    categories: categories.filter(c => c.discipline === d.discipline),
+    bands: ageBands.filter(b => b.discipline === d.discipline)
+  }));
+
+  // Disciplinas viejas que ya no están en el catálogo pero conservan
+  // inscripciones (ej: STAR DANCE y STYLE, ahora categorías de FREE DANCE).
+  extraNames.forEach(name => {
+    groups.push({
+      discipline: name,
+      order_index: 999,
+      is_enabled: false,
+      isLegacy: true,
+      categories: categories.filter(c => c.discipline === name),
+      bands: ageBands.filter(b => b.discipline === name)
+    });
+  });
 
   res.render('admin/categorias', {
     user: req.session.user,
     tournament,
-    categories,
+    groups,
+    totalCategories: categories.length,
     success: req.query.success || null,
     error: req.query.error || null
   });
 });
 
-// Save Category
-router.post('/torneos/:id/categorias', async (req, res) => {
-  const tournamentId = req.params.id;
-  const { name, discipline, division, level, min_age, max_age, gender, schedule } = req.body;
+// --- Disciplinas -----------------------------------------------------------
 
+// Alta de una disciplina nueva en el torneo
+router.post('/torneos/:id/disciplinas', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  const name = String(req.body.discipline || '').trim().toUpperCase();
+  if (!name) return backToConfig(res, tournament.id, { error: 'Escribí el nombre de la disciplina.' });
+
+  const last = await db.prepare(`
+    SELECT COALESCE(MAX(order_index), -1) AS max FROM tournament_disciplines WHERE tournament_id = ?
+  `).get(tournament.id);
+
+  try {
+    await db.prepare(`
+      INSERT INTO tournament_disciplines (tournament_id, discipline, order_index, is_enabled)
+      VALUES (?, ?, ?, true)
+      ON CONFLICT (tournament_id, discipline) DO UPDATE SET is_enabled = true
+    `).run(tournament.id, name, Number(last.max) + 1);
+    backToConfig(res, tournament.id, { success: `Disciplina ${name} agregada al torneo.` });
+  } catch (err) {
+    console.error('Error adding discipline:', err);
+    backToConfig(res, tournament.id, { error: 'Error al agregar la disciplina.' });
+  }
+});
+
+// Habilitar / deshabilitar y reordenar una disciplina
+router.post('/torneos/:id/disciplinas/actualizar', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  const discipline = String(req.body.discipline || '').trim();
+  const isEnabled = req.body.is_enabled === '1';
+  const orderIndex = toInt(req.body.order_index);
+
+  try {
+    await db.prepare(`
+      UPDATE tournament_disciplines
+      SET is_enabled = ?, order_index = COALESCE(?, order_index)
+      WHERE tournament_id = ? AND discipline = ?
+    `).run(isEnabled, orderIndex, tournament.id, discipline);
+    backToConfig(res, tournament.id, { success: `Disciplina ${discipline} actualizada.` });
+  } catch (err) {
+    console.error('Error updating discipline:', err);
+    backToConfig(res, tournament.id, { error: 'Error al actualizar la disciplina.' });
+  }
+});
+
+// Quitar una disciplina del torneo (solo si ninguna de sus categorías tiene inscripciones)
+router.post('/torneos/:id/disciplinas/eliminar', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  const discipline = String(req.body.discipline || '').trim();
+
+  const used = await db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM registrations r JOIN categories c ON c.id = r.category_id
+    WHERE r.tournament_id = ? AND c.discipline = ?
+  `).get(tournament.id, discipline);
+
+  if (Number(used.count) > 0) {
+    return backToConfig(res, tournament.id, {
+      error: `No se puede quitar ${discipline}: tiene ${used.count} inscripción(es). Podés deshabilitarla para que no aparezca en el formulario.`
+    });
+  }
+
+  try {
+    await db.prepare(`DELETE FROM categories WHERE tournament_id = ? AND discipline = ?`).run(tournament.id, discipline);
+    await db.prepare(`DELETE FROM tournament_age_bands WHERE tournament_id = ? AND discipline = ?`).run(tournament.id, discipline);
+    await db.prepare(`DELETE FROM tournament_disciplines WHERE tournament_id = ? AND discipline = ?`).run(tournament.id, discipline);
+    backToConfig(res, tournament.id, { success: `Disciplina ${discipline} quitada del torneo.` });
+  } catch (err) {
+    console.error('Error deleting discipline:', err);
+    backToConfig(res, tournament.id, { error: 'Error al quitar la disciplina.' });
+  }
+});
+
+// --- Categorías ------------------------------------------------------------
+
+// Alta de categoría
+router.post('/torneos/:id/categorias', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  const { name, discipline, schedule } = req.body;
   if (!name || !discipline) {
-    return res.redirect(`/admin/torneos/${tournamentId}/categorias?error=` + encodeURIComponent('Nombre y disciplina son requeridos.'));
+    return backToConfig(res, tournament.id, { error: 'Nombre y disciplina son requeridos.' });
+  }
+
+  const disc = discipline.trim().toUpperCase();
+  const bare = name.trim().toUpperCase();
+  // Se guarda con el prefijo "DISCIPLINA - " igual que el catálogo, para que
+  // el formulario de inscripción muestre solo el nombre corto.
+  const fullName = `${disc} - ${bare}`;
+
+  const dup = await db.prepare(`
+    SELECT id FROM categories WHERE tournament_id = ? AND discipline = ? AND name = ?
+  `).get(tournament.id, disc, fullName);
+  if (dup) {
+    return backToConfig(res, tournament.id, { error: `La categoría ${bare} ya existe en ${disc}.` });
   }
 
   try {
     await db.prepare(`
-      INSERT INTO categories (tournament_id, name, discipline, division, level, min_age, max_age, gender, schedule)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      tournamentId,
-      name.trim().toUpperCase(),
-      discipline.trim().toUpperCase(),
-      (division || '').toUpperCase(),
-      (level || '').toUpperCase(),
-      parseInt(min_age) || 0,
-      parseInt(max_age) || 99,
-      gender || 'MIXTO',
-      (schedule || '').toUpperCase()
-    );
+      INSERT INTO categories (tournament_id, name, discipline, division, min_age, max_age, gender, schedule)
+      VALUES (?, ?, ?, ?, 0, 99, 'MIXTO', ?)
+    `).run(tournament.id, fullName, disc, bare, (schedule || 'A CONFIRMAR').toUpperCase());
 
-    res.redirect(`/admin/torneos/${tournamentId}/categorias?success=` + encodeURIComponent('Categoría agregada correctamente al torneo.'));
+    // Si la disciplina no estaba en la configuración del torneo, se agrega.
+    const last = await db.prepare(`
+      SELECT COALESCE(MAX(order_index), -1) AS max FROM tournament_disciplines WHERE tournament_id = ?
+    `).get(tournament.id);
+    await db.prepare(`
+      INSERT INTO tournament_disciplines (tournament_id, discipline, order_index, is_enabled)
+      VALUES (?, ?, ?, true) ON CONFLICT (tournament_id, discipline) DO NOTHING
+    `).run(tournament.id, disc, Number(last.max) + 1);
+
+    backToConfig(res, tournament.id, { success: `Categoría ${bare} agregada a ${disc}.` });
   } catch (err) {
     console.error('Error creating category:', err);
-    res.redirect(`/admin/torneos/${tournamentId}/categorias?error=` + encodeURIComponent('Error al agregar categoría.'));
+    backToConfig(res, tournament.id, { error: 'Error al agregar la categoría.' });
+  }
+});
+
+// Renombrar / editar una categoría
+router.post('/torneos/:id/categorias/:catId/editar', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  const catId = toInt(req.params.catId);
+  const category = await db.prepare(`SELECT * FROM categories WHERE id = ? AND tournament_id = ?`).get(catId, tournament.id);
+  if (!category) return backToConfig(res, tournament.id, { error: 'Categoría no encontrada.' });
+
+  const bare = String(req.body.name || '').trim().toUpperCase();
+  if (!bare) return backToConfig(res, tournament.id, { error: 'El nombre de la categoría no puede quedar vacío.' });
+
+  const fullName = `${category.discipline} - ${bare}`;
+  try {
+    await db.prepare(`
+      UPDATE categories SET name = ?, division = ?, schedule = ? WHERE id = ?
+    `).run(fullName, bare, (req.body.schedule || category.schedule || '').toUpperCase(), catId);
+    backToConfig(res, tournament.id, { success: `Categoría actualizada a ${bare}.` });
+  } catch (err) {
+    console.error('Error updating category:', err);
+    backToConfig(res, tournament.id, { error: 'Error al actualizar la categoría.' });
+  }
+});
+
+// Marcar una categoría como vigente o histórica. Las históricas se conservan
+// (junto con sus inscripciones) pero dejan de ofrecerse al inscribir.
+router.post('/torneos/:id/categorias/:catId/estado', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  const catId = toInt(req.params.catId);
+  const activate = req.body.is_active === '1';
+
+  try {
+    await db.prepare(`UPDATE categories SET is_active = ? WHERE id = ? AND tournament_id = ?`)
+      .run(activate, catId, tournament.id);
+    backToConfig(res, tournament.id, {
+      success: activate ? 'Categoría marcada como vigente: vuelve a ofrecerse al inscribir.' : 'Categoría marcada como histórica: ya no se ofrece al inscribir.'
+    });
+  } catch (err) {
+    console.error('Error toggling category:', err);
+    backToConfig(res, tournament.id, { error: 'Error al cambiar el estado de la categoría.' });
+  }
+});
+
+// Eliminar categoría (bloqueada si tiene inscripciones)
+router.post('/torneos/:id/categorias/:catId/eliminar', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  const catId = toInt(req.params.catId);
+  const category = await db.prepare(`SELECT * FROM categories WHERE id = ? AND tournament_id = ?`).get(catId, tournament.id);
+  if (!category) return backToConfig(res, tournament.id, { error: 'Categoría no encontrada.' });
+
+  const used = await db.prepare(`SELECT COUNT(*) AS count FROM registrations WHERE category_id = ?`).get(catId);
+  if (Number(used.count) > 0) {
+    return backToConfig(res, tournament.id, {
+      error: `No se puede eliminar "${formatCategoryName(category.name, category.discipline)}": tiene ${used.count} inscripción(es).`
+    });
+  }
+
+  try {
+    await db.prepare(`DELETE FROM categories WHERE id = ?`).run(catId);
+    backToConfig(res, tournament.id, { success: 'Categoría eliminada.' });
+  } catch (err) {
+    console.error('Error deleting category:', err);
+    backToConfig(res, tournament.id, { error: 'Error al eliminar la categoría.' });
+  }
+});
+
+// --- Categorías de edad (franjas) -----------------------------------------
+
+router.post('/torneos/:id/franjas', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  const discipline = String(req.body.discipline || '').trim().toUpperCase();
+  const name = String(req.body.name || '').trim().toUpperCase();
+  const minAge = parseInt(req.body.min_age, 10);
+  const maxAge = parseInt(req.body.max_age, 10);
+
+  if (!discipline || !name) {
+    return backToConfig(res, tournament.id, { error: 'Disciplina y nombre de la categoría de edad son requeridos.' });
+  }
+  if (!Number.isFinite(minAge) || !Number.isFinite(maxAge) || minAge < 0 || maxAge < minAge) {
+    return backToConfig(res, tournament.id, { error: 'El rango de edades no es válido (la edad máxima debe ser mayor o igual a la mínima).' });
+  }
+
+  const last = await db.prepare(`
+    SELECT COALESCE(MAX(order_index), -1) AS max FROM tournament_age_bands
+    WHERE tournament_id = ? AND discipline = ?
+  `).get(tournament.id, discipline);
+
+  try {
+    await db.prepare(`
+      INSERT INTO tournament_age_bands (tournament_id, discipline, name, min_age, max_age, order_index)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT (tournament_id, discipline, name)
+      DO UPDATE SET min_age = EXCLUDED.min_age, max_age = EXCLUDED.max_age
+    `).run(tournament.id, discipline, name, minAge, maxAge, Number(last.max) + 1);
+    backToConfig(res, tournament.id, { success: `Categoría de edad ${name} (${minAge}-${maxAge}) guardada en ${discipline}.` });
+  } catch (err) {
+    console.error('Error adding age band:', err);
+    backToConfig(res, tournament.id, { error: 'Error al guardar la categoría de edad.' });
+  }
+});
+
+router.post('/torneos/:id/franjas/:bandId/editar', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  const bandId = toInt(req.params.bandId);
+  const name = String(req.body.name || '').trim().toUpperCase();
+  const minAge = parseInt(req.body.min_age, 10);
+  const maxAge = parseInt(req.body.max_age, 10);
+
+  if (!name || !Number.isFinite(minAge) || !Number.isFinite(maxAge) || maxAge < minAge) {
+    return backToConfig(res, tournament.id, { error: 'Datos inválidos para la categoría de edad.' });
+  }
+
+  try {
+    await db.prepare(`
+      UPDATE tournament_age_bands SET name = ?, min_age = ?, max_age = ?
+      WHERE id = ? AND tournament_id = ?
+    `).run(name, minAge, maxAge, bandId, tournament.id);
+    backToConfig(res, tournament.id, { success: `Categoría de edad ${name} actualizada.` });
+  } catch (err) {
+    console.error('Error updating age band:', err);
+    backToConfig(res, tournament.id, { error: 'Error al actualizar la categoría de edad.' });
+  }
+});
+
+router.post('/torneos/:id/franjas/:bandId/eliminar', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  try {
+    await db.prepare(`DELETE FROM tournament_age_bands WHERE id = ? AND tournament_id = ?`)
+      .run(toInt(req.params.bandId), tournament.id);
+    backToConfig(res, tournament.id, { success: 'Categoría de edad eliminada.' });
+  } catch (err) {
+    console.error('Error deleting age band:', err);
+    backToConfig(res, tournament.id, { error: 'Error al eliminar la categoría de edad.' });
   }
 });
 
@@ -357,18 +997,23 @@ router.get('/usuarios', async (req, res) => {
 
 // Create New User
 router.post('/usuarios', async (req, res) => {
-  const { username, password, full_name, role, club_id, email, phone } = req.body;
+  const { username, password, full_name, role, club_id, email, phone, admin_scope } = req.body;
 
   if (!username || !password || !full_name || !role) {
     return res.redirect('/admin/usuarios?error=' + encodeURIComponent('Complete todos los campos obligatorios del usuario.'));
   }
 
+  if (!ROLES.includes(role)) {
+    return res.redirect('/admin/usuarios?error=' + encodeURIComponent('Rol inválido.'));
+  }
+
   try {
     const password_hash = bcrypt.hashSync(password, 10);
+    const scope = String(admin_scope || '').trim().toUpperCase() || null;
     const info = await db.prepare(`
-      INSERT INTO users (username, password_hash, full_name, role, club_id, email, phone)
-      VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
-    `).run(username.trim().toLowerCase(), password_hash, full_name.trim().toUpperCase(), role, club_id || null, (email || '').toUpperCase(), phone || '');
+      INSERT INTO users (username, password_hash, full_name, role, club_id, email, phone, admin_scope)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
+    `).run(username.trim().toLowerCase(), password_hash, full_name.trim().toUpperCase(), role, club_id || null, (email || '').toUpperCase(), phone || '', scope);
 
     if (club_id) {
       await db.prepare(`INSERT INTO user_clubs (user_id, club_id) VALUES (?, ?) ON CONFLICT DO NOTHING`).run(info.lastInsertRowid, club_id);
@@ -382,6 +1027,47 @@ router.post('/usuarios', async (req, res) => {
       msg = 'El nombre de usuario ya existe.';
     }
     res.redirect('/admin/usuarios?error=' + encodeURIComponent(msg));
+  }
+});
+
+// Cambiar el rol y el alcance de administración de un usuario.
+// 'profesor_admin' ve primero su módulo de profesora y además el panel admin;
+// el alcance (ej: CABA) limita qué torneos puede ver y editar.
+router.post('/usuarios/:id/rol', async (req, res) => {
+  const userId = toInt(req.params.id);
+  const { role, admin_scope } = req.body;
+
+  if (!ROLES.includes(role)) {
+    return res.redirect('/admin/usuarios?error=' + encodeURIComponent('Rol inválido.'));
+  }
+
+  const target = await db.prepare(`SELECT * FROM users WHERE id = ?`).get(userId);
+  if (!target) {
+    return res.redirect('/admin/usuarios?error=' + encodeURIComponent('Usuario no encontrado.'));
+  }
+
+  // Nadie puede quitarse a sí mismo el acceso de administrador y quedar afuera.
+  if (req.session.user.id === userId && !['admin', 'profesor_admin'].includes(role)) {
+    return res.redirect('/admin/usuarios?error=' + encodeURIComponent('No podés quitarte tu propio acceso de administrador.'));
+  }
+
+  const scope = String(admin_scope || '').trim().toUpperCase() || null;
+
+  try {
+    await db.prepare(`UPDATE users SET role = ?, admin_scope = ? WHERE id = ?`).run(role, scope, userId);
+
+    // Si se cambió a sí mismo, la sesión activa se actualiza al instante.
+    if (req.session.user.id === userId) {
+      req.session.user.role = role;
+      req.session.user.admin_scope = scope;
+    }
+
+    res.redirect('/admin/usuarios?success=' + encodeURIComponent(
+      `${target.full_name}: rol ${role}${scope ? ` con alcance ${scope}` : ' (todos los torneos)'}.`
+    ));
+  } catch (err) {
+    console.error('Error updating user role:', err);
+    res.redirect('/admin/usuarios?error=' + encodeURIComponent('Error al actualizar el rol del usuario.'));
   }
 });
 
@@ -647,6 +1333,38 @@ router.post('/usuarios/:id/restablecer', async (req, res) => {
   }
 
   res.redirect('/admin/usuarios?success=' + encodeURIComponent(`✅ Correo enviado automáticamente a ${user.email} con las instrucciones.`));
+});
+
+// Delete User (Admins, Teachers, Judges)
+router.post('/usuarios/:id/eliminar', async (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+  if (!userId) {
+    return res.redirect('/admin/usuarios?error=' + encodeURIComponent('Identificador de usuario inválido.'));
+  }
+
+  if (userId === req.session.user.id) {
+    return res.redirect('/admin/usuarios?error=' + encodeURIComponent('No podés eliminar tu propia cuenta de administrador.'));
+  }
+
+  const user = await db.prepare(`SELECT * FROM users WHERE id = ?`).get(userId);
+  if (!user) {
+    return res.redirect('/admin/usuarios?error=' + encodeURIComponent('Usuario no encontrado.'));
+  }
+
+  if (user.role === 'admin') {
+    const adminCount = await db.prepare(`SELECT COUNT(*) as count FROM users WHERE role = 'admin'`).get();
+    if (adminCount.count <= 1) {
+      return res.redirect('/admin/usuarios?error=' + encodeURIComponent('No se puede eliminar: es el único administrador del sistema.'));
+    }
+  }
+
+  try {
+    await db.prepare(`DELETE FROM users WHERE id = ?`).run(userId);
+    res.redirect('/admin/usuarios?success=' + encodeURIComponent(`✅ Usuario ${user.full_name} (@${user.username}) eliminado correctamente.`));
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    res.redirect('/admin/usuarios?error=' + encodeURIComponent('Error al eliminar el usuario.'));
+  }
 });
 
 // View Student Documents (Admin Inspector)

@@ -105,13 +105,37 @@ db.initPromise.then(async () => {
     console.log(`🏷️ Categorías copiadas a ${catReport.copied.length} torneo(s) sin categorías: ${catReport.copied.map(t => `#${t.id} (${t.categories})`).join(', ')}`);
   }
 
-  // Alinear catálogo de categorías/disciplinas con el Excel oficial (idempotente)
+  // Alinear catálogo de categorías/disciplinas con el catálogo oficial.
+  // Solo corre cuando cambia CATALOG_REVISION: si no, respeta lo que el
+  // administrador editó desde el panel.
   const ensureCategoriesCatalog = require('./lib/ensure_categories_catalog');
   const catalogReport = await ensureCategoriesCatalog();
-  const totalAdded = catalogReport.aligned.reduce((s, t) => s + t.added, 0);
-  const totalRemoved = catalogReport.aligned.reduce((s, t) => s + t.removed, 0);
-  if (totalAdded > 0 || totalRemoved > 0) {
-    console.log(`📊 Catálogo alineado: +${totalAdded} / -${totalRemoved} categorías en ${catalogReport.tournaments} torneo(s).`);
+  if (catalogReport.skipped) {
+    console.log(`📊 Catálogo ya alineado (revisión ${catalogReport.revision}), se respeta la configuración de la base.`);
+  } else {
+    const totalAdded = catalogReport.aligned.reduce((s, t) => s + t.added, 0);
+    const totalRemoved = catalogReport.aligned.reduce((s, t) => s + t.removed, 0);
+    const totalKept = catalogReport.aligned.reduce((s, t) => s + t.kept, 0);
+    console.log(`📊 Catálogo alineado a ${catalogReport.revision}: +${totalAdded} / -${totalRemoved} categorías en ${catalogReport.tournaments} torneo(s); ${totalKept} conservada(s) por tener inscripciones.`);
+  }
+
+  // Siembra la configuración editable por torneo (disciplinas y categorías de edad)
+  const tournamentConfig = require('./lib/tournament_config');
+  const configReport = await tournamentConfig.seedAllTournaments();
+  if (configReport.disciplines > 0 || configReport.bands > 0) {
+    console.log(`🎛️ Configuración por torneo sembrada: ${configReport.disciplines} disciplina(s) y ${configReport.bands} categoría(s) de edad en ${configReport.tournaments} torneo(s).`);
+  }
+
+  // Rol combinado profesor + administrador para quienes lo pidió la Liga
+  const { ensureRoles } = require('./lib/ensure_roles');
+  const rolesReport = await ensureRoles();
+  if (!rolesReport.skipped) {
+    rolesReport.updated.forEach(u => {
+      console.log(`👤 ${u.name} (${u.email}) → profesor + administrador${u.scope ? ` · solo torneos de ${u.scope}` : ' · todos los torneos'}`);
+    });
+    if (rolesReport.notFound.length) {
+      console.log(`⚠️ No se encontró cuenta para: ${rolesReport.notFound.join(', ')}`);
+    }
   }
 
   app.listen(PORT, () => {

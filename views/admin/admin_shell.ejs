@@ -9,12 +9,21 @@
   </div>
 
   <nav class="admin-sidebar-nav">
+    <%# Rol combinado: acceso directo de vuelta a su módulo de profesora %>
+    <% if (user && user.role === 'profesor_admin') { %>
+      <a href="/profesor/dashboard" class="admin-nav-link">
+        <span class="material-symbols-outlined">school</span> Volver a Mis Alumnas
+      </a>
+      <div style="margin: 0.5rem 0 0.75rem; border-top: 1px solid rgba(212,175,55,0.25);"></div>
+    <% } %>
     <a href="/admin/dashboard" class="admin-nav-link <%= activeNav === 'dashboard' ? 'active' : '' %>">
       <span class="material-symbols-outlined">dashboard</span> Dashboard
     </a>
-    <a href="/admin/usuarios" class="admin-nav-link <%= activeNav === 'usuarios' ? 'active' : '' %>">
-      <span class="material-symbols-outlined">group</span> Usuarios
-    </a>
+    <% if (!user || !user.admin_scope) { %>
+      <a href="/admin/usuarios" class="admin-nav-link <%= activeNav === 'usuarios' ? 'active' : '' %>">
+        <span class="material-symbols-outlined">group</span> Usuarios
+      </a>
+    <% } %>
     <a href="/admin/torneos" class="admin-nav-link <%= activeNav === 'torneos' ? 'active' : '' %>">
       <span class="material-symbols-outlined">emoji_events</span> Torneos
     </a>
@@ -30,9 +39,11 @@
     <a href="/admin/posiciones" class="admin-nav-link <%= activeNav === 'posiciones' ? 'active' : '' %>">
       <span class="material-symbols-outlined">leaderboard</span> Posiciones
     </a>
-    <a href="/admin/cms" class="admin-nav-link <%= activeNav === 'cms' ? 'active' : '' %>">
-      <span class="material-symbols-outlined">settings_applications</span> Página Principal
-    </a>
+    <% if (!user || !user.admin_scope) { %>
+      <a href="/admin/cms" class="admin-nav-link <%= activeNav === 'cms' ? 'active' : '' %>">
+        <span class="material-symbols-outlined">settings_applications</span> Página Principal
+      </a>
+    <% } %>
   </nav>
 
   <div class="admin-sidebar-footer">

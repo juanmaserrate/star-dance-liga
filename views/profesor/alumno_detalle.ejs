@@ -81,6 +81,7 @@
                 <th>Torneo</th>
                 <th>Fecha Torneo</th>
                 <th>Categoría y Disciplina</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -91,6 +92,9 @@
                   <td>
                     <span class="badge badge-violet"><%= formatCategoryName(r.category_name, r.discipline) %></span>
                     <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.discipline %></div>
+                  </td>
+                  <td>
+                    <a href="/profesor/inscripciones/<%= r.id %>/editar" class="btn btn-outline-gold btn-sm" title="Editar o mover de torneo">✏️ Editar</a>
                   </td>
                 </tr>
               <% }) %>

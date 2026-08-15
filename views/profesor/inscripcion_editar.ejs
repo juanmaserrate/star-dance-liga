@@ -1,0 +1,20 @@
+<%- include('../partials/header', { title: 'Editar Inscripción' }) %>
+<%- include('profesor_shell', { activeNav: 'mis_alumnas', topbarSection: 'Editar Inscripción' }) %>
+
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+    <div>
+      <h1 style="color: var(--gold-light); font-size: 1.8rem;">✏️ Editar / Mover Inscripción</h1>
+      <p style="color: var(--text-muted);">Modificá el torneo, la categoría o las notas de tu inscripción.</p>
+    </div>
+  </div>
+
+  <%- include('../partials/inscripcion_editar_form', {
+    formAction: '/profesor/inscripciones/' + reg.id + '/editar',
+    baseUrl: '/profesor/inscripciones/' + reg.id + '/editar',
+    backUrl: '/profesor/dashboard',
+    showStatus: false
+  }) %>
+
+</main>
+
+<%- include('../partials/footer') %>
