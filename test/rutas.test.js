@@ -155,6 +155,46 @@ async function main() {
   check('La inscripción guarda la edad', Number(nueva.age) === 16, JSON.stringify(nueva));
   check('La inscripción guarda la categoría de edad', nueva.age_band === 'JUVENIL', JSON.stringify(nueva));
 
+  // --- No se puede repetir alumna + categoría dentro del MISMO torneo ---
+  const contar = async () => (await pglite.query(`SELECT COUNT(*)::int AS n FROM registrations`)).rows[0].n;
+  const antesDup = await contar();
+
+  const repetida = await request(app).post('/profesor/inscribir').send({
+    tournament_id: String(zonaSur), category_id: String(freeCat.id),
+    group_type: 'Individual', student_ids: '2', age: '16', club_id: '1'
+  });
+  check('Rechaza inscribir dos veces en la misma categoría del mismo torneo',
+    (await contar()) === antesDup, `quedaron ${await contar()} (antes ${antesDup})`);
+  check('Y explica el motivo en pantalla',
+    decodeURIComponent(repetida.headers.location || '').includes('ya está inscripta'),
+    decodeURIComponent(repetida.headers.location || ''));
+
+  // Otra categoría del mismo torneo sí se permite: no es un duplicado
+  const otraCat = (await pglite.query(
+    `SELECT id FROM categories WHERE tournament_id = ${zonaSur} AND discipline = 'FREE DANCE' AND division = 'INICIAL'`
+  )).rows[0];
+  await request(app).post('/profesor/inscribir').send({
+    tournament_id: String(zonaSur), category_id: String(otraCat.id),
+    group_type: 'Individual', student_ids: '2', age: '16', club_id: '1'
+  });
+  check('Deja inscribir a la misma alumna en OTRA categoría del torneo',
+    (await contar()) === antesDup + 1, `quedaron ${await contar()}`);
+
+  // La misma categoría en OTRO torneo también se permite: el control es por torneo
+  const mismaEnCaba = (await pglite.query(
+    `SELECT id FROM categories WHERE tournament_id = ${zonaCaba} AND discipline = 'FREE DANCE' AND division = 'DEBUTANTE'`
+  )).rows[0];
+  await request(app).post('/profesor/inscribir').send({
+    tournament_id: String(zonaCaba), category_id: String(mismaEnCaba.id),
+    group_type: 'Individual', student_ids: '2', age: '16', club_id: '1'
+  });
+  check('Deja inscribir la MISMA categoría en otro torneo (el control es por torneo)',
+    (await contar()) === antesDup + 2, `quedaron ${await contar()}`);
+
+  const formDup = await request(app).get(`/profesor/inscribir?tournament_id=${zonaSur}`);
+  check('El formulario avisa del repetido antes de confirmar',
+    formDup.text.includes('YA_INSCRIPTAS') && formDup.text.includes('dup_warning'));
+
   // --- Pantallas del administrador ---
   await get(ADMIN, '/admin/dashboard');
   const dashFiltrado = await get(ADMIN, `/admin/dashboard?tournament_id=${zonaSur}`);

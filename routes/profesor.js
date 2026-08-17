@@ -667,6 +667,24 @@ router.get('/inscribir', async (req, res) => {
     ? await tc.getRulesetsByDiscipline(selectedTournamentId)
     : {};
 
+  // Pares alumna+categoría ya ocupados EN ESTE TORNEO, para avisar en pantalla
+  // antes de confirmar. Es solo de este torneo: en otro la inscripción es válida.
+  const yaInscriptas = selectedTournamentId
+    ? await db.prepare(`
+        SELECT DISTINCT student_id, category_id FROM (
+          SELECT r.student_id, r.category_id
+          FROM registrations r
+          WHERE r.tournament_id = ? AND r.student_id IS NOT NULL
+            AND COALESCE(r.status, '') <> 'cancelled'
+          UNION
+          SELECT rm.student_id, r.category_id
+          FROM registrations r
+          JOIN registration_members rm ON rm.registration_id = r.id
+          WHERE r.tournament_id = ? AND COALESCE(r.status, '') <> 'cancelled'
+        ) x
+      `).all(selectedTournamentId, selectedTournamentId)
+    : [];
+
   res.render('profesor/inscribir', {
     user: req.session.user,
     students,
@@ -677,6 +695,7 @@ router.get('/inscribir', async (req, res) => {
     disciplines,
     ageBandsByDiscipline,
     rulesetsByDiscipline,
+    yaInscriptas,
     preselectedStudentId: req.query.student_id || null,
     error: req.query.error || null
   });
@@ -719,6 +738,19 @@ router.post('/inscribir', async (req, res) => {
   if (uniqueStudentIds.length !== selectedStudentIds.length) {
     if (ajax) return res.status(400).json({ ok: false, message: 'No podés seleccionar a la misma patinadora más de una vez en la misma inscripción.' });
     return res.redirect('/profesor/inscribir?error=' + encodeURIComponent('No podés seleccionar a la misma patinadora más de una vez en la misma inscripción.'));
+  }
+
+  // No se puede anotar dos veces a la misma patinadora en la misma categoría
+  // del mismo torneo. Se mira solo ese torneo: en otro torneo, o en otra
+  // categoría de este, la inscripción es válida.
+  const duplicadas = await inscEdit.findDuplicateInCategory(
+    tournament_id, category_id, selectedStudentIds
+  );
+  if (duplicadas.length) {
+    const msg = inscEdit.duplicateMessage(duplicadas);
+    if (ajax) return res.status(409).json({ ok: false, message: msg });
+    return res.redirect('/profesor/inscribir?tournament_id=' + encodeURIComponent(tournament_id) +
+      '&error=' + encodeURIComponent(msg));
   }
 
   // Get main student and primary club
@@ -872,6 +904,12 @@ router.post('/inscripciones/:id/editar', async (req, res) => {
       return back('No se puede mover: alguna de las patinadoras ya está inscripta en el torneo de destino.');
     }
   }
+
+  // Tampoco se puede editar una inscripción para dejarla repetida.
+  const repetida = await inscEdit.findDuplicateInCategory(
+    tournament_id, category_id, reg.studentIds, regId
+  );
+  if (repetida.length) return back(inscEdit.duplicateMessage(repetida));
 
   // Edad y categoría de edad: manda lo que eligió la profesora en el formulario.
   let age = parseInt(req.body.age, 10);

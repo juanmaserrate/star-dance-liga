@@ -285,6 +285,15 @@ router.post('/inscripciones/:id/editar', async (req, res) => {
     }
   }
 
+  // Una inscripción no puede quedar repetida dentro del mismo torneo. Las
+  // canceladas no cuentan, así que el administrador puede reactivar sin trabas.
+  if (status !== 'cancelled') {
+    const repetida = await inscEdit.findDuplicateInCategory(
+      tournament_id, category_id, reg.studentIds, regId
+    );
+    if (repetida.length) return back(inscEdit.duplicateMessage(repetida));
+  }
+
   // Edad y categoría de edad: manda lo que se eligió en el formulario. Si no
   // vino nada, se resuelve por la categoría (comportamiento anterior).
   let age = parseInt(req.body.age, 10);

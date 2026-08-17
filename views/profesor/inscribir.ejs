@@ -136,6 +136,9 @@
         <input type="text" id="notes" name="notes" class="form-control" placeholder="EJ: MÚSICA ENVIADA / PISTAS">
       </div>
 
+      <!-- Aviso de inscripción repetida en este torneo -->
+      <div id="dup_warning" class="alert alert-danger" style="display: none;"></div>
+
       <div style="margin-top: 2rem;">
         <button type="submit" class="btn btn-gold" style="width: 100%; font-size: 1.1rem;" <%= (!students || students.length === 0 || !categories || categories.length === 0) ? 'disabled' : '' %>>
           ✨ Confirmar
@@ -151,6 +154,13 @@
   const PRESELECTED_ID = <%- JSON.stringify(preselectedStudentId || null) %>;
   const AGE_BANDS = <%- typeof ageBandsByDiscipline !== 'undefined' ? JSON.stringify(ageBandsByDiscipline).replace(/</g, '\\u003c') : '{}' %>;
   const RULESETS = <%- typeof rulesetsByDiscipline !== 'undefined' ? JSON.stringify(rulesetsByDiscipline).replace(/</g, '\\u003c') : '{}' %>;
+
+  // Pares "alumna|categoría" ya ocupados EN ESTE TORNEO. Sirve para avisar antes
+  // de confirmar; el servidor igual lo vuelve a chequear al guardar.
+  const YA_INSCRIPTAS = new Set(
+    (<%- typeof yaInscriptas !== 'undefined' ? JSON.stringify(yaInscriptas).replace(/</g, '\\u003c') : '[]' %>)
+      .map(x => String(x.student_id) + '|' + String(x.category_id))
+  );
 
   // Disciplinas que siempre son individuales y por lo tanto NO muestran el
   // desplegable de tipo de inscripción.
@@ -495,6 +505,50 @@
     buildStudentRows(max);
   }
 
+  // El botón puede venir deshabilitado de entrada (sin alumnas o sin categorías).
+  let SUBMIT_YA_BLOQUEADO = false;
+
+  // Avisa si alguna de las patinadoras elegidas ya está anotada en esa misma
+  // categoría de ESTE torneo, y bloquea el botón de confirmar.
+  function checkDuplicados() {
+    const box = document.getElementById('dup_warning');
+    const catSelect = document.getElementById('category_id');
+    const submit = document.querySelector('#enrollmentForm button[type="submit"]');
+    if (!box || !catSelect || !submit) return;
+
+    const catId = catSelect.value;
+    const container = document.getElementById('student_rows');
+    const elegidas = container
+      ? Array.from(container.querySelectorAll('select[name="student_ids"]')).map(s => s.value).filter(Boolean)
+      : [];
+
+    const repetidas = !catId ? [] : elegidas.filter(id => YA_INSCRIPTAS.has(id + '|' + catId));
+
+    if (!repetidas.length) {
+      box.style.display = 'none';
+      box.textContent = '';
+      // No se reactiva el botón si ya venía deshabilitado por otro motivo
+      // (sin patinadoras cargadas o sin categorías en el torneo).
+      submit.disabled = SUBMIT_YA_BLOQUEADO;
+      return;
+    }
+
+    const nombres = repetidas
+      .map(id => STUDENTS.find(s => String(s.id) === String(id)))
+      .filter(Boolean)
+      .map(s => s.last_name + ' ' + s.first_name);
+    const catLabel = catSelect.options[catSelect.selectedIndex]
+      ? catSelect.options[catSelect.selectedIndex].textContent.trim()
+      : 'esa categoría';
+
+    box.textContent = '⚠️ ' + nombres.join(' y ') +
+      (nombres.length > 1 ? ' ya están inscriptas' : ' ya está inscripta') +
+      ' en ' + catLabel + ' en este torneo. No se puede repetir la misma categoría. ' +
+      'Podés elegir otra categoría, o revisar las inscripciones realizadas.';
+    box.style.display = 'block';
+    submit.disabled = true;
+  }
+
   function filterSelectedStudents() {
     const container = document.getElementById('student_rows');
     if (!container) return;
@@ -519,6 +573,12 @@
 
   // Attach event listeners (delegación: no hace falta re-adjuntar por renglón)
   document.addEventListener('DOMContentLoaded', () => {
+    const submitBtn = document.querySelector('#enrollmentForm button[type="submit"]');
+    SUBMIT_YA_BLOQUEADO = !!(submitBtn && submitBtn.disabled);
+
+    const catSelect = document.getElementById('category_id');
+    if (catSelect) catSelect.addEventListener('change', checkDuplicados);
+
     const disciplineSelect = document.getElementById('discipline_select');
     if (disciplineSelect) {
       disciplineSelect.addEventListener('change', () => {
@@ -527,6 +587,7 @@
         populateAgeBands();
         filterGroupTypesByDiscipline(disciplineSelect.value);
         applyStudentDefaults();
+        checkDuplicados();
       });
       populateRulesets();
       populateAgeBands();
@@ -538,7 +599,10 @@
     // Al cambiar el reglamento se recargan las categorías de ese reglamento.
     const rulesetSelect = document.getElementById('ruleset');
     if (rulesetSelect) {
-      rulesetSelect.addEventListener('change', filterCategoriesByDiscipline);
+      rulesetSelect.addEventListener('change', () => {
+        filterCategoriesByDiscipline();
+        checkDuplicados();
+      });
     }
 
     const ageInput = document.getElementById('age');
@@ -552,6 +616,7 @@
         if (e.target && e.target.name === 'student_ids') {
           filterSelectedStudents();
           applyStudentDefaults();
+          checkDuplicados();
         }
       });
     }
