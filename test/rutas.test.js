@@ -290,6 +290,25 @@ async function main() {
   check('El archivo generado es un .xlsx válido',
     buf.length > 3000 && buf[0] === 0x50 && buf[1] === 0x4b, `${buf.length} bytes`);
 
+  // El cuadro tiene que llevar la categoría como columna, además del bloque
+  const ExcelJS = require('exceljs');
+  const leido = new ExcelJS.Workbook();
+  await leido.xlsx.load(buf);
+  const hoja = leido.getWorksheet('Planilla');
+  let encabezado = null, primeraFila = null;
+  hoja.eachRow((fila, n) => {
+    if (encabezado || String(fila.getCell(1).value || '') !== 'NOMBRE COMPLETO') return;
+    encabezado = [1, 2, 3, 4, 5].map(c => String(fila.getCell(c).value || ''));
+    primeraFila = [1, 2, 3, 4, 5].map(c => hoja.getRow(n + 1).getCell(c).value);
+  });
+  check('Las columnas son nombre, edad, categoría, categoría de edad y club',
+    JSON.stringify(encabezado) === JSON.stringify(
+      ['NOMBRE COMPLETO', 'EDAD', 'CATEGORÍA', 'CATEGORÍA DE EDAD', 'CLUB']),
+    JSON.stringify(encabezado));
+  check('Cada renglón trae la categoría cargada',
+    primeraFila && primeraFila[2] && String(primeraFila[2]).trim() !== '',
+    JSON.stringify(primeraFila));
+
   const vacia = Buffer.from(await insc.buildXlsxPorCategoria([],
     { name: 'TORNEO VACÍO', datesLabel: '', venue: '' }));
   check('Un torneo sin inscripciones genera la planilla igual, sin romper', vacia.length > 2000);
