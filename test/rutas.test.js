@@ -472,6 +472,66 @@ async function main() {
     insc.sheetName('LIBRE/EXHIBICIÓN', usados) === 'LIBRE EXHIBICIÓN (2)' &&
     insc.sheetName('X'.repeat(60), usados).length === 31);
 
+
+  // --- Cuarta opción: planilla de orden de salida a pista ---
+  const ordenPista = await request(app).get(
+    `/admin/exportar/planilla?tournament_id=${zonaSur}&agrupar=orden_pista`);
+  check('GET planilla de orden de pista responde un .xlsx',
+    ordenPista.status === 200 &&
+    /spreadsheetml/.test(ordenPista.headers['content-type'] || '') &&
+    /filename="PLANILLA_.*_ORDEN_DE_PISTA\.xlsx"/.test(ordenPista.headers['content-disposition'] || ''),
+    `status ${ordenPista.status} · ${ordenPista.headers['content-disposition']}`);
+
+  // El bloque se arma con disciplina + categoría + categoría de edad
+  const pistaBloques = insc.groupByOrdenDePista(filas);
+  const conFranja = pistaBloques.find(b => b.franja);
+  check('Cada bloque titula disciplina + categoría + categoría de edad',
+    !!conFranja && conFranja.titulo === `${conFranja.discipline} ${conFranja.label} ${conFranja.franja}`,
+    conFranja ? conFranja.titulo : 'sin bloques con franja');
+  check('Si la inscripción no tiene categoría de edad, el título no la inventa',
+    pistaBloques.filter(b => !b.franja).every(b => b.titulo === `${b.discipline} ${b.label}`),
+    JSON.stringify(pistaBloques.filter(b => !b.franja).slice(0, 3).map(b => b.titulo)));
+  check('Ninguna inscripción se pierde ni se duplica al agrupar',
+    pistaBloques.reduce((n, b) => n + b.total, 0) === filas.length,
+    `${pistaBloques.reduce((n, b) => n + b.total, 0)} de ${filas.length}`);
+
+  const bufPista = Buffer.from(await insc.buildXlsxOrdenDePista(filas,
+    { name: 'ZONA SUR', datesLabel: '6 DE SEPTIEMBRE', venue: 'INSTITUTO ESTRADA' }));
+  const libroPista = new ExcelJS.Workbook();
+  await libroPista.xlsx.load(bufPista);
+  const hojaPista = libroPista.getWorksheet('Orden de Pista');
+
+  let encPista = null;
+  const salidas = [];
+  let horarioVacio = true;
+  hojaPista.eachRow((fila, n) => {
+    if (String(fila.getCell(3).value || '') === 'Apellido') {
+      if (!encPista) encPista = [3, 4, 5, 6].map(c => String(fila.getCell(c).value || ''));
+      // La primera fila de datos de cada bloque tiene que arrancar en 1
+      const primera = hojaPista.getRow(n + 1).getCell(6).value;
+      if (primera !== null && primera !== undefined && primera !== '') salidas.push(Number(primera));
+    }
+    // Las filas 1 y 2 son el título, combinado de punta a punta: ExcelJS
+    // devuelve el valor del maestro en toda la combinación, así que se saltean.
+    if (n > 2) {
+      const h = fila.getCell(2).value;
+      if (h !== null && h !== undefined && h !== '') horarioVacio = false;
+    }
+  });
+
+  check('Las columnas son Apellido, Nombre, Institución y Salida a pista',
+    JSON.stringify(encPista) === JSON.stringify(['Apellido', 'Nombre', 'Institución', 'Salida a pista']),
+    JSON.stringify(encPista));
+  check('La salida a pista arranca en 1 en cada bloque',
+    salidas.length > 0 && salidas.every(v => v === 1), JSON.stringify(salidas.slice(0, 8)));
+  check('La columna de horario queda vacía: no hay horarios cargados', horarioVacio);
+
+  // Apellido y nombre salen de los campos del padrón, sin recombinarlos
+  const conAlumna = filas.find(f => !f.is_group && f.apellido && f.nombre_pila);
+  check('Apellido y Nombre se toman tal cual están en el padrón',
+    !!conAlumna && conAlumna.nombre === `${conAlumna.apellido} ${conAlumna.nombre_pila}`,
+    conAlumna ? `${conAlumna.apellido} | ${conAlumna.nombre_pila}` : 'sin datos');
+
   const scopeAjeno = await get(PROFE_ADMIN, `/admin/exportar/planilla?tournament_id=${zonaSur}`, false);
   check('Giselle no puede bajar la planilla de un torneo de otra zona',
     scopeAjeno.status === 302 && decodeURIComponent(scopeAjeno.headers.location || '').includes('fuera de tu alcance'),

@@ -386,7 +386,8 @@ router.get('/exportar/planilla', async (req, res) => {
     const armados = {
       disciplina: { build: insc.buildXlsxPorCategoria, sufijo: '_POR_DISCIPLINA' },
       categoria: { build: insc.buildXlsxPorCategoriaSola, sufijo: '_POR_CATEGORIA' },
-      categoria_hojas: { build: insc.buildXlsxHojaPorCategoria, sufijo: '_POR_CATEGORIA_EN_HOJAS' }
+      categoria_hojas: { build: insc.buildXlsxHojaPorCategoria, sufijo: '_POR_CATEGORIA_EN_HOJAS' },
+      orden_pista: { build: insc.buildXlsxOrdenDePista, sufijo: '_ORDEN_DE_PISTA' }
     };
     const armado = armados[agrupar] || armados.disciplina;
 

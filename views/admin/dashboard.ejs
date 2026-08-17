@@ -63,13 +63,16 @@
           <option value="disciplina">Disciplina, y adentro por categoría</option>
           <option value="categoria">Categoría (la disciplina va como columna)</option>
           <option value="categoria_hojas">Categoría, cada una en una hoja aparte</option>
+          <option value="orden_pista">Orden de salida a pista (formato planilla)</option>
         </select>
       </div>
       <button type="submit" class="btn btn-gold" style="height: 40px;">⬇️ Descargar Excel</button>
       <p style="color: var(--text-muted); font-size: 0.85rem; width: 100%; margin: 0.25rem 0 0;">
-        Cuadros con nombre completo, edad, disciplina, categoría, categoría de edad y club.
-        Las patinadoras van ordenadas por edad, de menor a mayor. La tercera opción abre una
-        solapa por categoría, con un índice al principio. No incluye las inscripciones canceladas.
+        Las tres primeras arman cuadros con nombre completo, edad, disciplina, categoría,
+        categoría de edad y club, ordenados por edad de menor a mayor; la tercera abre una solapa
+        por categoría. La última reproduce la planilla de pista: un bloque por disciplina,
+        categoría y categoría de edad, con Apellido, Nombre, Institución y salida a pista, más
+        columnas en blanco para el horario y para anotar a mano. No incluye las canceladas.
       </p>
     </form>
   </div>
