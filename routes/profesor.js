@@ -661,6 +661,12 @@ router.get('/inscribir', async (req, res) => {
     ? await tc.getAgeBandsByDiscipline(selectedTournamentId)
     : {};
 
+  // Reglamentos por disciplina: en ADULTOS la categoría depende de si compite
+  // por el reglamento interno de Star Dance o por el del CAP.
+  const rulesetsByDiscipline = selectedTournamentId
+    ? await tc.getRulesetsByDiscipline(selectedTournamentId)
+    : {};
+
   res.render('profesor/inscribir', {
     user: req.session.user,
     students,
@@ -670,6 +676,7 @@ router.get('/inscribir', async (req, res) => {
     categories,
     disciplines,
     ageBandsByDiscipline,
+    rulesetsByDiscipline,
     preselectedStudentId: req.query.student_id || null,
     error: req.query.error || null
   });

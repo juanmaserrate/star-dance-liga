@@ -94,8 +94,24 @@ async function main() {
   });
   check('El formulario tiene los 6 campos en el orden pedido', ordered && missing.length === 0,
     missing.length ? 'faltan: ' + missing.join(', ') : 'orden incorrecto');
-  check('El formulario oculta el tipo de inscripción en LIBRE y FREE DANCE',
-    html.includes("HIDE_TYPE_DISCIPLINES = ['LIBRE', 'FREE DANCE']"));
+  check('El formulario oculta el tipo de inscripción en LIBRE, FREE DANCE y ADULTOS',
+    html.includes("HIDE_TYPE_DISCIPLINES = ['LIBRE', 'FREE DANCE', 'ADULTOS']"));
+
+  // ADULTOS: desplegable de Reglamento arriba del de Categoría.
+  check('El formulario ofrece ADULTOS como disciplina',
+    /<option value="ADULTOS"/.test(html));
+  check('El formulario tiene el desplegable de Reglamento',
+    html.includes('id="ruleset"') && html.includes('Reglamento'));
+  check('El Reglamento va arriba de la Categoría',
+    html.indexOf('id="ruleset_box"') < html.indexOf('id="category_id"') &&
+    html.indexOf('id="ruleset_box"') !== -1);
+  check('El formulario lleva los dos reglamentos de ADULTOS',
+    html.includes('REGLAMENTO INTERNO STAR DANCE') && html.includes('REGLAMENTO CAP'));
+  check('Cada categoría de ADULTOS viaja con su reglamento',
+    /"label":"ESCUELA FORMATIVA","discipline":"ADULTOS","ruleset":"REGLAMENTO INTERNO STAR DANCE"/.test(html) &&
+    /"label":"ELITE","discipline":"ADULTOS","ruleset":"REGLAMENTO CAP"/.test(html));
+  check('El formulario lleva las franjas de edad de ADULTOS',
+    html.includes('PROFESIONAL') && html.includes('MASTER'));
   check('El formulario no ofrece STAR DANCE ni STYLE como disciplina',
     !/<option value="STAR DANCE"/.test(html) && !/<option value="STYLE"/.test(html));
   check('El formulario lleva las franjas de edad de FREE DANCE',

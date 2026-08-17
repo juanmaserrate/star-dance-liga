@@ -74,11 +74,21 @@
         <% } %>
       </div>
 
+      <!-- Reglamento: solo en las disciplinas que se dividen por reglamento
+           (ADULTOS). Define qué categorías se ofrecen abajo. -->
+      <div class="form-group" id="ruleset_box" style="display: none;">
+        <label class="form-label" for="ruleset">Reglamento *</label>
+        <select id="ruleset" name="ruleset" class="form-select">
+          <option value="">-- Seleccionar Reglamento --</option>
+        </select>
+        <small style="color: var(--text-muted);">Cada reglamento tiene sus propias categorías.</small>
+      </div>
+
       <!-- 3. Categoría -->
       <div class="form-group">
         <label class="form-label" for="category_id">3. Seleccionar Categoría *</label>
         <% if (categories && categories.length > 0) { %>
-          <select id="category_id" name="category_id" class="form-select" required disabled data-all-categories='<%- JSON.stringify(categories.map(c => ({ id: c.id, label: c.label || c.name, discipline: c.discipline }))) %>'></select>
+          <select id="category_id" name="category_id" class="form-select" required disabled data-all-categories='<%- JSON.stringify(categories.map(c => ({ id: c.id, label: c.label || c.name, discipline: c.discipline, ruleset: c.ruleset || null }))) %>'></select>
         <% } else { %>
           <p style="color: var(--text-muted); font-size: 0.9rem;">No hay categorías creadas para este torneo.</p>
         <% } %>
@@ -140,10 +150,11 @@
   const STUDENTS = <%- JSON.stringify(students.map(s => ({ id: s.id, first_name: s.first_name, last_name: s.last_name, dni: s.dni, age: s.age, club_id: s.club_id, club_name: s.club_name }))).replace(/</g, '\\u003c') %>;
   const PRESELECTED_ID = <%- JSON.stringify(preselectedStudentId || null) %>;
   const AGE_BANDS = <%- typeof ageBandsByDiscipline !== 'undefined' ? JSON.stringify(ageBandsByDiscipline).replace(/</g, '\\u003c') : '{}' %>;
+  const RULESETS = <%- typeof rulesetsByDiscipline !== 'undefined' ? JSON.stringify(rulesetsByDiscipline).replace(/</g, '\\u003c') : '{}' %>;
 
   // Disciplinas que siempre son individuales y por lo tanto NO muestran el
   // desplegable de tipo de inscripción.
-  const HIDE_TYPE_DISCIPLINES = ['LIBRE', 'FREE DANCE'];
+  const HIDE_TYPE_DISCIPLINES = ['LIBRE', 'FREE DANCE', 'ADULTOS'];
 
   const MAX_BY_TYPE = {
     'Individual': 1,
@@ -165,6 +176,9 @@
   const AGE_BANDS_NORM = {};
   Object.keys(AGE_BANDS).forEach(k => { AGE_BANDS_NORM[normalizeDisc(k)] = AGE_BANDS[k]; });
 
+  const RULESETS_NORM = {};
+  Object.keys(RULESETS).forEach(k => { RULESETS_NORM[normalizeDisc(k)] = RULESETS[k]; });
+
   function currentDiscipline() {
     const sel = document.getElementById('discipline_select');
     return sel ? sel.value : '';
@@ -172,6 +186,49 @@
 
   function currentBands() {
     return AGE_BANDS_NORM[normalizeDisc(currentDiscipline())] || [];
+  }
+
+  // Reglamentos disponibles para la disciplina elegida (vacío si no usa).
+  function currentRulesets() {
+    return RULESETS_NORM[normalizeDisc(currentDiscipline())] || [];
+  }
+
+  function currentRuleset() {
+    const sel = document.getElementById('ruleset');
+    return sel ? sel.value : '';
+  }
+
+  // Muestra el desplegable de Reglamento solo en las disciplinas que lo usan.
+  function populateRulesets() {
+    const box = document.getElementById('ruleset_box');
+    const sel = document.getElementById('ruleset');
+    if (!box || !sel) return;
+
+    const list = currentRulesets();
+    if (!list.length) {
+      box.style.display = 'none';
+      sel.innerHTML = '<option value=""></option>';
+      sel.required = false;
+      sel.value = '';
+      return;
+    }
+
+    sel.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '-- Seleccionar Reglamento --';
+    sel.appendChild(placeholder);
+
+    list.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r;
+      opt.textContent = r;
+      sel.appendChild(opt);
+    });
+
+    sel.value = '';
+    sel.required = true;
+    box.style.display = 'block';
   }
 
   function ordinal(n) {
@@ -338,26 +395,38 @@
       return;
     }
 
+    // En las disciplinas con reglamento (ADULTOS) hay que elegirlo primero:
+    // las categorías dependen de él.
+    const usaReglamento = currentRulesets().length > 0;
+    const reglamento = currentRuleset();
+    if (usaReglamento && !reglamento) {
+      catSelect.innerHTML = '<option value="">-- Primero elegí un reglamento --</option>';
+      catSelect.disabled = true;
+      return;
+    }
+
     const placeholder = document.createElement('option');
     placeholder.value = '';
     placeholder.textContent = '-- Seleccionar Categoría --';
     catSelect.appendChild(placeholder);
 
     (allCategories || []).forEach(c => {
-      if (!selectedDisc || c.discipline === selectedDisc) {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.setAttribute('data-discipline', c.discipline);
-        opt.textContent = c.label || c.name;
-        catSelect.appendChild(opt);
-      }
+      if (c.discipline !== selectedDisc) return;
+      if (usaReglamento && c.ruleset !== reglamento) return;
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.setAttribute('data-discipline', c.discipline);
+      opt.textContent = c.label || c.name;
+      catSelect.appendChild(opt);
     });
 
     if (catSelect.options.length > 1) {
       catSelect.disabled = false;
     } else {
       catSelect.disabled = true;
-      catSelect.innerHTML = '<option value="">-- No hay categorías en esta disciplina --</option>';
+      catSelect.innerHTML = usaReglamento
+        ? '<option value="">-- No hay categorías en este reglamento --</option>'
+        : '<option value="">-- No hay categorías en esta disciplina --</option>';
     }
     catSelect.value = '';
   }
@@ -453,15 +522,23 @@
     const disciplineSelect = document.getElementById('discipline_select');
     if (disciplineSelect) {
       disciplineSelect.addEventListener('change', () => {
+        populateRulesets();
         filterCategoriesByDiscipline();
         populateAgeBands();
         filterGroupTypesByDiscipline(disciplineSelect.value);
         applyStudentDefaults();
       });
+      populateRulesets();
       populateAgeBands();
       filterGroupTypesByDiscipline(disciplineSelect.value);
     } else {
       updateRowVisibility();
+    }
+
+    // Al cambiar el reglamento se recargan las categorías de ese reglamento.
+    const rulesetSelect = document.getElementById('ruleset');
+    if (rulesetSelect) {
+      rulesetSelect.addEventListener('change', filterCategoriesByDiscipline);
     }
 
     const ageInput = document.getElementById('age');

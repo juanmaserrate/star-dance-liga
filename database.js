@@ -159,6 +159,11 @@ async function initDb() {
     -- "AVANZADO"), y el orden de estas categorías es una progresión.
     ALTER TABLE categories ADD COLUMN IF NOT EXISTS order_index INTEGER DEFAULT 0;
 
+    -- Reglamento al que pertenece la categoría. Solo lo usan las disciplinas
+    -- que se dividen en más de un reglamento (ADULTOS: interno Star Dance y
+    -- CAP, con categorías distintas cada uno). En el resto queda en NULL.
+    ALTER TABLE categories ADD COLUMN IF NOT EXISTS ruleset TEXT;
+
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS age_band TEXT;
 
     -- Edad de la patinadora al momento de inscribirse. Se precarga desde la

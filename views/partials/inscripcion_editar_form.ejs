@@ -74,7 +74,7 @@
             <option value="">-- Seleccionar categoría --</option>
             <% categories.forEach(c => { %>
               <option value="<%= c.id %>" <%= suggestedId == c.id ? 'selected' : '' %> data-discipline="<%= c.discipline %>">
-                <%= c.label %> (<%= c.discipline %>)
+                <%= c.label %> (<%= c.discipline %><% if (c.ruleset) { %> · <%= c.ruleset %><% } %>)
               </option>
             <% }) %>
           <% } %>

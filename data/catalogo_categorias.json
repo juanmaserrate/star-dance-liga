@@ -440,6 +440,59 @@
   },
   {
     "discipline": "ADULTOS",
-    "categories": []
+    "rulesets": [
+      {
+        "name": "REGLAMENTO INTERNO STAR DANCE",
+        "categories": [
+          "ESCUELA FORMATIVA",
+          "5C",
+          "4C",
+          "3C",
+          "2C",
+          "1C"
+        ]
+      },
+      {
+        "name": "REGLAMENTO CAP",
+        "categories": [
+          "BÁSICO",
+          "INTERMEDIO",
+          "ELITE"
+        ]
+      }
+    ],
+    "categories": [
+      "ESCUELA FORMATIVA",
+      "5C",
+      "4C",
+      "3C",
+      "2C",
+      "1C",
+      "BÁSICO",
+      "INTERMEDIO",
+      "ELITE"
+    ],
+    "ages": [
+      {
+        "name": "CLÁSICO",
+        "min": 21,
+        "max": 27
+      },
+      {
+        "name": "NOVICIO",
+        "min": 28,
+        "max": 37
+      },
+      {
+        "name": "PROFESIONAL",
+        "min": 38,
+        "max": 47
+      },
+      {
+        "name": "MASTER",
+        "min": 48,
+        "max": 57
+      }
+    ]
   }
 ]

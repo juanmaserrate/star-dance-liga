@@ -162,6 +162,55 @@ async function main() {
       'edades sin categoría: ' + huecos.join(', '));
   }
 
+  // --- ADULTOS: se divide en dos reglamentos con categorías distintas ---
+  const adultosCats = await pglite.query(`
+    SELECT division, ruleset FROM categories
+    WHERE tournament_id = ${zonaSur} AND discipline = 'ADULTOS' AND COALESCE(is_active, true) = true
+    ORDER BY order_index ASC`);
+  const porReglamento = {};
+  adultosCats.rows.forEach(r => {
+    if (!porReglamento[r.ruleset]) porReglamento[r.ruleset] = [];
+    porReglamento[r.ruleset].push(r.division);
+  });
+
+  check('ADULTOS: reglamento interno Star Dance con sus categorías',
+    JSON.stringify(porReglamento['REGLAMENTO INTERNO STAR DANCE']) ===
+    JSON.stringify(['ESCUELA FORMATIVA', '5C', '4C', '3C', '2C', '1C']),
+    JSON.stringify(porReglamento['REGLAMENTO INTERNO STAR DANCE']));
+
+  check('ADULTOS: reglamento CAP con sus categorías',
+    JSON.stringify(porReglamento['REGLAMENTO CAP']) ===
+    JSON.stringify(['BÁSICO', 'INTERMEDIO', 'ELITE']),
+    JSON.stringify(porReglamento['REGLAMENTO CAP']));
+
+  check('ADULTOS: ninguna categoría queda sin reglamento',
+    adultosCats.rows.length === 9 && adultosCats.rows.every(r => r.ruleset),
+    adultosCats.rows.map(r => `${r.division}=${r.ruleset}`).join(' | '));
+
+  const rulesets = await tc.getRulesetsByDiscipline(zonaSur);
+  check('ADULTOS: los dos reglamentos llegan al formulario, en orden',
+    JSON.stringify(rulesets['ADULTOS']) ===
+    JSON.stringify(['REGLAMENTO INTERNO STAR DANCE', 'REGLAMENTO CAP']),
+    JSON.stringify(rulesets['ADULTOS']));
+
+  check('Solo ADULTOS usa reglamentos (el resto no muestra el desplegable)',
+    Object.keys(rulesets).length === 1 && rulesets['ADULTOS'],
+    Object.keys(rulesets).join(', '));
+
+  const adultosBands = bands['ADULTOS'] || [];
+  check('ADULTOS: franjas de edad del Excel (CLÁSICO 21-27 … MASTER 48-57)',
+    adultosBands.length === 4 &&
+    adultosBands[0].name === 'CLÁSICO' && adultosBands[0].min === 21 && adultosBands[0].max === 27 &&
+    adultosBands[3].name === 'MASTER' && adultosBands[3].min === 48 && adultosBands[3].max === 57,
+    adultosBands.map(b => `${b.name} ${b.min}-${b.max}`).join(', '));
+
+  check('ADULTOS: la edad asigna la categoría de edad (30 años → NOVICIO)',
+    (tc.bandForAge(adultosBands, 30) || {}).name === 'NOVICIO',
+    JSON.stringify(tc.bandForAge(adultosBands, 30)));
+
+  check('ADULTOS: una edad fuera de rango no inventa categoría (18 años)',
+    tc.bandForAge(adultosBands, 18) === null);
+
   const soloDance = bands['SOLO DANCE'] || [];
   check('SOLO DANCE: la franja JUVENIL repetida quedó unificada (14-17)',
     soloDance.filter(b => b.name === 'JUVENIL').length === 1 &&

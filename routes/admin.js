@@ -635,12 +635,18 @@ router.get('/torneos/:id/categorias', async (req, res) => {
   const extraNames = [...new Set(categories.map(c => c.discipline))]
     .filter(d => d && !configuredNames.has(d));
 
+  // Reglamentos presentes en cada disciplina (hoy solo ADULTOS los usa).
+  const rulesetsOf = disc => [...new Set(
+    categories.filter(c => c.discipline === disc && c.ruleset).map(c => c.ruleset)
+  )];
+
   const groups = disciplines.map(d => ({
     discipline: d.discipline,
     order_index: d.order_index,
     is_enabled: d.is_enabled,
     isLegacy: false,
     categories: categories.filter(c => c.discipline === d.discipline),
+    rulesets: rulesetsOf(d.discipline),
     bands: ageBands.filter(b => b.discipline === d.discipline)
   }));
 
@@ -653,6 +659,7 @@ router.get('/torneos/:id/categorias', async (req, res) => {
       is_enabled: false,
       isLegacy: true,
       categories: categories.filter(c => c.discipline === name),
+      rulesets: rulesetsOf(name),
       bands: ageBands.filter(b => b.discipline === name)
     });
   });
@@ -777,10 +784,14 @@ router.post('/torneos/:id/categorias', async (req, res) => {
   `).get(tournament.id, disc);
 
   try {
+    // Reglamento: el que venga del formulario o, si no, el que le corresponda
+    // en el catálogo oficial (ADULTOS).
+    const reglamento = String(req.body.ruleset || '').trim().toUpperCase() || tcfg.rulesetFor(disc, bare);
+
     await db.prepare(`
-      INSERT INTO categories (tournament_id, name, discipline, division, min_age, max_age, gender, schedule, is_active, order_index)
-      VALUES (?, ?, ?, ?, 0, 99, 'MIXTO', ?, true, ?)
-    `).run(tournament.id, fullName, disc, bare, (schedule || 'A CONFIRMAR').toUpperCase(), Number(last.max) + 1);
+      INSERT INTO categories (tournament_id, name, discipline, division, min_age, max_age, gender, schedule, is_active, order_index, ruleset)
+      VALUES (?, ?, ?, ?, 0, 99, 'MIXTO', ?, true, ?, ?)
+    `).run(tournament.id, fullName, disc, bare, (schedule || 'A CONFIRMAR').toUpperCase(), Number(last.max) + 1, reglamento || null);
 
     // Si la disciplina no estaba en la configuración del torneo, se agrega.
     const last = await db.prepare(`
@@ -814,12 +825,18 @@ router.post('/torneos/:id/categorias/:catId/editar', async (req, res) => {
   const orden = toInt(req.body.order_index);
 
   try {
+    // El reglamento solo se toca si el formulario trae el campo (las disciplinas
+    // que no se dividen por reglamento no lo muestran y deben quedar igual).
+    const reglamento = req.body.ruleset === undefined
+      ? category.ruleset
+      : (String(req.body.ruleset).trim().toUpperCase() || null);
+
     await db.prepare(`
-      UPDATE categories SET name = ?, division = ?, schedule = ?, order_index = COALESCE(?, order_index)
+      UPDATE categories SET name = ?, division = ?, schedule = ?, order_index = COALESCE(?, order_index), ruleset = ?
       WHERE id = ?
     `).run(fullName, bare, (req.body.schedule || category.schedule || '').toUpperCase(),
       req.body.order_index === undefined || req.body.order_index === '' ? null : (orden === null ? 0 : orden),
-      catId);
+      reglamento, catId);
     backToConfig(res, tournament.id, { success: `Categoría actualizada a ${bare}.` });
   } catch (err) {
     console.error('Error updating category:', err);
