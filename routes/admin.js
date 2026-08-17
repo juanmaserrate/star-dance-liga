@@ -380,18 +380,22 @@ router.get('/exportar/planilla', async (req, res) => {
     }
     tournament.datesLabel = formatEventDates(tournament.date_from || tournament.event_date, tournament.date_to);
 
-    // Dos armados posibles: por disciplina (con bloques de categoría adentro)
-    // o directamente por categoría, con la disciplina como columna.
-    const porCategoria = String(req.query.agrupar || '') === 'categoria';
+    // Tres armados posibles: por disciplina (con bloques de categoría adentro),
+    // por categoría en una sola hoja, o por categoría con una hoja para cada una.
+    const agrupar = String(req.query.agrupar || 'disciplina');
+    const armados = {
+      disciplina: { build: insc.buildXlsxPorCategoria, sufijo: '_POR_DISCIPLINA' },
+      categoria: { build: insc.buildXlsxPorCategoriaSola, sufijo: '_POR_CATEGORIA' },
+      categoria_hojas: { build: insc.buildXlsxHojaPorCategoria, sufijo: '_POR_CATEGORIA_EN_HOJAS' }
+    };
+    const armado = armados[agrupar] || armados.disciplina;
 
     const rows = await insc.fetchForGroupedSheet(tournament.id);
-    const buffer = porCategoria
-      ? await insc.buildXlsxPorCategoriaSola(rows, tournament)
-      : await insc.buildXlsxPorCategoria(rows, tournament);
+    const buffer = await armado.build(rows, tournament);
 
     const slug = String(tournament.name).normalize('NFD').replace(/\p{Diacritic}/gu, '')
       .replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '').toUpperCase() || 'TORNEO';
-    const sufijo = porCategoria ? '_POR_CATEGORIA' : '_POR_DISCIPLINA';
+    const sufijo = armado.sufijo;
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="PLANILLA_${slug}${sufijo}.xlsx"`);

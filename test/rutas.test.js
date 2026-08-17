@@ -415,7 +415,62 @@ async function main() {
     JSON.stringify(encCat));
 
   check('El dashboard deja elegir cómo agrupar la planilla',
-    dash.text.includes('name="agrupar"') && dash.text.includes('value="categoria"'));
+    dash.text.includes('name="agrupar"') && dash.text.includes('value="categoria"') &&
+    dash.text.includes('value="categoria_hojas"'));
+
+  // --- Tercera opción: una hoja por categoría ---
+  const porHojas = await request(app).get(
+    `/admin/exportar/planilla?tournament_id=${zonaSur}&agrupar=categoria_hojas`);
+  check('GET planilla con una hoja por categoría responde un .xlsx',
+    porHojas.status === 200 &&
+    /spreadsheetml/.test(porHojas.headers['content-type'] || '') &&
+    /filename="PLANILLA_.*_POR_CATEGORIA_EN_HOJAS\.xlsx"/.test(porHojas.headers['content-disposition'] || ''),
+    `status ${porHojas.status} · ${porHojas.headers['content-disposition']}`);
+
+  const bufHojas = Buffer.from(await insc.buildXlsxHojaPorCategoria(filas,
+    { name: 'ZONA SUR', datesLabel: '6 DE SEPTIEMBRE', venue: 'INSTITUTO ESTRADA' }));
+  const libro = new ExcelJS.Workbook();
+  await libro.xlsx.load(bufHojas);
+  const nombres = libro.worksheets.map(w => w.name);
+
+  check('El libro trae una hoja por cada categoría, más el índice',
+    nombres[0] === 'Índice' && nombres.length === bloques.length + 1,
+    `${nombres.length} hojas para ${bloques.length} categorías`);
+  check('Ningún nombre de hoja pasa los 31 caracteres ni se repite',
+    nombres.every(n => n.length <= 31) && new Set(nombres.map(n => n.toUpperCase())).size === nombres.length,
+    nombres.filter(n => n.length > 31).join(', ') || 'ok');
+
+  const primera = libro.getWorksheet(nombres[1]);
+  let encHojas = null, edades = [];
+  primera.eachRow((fila, n) => {
+    if (encHojas) return;
+    if (String(fila.getCell(1).value || '') !== 'NOMBRE COMPLETO') return;
+    encHojas = [1, 2, 3, 4, 5, 6].map(c => String(fila.getCell(c).value || ''));
+    for (let r = n + 1; r <= primera.rowCount; r++) {
+      const v = primera.getRow(r).getCell(2).value;
+      if (v === null || v === undefined || v === '') break;
+      edades.push(Number(v));
+    }
+  });
+  check('Cada hoja lleva las mismas columnas, con DISCIPLINA incluida',
+    JSON.stringify(encHojas) === JSON.stringify(
+      ['NOMBRE COMPLETO', 'EDAD', 'DISCIPLINA', 'CATEGORÍA', 'CATEGORÍA DE EDAD', 'CLUB']),
+    JSON.stringify(encHojas));
+  check('Dentro de la hoja las edades van de menor a mayor',
+    edades.every((v, i) => i === 0 || edades[i - 1] <= v), JSON.stringify(edades));
+
+  const indice = libro.getWorksheet('Índice');
+  let filasIndice = 0;
+  indice.eachRow(fila => { if (Number.isFinite(Number(fila.getCell(2).value))) filasIndice++; });
+  check('El índice lista todas las categorías', filasIndice === bloques.length,
+    `${filasIndice} de ${bloques.length}`);
+
+  // Nombres de hoja: recorte, saneado de caracteres prohibidos y sin repetir
+  const usados = new Set();
+  check('Los nombres de hoja se sanean y no chocan entre sí',
+    insc.sheetName('LIBRE/EXHIBICIÓN', usados) === 'LIBRE EXHIBICIÓN' &&
+    insc.sheetName('LIBRE/EXHIBICIÓN', usados) === 'LIBRE EXHIBICIÓN (2)' &&
+    insc.sheetName('X'.repeat(60), usados).length === 31);
 
   const scopeAjeno = await get(PROFE_ADMIN, `/admin/exportar/planilla?tournament_id=${zonaSur}`, false);
   check('Giselle no puede bajar la planilla de un torneo de otra zona',
