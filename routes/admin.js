@@ -591,6 +591,32 @@ router.post('/torneos/nuevo', async (req, res) => {
 // Todo es por torneo, así cada fecha puede tener su propia grilla.
 // ---------------------------------------------------------------------------
 
+// Parte un textarea en líneas limpias, sin vacías ni repetidas.
+function splitLines(text) {
+  const seen = new Set();
+  return String(text || '')
+    .split(/\r?\n|;/)
+    .map(l => l.trim().toUpperCase())
+    .filter(l => {
+      if (!l || seen.has(l)) return false;
+      seen.add(l);
+      return true;
+    });
+}
+
+// Interpreta una línea de categoría de edad: "BABY 4-5", "BABY 4 5",
+// "BABY: 4 a 5", "BABY 4-5 años". Devuelve { name, min, max } o null.
+function parseBandLine(line) {
+  const m = String(line).trim()
+    .match(/^(.*?)[\s:,\-]*(\d{1,3})\s*(?:-|–|a|\/|\s)\s*(\d{1,3})\s*(?:AÑOS|ANOS)?$/i);
+  if (!m) return null;
+  const name = m[1].trim().toUpperCase();
+  const min = parseInt(m[2], 10);
+  const max = parseInt(m[3], 10);
+  if (!name || !Number.isFinite(min) || !Number.isFinite(max) || min > max) return null;
+  return { name, min, max };
+}
+
 // Vuelve a la pantalla de configuración con un mensaje.
 function backToConfig(res, tournamentId, { success, error } = {}) {
   const qs = success
@@ -664,14 +690,105 @@ router.get('/torneos/:id/categorias', async (req, res) => {
     });
   });
 
+  // Otros torneos del alcance del usuario, para copiarles la configuración.
+  const scope = scopeFilter(req.session.user, 't.name');
+  const otherTournaments = await db.prepare(`
+    SELECT t.id, t.name FROM tournaments t WHERE t.id <> ?${scope.sql}
+    ORDER BY COALESCE(t.date_from, t.event_date) DESC
+  `).all(tournament.id, ...scope.params);
+
   res.render('admin/categorias', {
     user: req.session.user,
     tournament,
     groups,
+    otherTournaments,
     totalCategories: categories.length,
+    totalDisciplines: groups.filter(g => !g.isLegacy).length,
+    totalBands: ageBands.length,
     success: req.query.success || null,
     error: req.query.error || null
   });
+});
+
+// --- Atajos de configuración ----------------------------------------------
+
+// Vuelve a traer del catálogo oficial todo lo que le falte al torneo. Es
+// aditivo: no borra ni renombra nada de lo que el administrador ya cargó.
+router.post('/torneos/:id/restaurar-catalogo', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  try {
+    const cfg = await tcfg.seedTournament(tournament.id);
+    const cats = await tcfg.seedCategories(tournament.id);
+    backToConfig(res, tournament.id, {
+      success: `Catálogo oficial restaurado: ${cfg.disciplines} disciplina(s), ${cats.added} categoría(s) y ${cfg.bands} categoría(s) de edad agregadas. No se borró nada de lo que ya tenías.`
+    });
+  } catch (err) {
+    console.error('Error restoring catalog:', err);
+    backToConfig(res, tournament.id, { error: 'Error al restaurar el catálogo oficial.' });
+  }
+});
+
+// Copia la configuración de otro torneo (disciplinas, categorías y categorías
+// de edad). Solo agrega lo que falta; nunca pisa ni borra lo que ya está.
+router.post('/torneos/:id/copiar-de', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  const origen = await loadTournamentForUser(req, toInt(req.body.source_tournament_id));
+  if (!origen) return backToConfig(res, tournament.id, { error: 'Elegí un torneo de origen válido.' });
+  if (origen.id === tournament.id) {
+    return backToConfig(res, tournament.id, { error: 'El torneo de origen tiene que ser otro.' });
+  }
+
+  try {
+    let discs = 0, cats = 0, bands = 0;
+
+    for (const d of await tcfg.getDisciplines(origen.id, { includeDisabled: true })) {
+      const r = await db.prepare(`
+        INSERT INTO tournament_disciplines (tournament_id, discipline, order_index, is_enabled)
+        VALUES (?, ?, ?, ?) ON CONFLICT (tournament_id, discipline) DO NOTHING
+      `).run(tournament.id, d.discipline, d.order_index, d.is_enabled);
+      if (r && r.changes) discs++;
+    }
+
+    const origenCats = await db.prepare(`
+      SELECT name, discipline, division, schedule, is_active, order_index, ruleset
+      FROM categories WHERE tournament_id = ? ORDER BY discipline ASC, order_index ASC
+    `).all(origen.id);
+    for (const c of origenCats) {
+      const dup = await db.prepare(`
+        SELECT id FROM categories WHERE tournament_id = ? AND discipline = ? AND name = ?
+      `).get(tournament.id, c.discipline, c.name);
+      if (dup) continue;
+      await db.prepare(`
+        INSERT INTO categories (tournament_id, name, discipline, division, min_age, max_age, gender, schedule, is_active, order_index, ruleset)
+        VALUES (?, ?, ?, ?, 0, 99, 'MIXTO', ?, ?, ?, ?)
+      `).run(tournament.id, c.name, c.discipline, c.division,
+        c.schedule || 'A CONFIRMAR', c.is_active !== false, c.order_index || 0, c.ruleset || null);
+      cats++;
+    }
+
+    const origenBands = await db.prepare(`
+      SELECT discipline, name, min_age, max_age, order_index
+      FROM tournament_age_bands WHERE tournament_id = ? ORDER BY discipline ASC, order_index ASC
+    `).all(origen.id);
+    for (const b of origenBands) {
+      const r = await db.prepare(`
+        INSERT INTO tournament_age_bands (tournament_id, discipline, name, min_age, max_age, order_index)
+        VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (tournament_id, discipline, name) DO NOTHING
+      `).run(tournament.id, b.discipline, b.name, b.min_age, b.max_age, b.order_index || 0);
+      if (r && r.changes) bands++;
+    }
+
+    backToConfig(res, tournament.id, {
+      success: `Copiado de ${origen.name}: ${discs} disciplina(s), ${cats} categoría(s) y ${bands} categoría(s) de edad. Lo que ya tenías quedó igual.`
+    });
+  } catch (err) {
+    console.error('Error copying tournament config:', err);
+    backToConfig(res, tournament.id, { error: 'Error al copiar la configuración del otro torneo.' });
+  }
 });
 
 // --- Disciplinas -----------------------------------------------------------
@@ -809,6 +926,61 @@ router.post('/torneos/:id/categorias', async (req, res) => {
   }
 });
 
+// Alta en lote: una categoría por renglón. Es la forma rápida de cargar toda
+// una disciplina de una vez en vez de ir de a una.
+router.post('/torneos/:id/categorias/lote', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  const disc = String(req.body.discipline || '').trim().toUpperCase();
+  const nombres = splitLines(req.body.names);
+  if (!disc) return backToConfig(res, tournament.id, { error: 'Falta la disciplina.' });
+  if (!nombres.length) return backToConfig(res, tournament.id, { error: 'Escribí al menos una categoría (una por renglón).' });
+
+  const reglamentoManual = String(req.body.ruleset || '').trim().toUpperCase();
+
+  try {
+    let last = Number((await db.prepare(`
+      SELECT COALESCE(MAX(order_index), -1) AS max FROM categories WHERE tournament_id = ? AND discipline = ?
+    `).get(tournament.id, disc)).max);
+
+    let creadas = 0;
+    const repetidas = [];
+    for (const bare of nombres) {
+      const fullName = `${disc} - ${bare}`;
+      const dup = await db.prepare(`
+        SELECT id FROM categories WHERE tournament_id = ? AND discipline = ? AND name = ?
+      `).get(tournament.id, disc, fullName);
+      if (dup) { repetidas.push(bare); continue; }
+
+      last++;
+      await db.prepare(`
+        INSERT INTO categories (tournament_id, name, discipline, division, min_age, max_age, gender, schedule, is_active, order_index, ruleset)
+        VALUES (?, ?, ?, ?, 0, 99, 'MIXTO', 'A CONFIRMAR', true, ?, ?)
+      `).run(tournament.id, fullName, disc, bare, last,
+        reglamentoManual || tcfg.rulesetFor(disc, bare) || null);
+      creadas++;
+    }
+
+    // Si la disciplina no estaba en el torneo, se agrega.
+    const lastDisc = await db.prepare(`
+      SELECT COALESCE(MAX(order_index), -1) AS max FROM tournament_disciplines WHERE tournament_id = ?
+    `).get(tournament.id);
+    await db.prepare(`
+      INSERT INTO tournament_disciplines (tournament_id, discipline, order_index, is_enabled)
+      VALUES (?, ?, ?, true) ON CONFLICT (tournament_id, discipline) DO NOTHING
+    `).run(tournament.id, disc, Number(lastDisc.max) + 1);
+
+    const aviso = repetidas.length ? ` (${repetidas.length} ya existían: ${repetidas.join(', ')})` : '';
+    backToConfig(res, tournament.id, {
+      success: `${creadas} categoría(s) agregada(s) a ${disc}${aviso}.`
+    });
+  } catch (err) {
+    console.error('Error creating categories in bulk:', err);
+    backToConfig(res, tournament.id, { error: 'Error al agregar las categorías.' });
+  }
+});
+
 // Renombrar / editar una categoría
 router.post('/torneos/:id/categorias/:catId/editar', async (req, res) => {
   const tournament = await loadTournamentForUser(req, toInt(req.params.id));
@@ -891,6 +1063,54 @@ router.post('/torneos/:id/categorias/:catId/eliminar', async (req, res) => {
 });
 
 // --- Categorías de edad (franjas) -----------------------------------------
+
+// Alta en lote: una franja por renglón, "NOMBRE DESDE-HASTA".
+router.post('/torneos/:id/franjas/lote', async (req, res) => {
+  const tournament = await loadTournamentForUser(req, toInt(req.params.id));
+  if (!tournament) return res.redirect('/admin/torneos?error=' + encodeURIComponent('Torneo no encontrado.'));
+
+  const discipline = String(req.body.discipline || '').trim().toUpperCase();
+  const lineas = splitLines(req.body.bands);
+  if (!discipline) return backToConfig(res, tournament.id, { error: 'Falta la disciplina.' });
+  if (!lineas.length) return backToConfig(res, tournament.id, { error: 'Escribí al menos una categoría de edad (una por renglón).' });
+
+  const parsed = [];
+  const malas = [];
+  for (const l of lineas) {
+    const b = parseBandLine(l);
+    if (b) parsed.push(b); else malas.push(l);
+  }
+  if (!parsed.length) {
+    return backToConfig(res, tournament.id, {
+      error: 'No se entendió ningún renglón. Se escribe así: BABY 4-5 (nombre, edad mínima y edad máxima).'
+    });
+  }
+
+  try {
+    let last = Number((await db.prepare(`
+      SELECT COALESCE(MAX(order_index), -1) AS max FROM tournament_age_bands
+      WHERE tournament_id = ? AND discipline = ?
+    `).get(tournament.id, discipline)).max);
+
+    for (const b of parsed) {
+      last++;
+      await db.prepare(`
+        INSERT INTO tournament_age_bands (tournament_id, discipline, name, min_age, max_age, order_index)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT (tournament_id, discipline, name)
+        DO UPDATE SET min_age = EXCLUDED.min_age, max_age = EXCLUDED.max_age
+      `).run(tournament.id, discipline, b.name, b.min, b.max, last);
+    }
+
+    const aviso = malas.length ? ` No se entendieron ${malas.length}: ${malas.join(' / ')}.` : '';
+    backToConfig(res, tournament.id, {
+      success: `${parsed.length} categoría(s) de edad guardada(s) en ${discipline}.${aviso}`
+    });
+  } catch (err) {
+    console.error('Error adding age bands in bulk:', err);
+    backToConfig(res, tournament.id, { error: 'Error al guardar las categorías de edad.' });
+  }
+});
 
 router.post('/torneos/:id/franjas', async (req, res) => {
   const tournament = await loadTournamentForUser(req, toInt(req.params.id));

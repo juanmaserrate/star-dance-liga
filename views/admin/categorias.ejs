@@ -21,22 +21,68 @@
     <div class="alert alert-danger">⚠️ <%= error %></div>
   <% } %>
 
-  <!-- Alta de disciplina -->
+  <!-- Qué tiene cargado este torneo -->
   <div class="admin-card" style="margin-bottom: 1.5rem;">
     <div class="admin-card-head">
       <div class="head-left">
-        <span class="material-symbols-outlined">add_circle</span>
-        <h2 class="admin-card-title">Agregar Disciplina a este Torneo</h2>
+        <span class="material-symbols-outlined">inventory_2</span>
+        <h2 class="admin-card-title">Lo que ya tiene este torneo</h2>
       </div>
-      <span class="count-chip"><%= totalCategories %> categorías en total</span>
+      <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+        <span class="count-chip"><%= totalDisciplines %> disciplinas</span>
+        <span class="count-chip"><%= totalCategories %> categorías</span>
+        <span class="count-chip"><%= totalBands %> categorías de edad</span>
+      </div>
     </div>
-    <form action="/admin/torneos/<%= tournament.id %>/disciplinas" method="POST" style="display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: flex-end; padding: 1rem 1.25rem;">
-      <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 260px;">
-        <label class="form-label" for="new_discipline">Nombre de la disciplina</label>
-        <input type="text" id="new_discipline" name="discipline" class="form-control" placeholder="EJ: ADULTOS" style="text-transform: uppercase;" required>
+    <div style="padding: 1rem 1.25rem;">
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+        Todo torneo nuevo arranca con el catálogo oficial completo ya cargado, así las profesoras
+        pueden inscribir desde el primer momento. Desde acá lo ajustás: cada disciplina se abre
+        haciendo clic y adentro agregás, renombrás, reordenás o quitás lo que quieras.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+        <!-- Copiar de otro torneo -->
+        <% if (otherTournaments && otherTournaments.length > 0) { %>
+          <form action="/admin/torneos/<%= tournament.id %>/copiar-de" method="POST"
+                style="border: 1px solid var(--border-gold); border-radius: var(--radius-sm); padding: 0.9rem;">
+            <label class="form-label" for="source_tournament_id">📋 Copiar de otro torneo</label>
+            <select id="source_tournament_id" name="source_tournament_id" class="form-select" style="margin-bottom: 0.6rem;" required>
+              <option value="">-- Elegí el torneo a copiar --</option>
+              <% otherTournaments.forEach(t => { %>
+                <option value="<%= t.id %>"><%= t.name %></option>
+              <% }) %>
+            </select>
+            <button type="submit" class="btn btn-outline-gold btn-sm" style="width: 100%;">Copiar su configuración</button>
+            <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">
+              Trae sus disciplinas, categorías y categorías de edad. Solo agrega lo que falte: no pisa ni borra nada.
+            </small>
+          </form>
+        <% } %>
+
+        <!-- Restaurar catálogo -->
+        <form action="/admin/torneos/<%= tournament.id %>/restaurar-catalogo" method="POST"
+              style="border: 1px solid var(--border-gold); border-radius: var(--radius-sm); padding: 0.9rem;">
+          <label class="form-label">♻️ Restaurar el catálogo oficial</label>
+          <button type="submit" class="btn btn-outline-gold btn-sm" style="width: 100%; margin-top: 0.35rem;">Traer lo que falte del catálogo</button>
+          <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">
+            Si borraste algo sin querer, esto lo vuelve a traer. Tampoco borra ni renombra lo que ya tenés.
+          </small>
+        </form>
+
+        <!-- Agregar disciplina -->
+        <form action="/admin/torneos/<%= tournament.id %>/disciplinas" method="POST"
+              style="border: 1px solid var(--border-gold); border-radius: var(--radius-sm); padding: 0.9rem;">
+          <label class="form-label" for="new_discipline">➕ Agregar una disciplina nueva</label>
+          <input type="text" id="new_discipline" name="discipline" class="form-control" placeholder="EJ: ADULTOS"
+                 style="text-transform: uppercase; margin-bottom: 0.6rem;" required>
+          <button type="submit" class="btn btn-gold btn-sm" style="width: 100%;">Agregar disciplina</button>
+          <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">
+            Después cargale sus categorías desde la tarjeta que aparece abajo.
+          </small>
+        </form>
       </div>
-      <button type="submit" class="btn btn-gold" style="height: 40px;">Agregar disciplina</button>
-    </form>
+    </div>
   </div>
 
   <% groups.forEach(g => { %>
@@ -161,24 +207,23 @@
               </p>
             <% } %>
 
-            <form action="/admin/torneos/<%= tournament.id %>/categorias" method="POST" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end;">
+            <form action="/admin/torneos/<%= tournament.id %>/categorias/lote" method="POST">
               <input type="hidden" name="discipline" value="<%= g.discipline %>">
-              <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
-                <label class="form-label">Nueva categoría</label>
-                <input type="text" name="name" class="form-control" placeholder="EJ: DEBUTANTE" style="text-transform: uppercase;" required>
+              <div class="form-group" style="margin-bottom: 0.6rem;">
+                <label class="form-label">Agregar categorías — una por renglón</label>
+                <textarea name="names" class="form-control" rows="3"
+                  placeholder="DEBUTANTE&#10;INICIAL&#10;AVANZADO"
+                  style="text-transform: uppercase; font-family: inherit;" required></textarea>
+                <small style="color: var(--text-muted);">Podés pegar varias de una vez. Las repetidas se saltean solas.</small>
               </div>
               <% if (g.rulesets && g.rulesets.length) { %>
-                <div class="form-group" style="margin-bottom: 0; width: 190px;">
-                  <label class="form-label">Reglamento</label>
+                <div class="form-group" style="margin-bottom: 0.6rem;">
+                  <label class="form-label">Reglamento de estas categorías</label>
                   <input type="text" name="ruleset" class="form-control" placeholder="EJ: REGLAMENTO CAP"
                     list="reglamentos_<%= g.discipline.replace(/[^A-Za-z0-9]/g, '') %>" style="text-transform: uppercase;">
                 </div>
               <% } %>
-              <div class="form-group" style="margin-bottom: 0; width: 130px;">
-                <label class="form-label">Horario</label>
-                <input type="text" name="schedule" class="form-control" placeholder="A CONFIRMAR">
-              </div>
-              <button type="submit" class="btn btn-gold" style="height: 40px;">+ Agregar</button>
+              <button type="submit" class="btn btn-gold btn-sm">+ Agregar categorías</button>
             </form>
           </div>
 
@@ -217,21 +262,16 @@
               <p style="color: var(--text-muted); padding: 1rem 0;">Esta disciplina no usa categorías de edad. Si agregás franjas acá, el formulario de inscripción va a asignarlas sola según la edad de la patinadora.</p>
             <% } %>
 
-            <form action="/admin/torneos/<%= tournament.id %>/franjas" method="POST" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end;">
+            <form action="/admin/torneos/<%= tournament.id %>/franjas/lote" method="POST">
               <input type="hidden" name="discipline" value="<%= g.discipline %>">
-              <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 130px;">
-                <label class="form-label">Nueva categoría de edad</label>
-                <input type="text" name="name" class="form-control" placeholder="EJ: BABY" style="text-transform: uppercase;" required>
+              <div class="form-group" style="margin-bottom: 0.6rem;">
+                <label class="form-label">Agregar categorías de edad — una por renglón</label>
+                <textarea name="bands" class="form-control" rows="3"
+                  placeholder="BABY 4-5&#10;MINI TOTS 6-7&#10;TOTS 8-9"
+                  style="text-transform: uppercase; font-family: inherit;" required></textarea>
+                <small style="color: var(--text-muted);">Nombre y edades: <strong>BABY 4-5</strong>. Si el nombre ya existe, se le actualizan las edades.</small>
               </div>
-              <div class="form-group" style="margin-bottom: 0; width: 90px;">
-                <label class="form-label">Desde</label>
-                <input type="number" name="min_age" class="form-control" min="0" max="120" required>
-              </div>
-              <div class="form-group" style="margin-bottom: 0; width: 90px;">
-                <label class="form-label">Hasta</label>
-                <input type="number" name="max_age" class="form-control" min="0" max="120" required>
-              </div>
-              <button type="submit" class="btn btn-gold" style="height: 40px;">+ Agregar</button>
+              <button type="submit" class="btn btn-gold btn-sm">+ Agregar categorías de edad</button>
             </form>
           </div>
         </div>

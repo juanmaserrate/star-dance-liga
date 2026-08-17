@@ -192,10 +192,59 @@ async function main() {
     check('El torneo nuevo arranca con las 11 disciplinas', discs === 11, `${discs} disciplinas`);
     check('El torneo nuevo arranca con las categorías de edad', franjas > 50, `${franjas} franjas`);
 
+    const adultos = (await pglite.query(`SELECT COUNT(*)::int AS n FROM categories
+      WHERE tournament_id = ${nuevoTorneo.id} AND discipline = 'ADULTOS' AND ruleset IS NOT NULL`)).rows[0].n;
+    check('El torneo nuevo arranca con ADULTOS y sus reglamentos', adultos === 9, `${adultos} categorías`);
+
     SESSION = PROFE;
     const formNuevo = await request(app).get(`/profesor/inscribir?tournament_id=${nuevoTorneo.id}`);
     check('Se puede inscribir en el torneo nuevo',
       formNuevo.status === 200 && formNuevo.text.includes('FREE DANCE'), `status ${formNuevo.status}`);
+
+    // --- Atajos de configuración: carga en lote, copiar y restaurar ---
+    SESSION = ADMIN;
+    const T = nuevoTorneo.id;
+
+    await request(app).post(`/admin/torneos/${T}/categorias/lote`)
+      .send({ discipline: 'LIBRE', names: 'PRUEBA UNO\nPRUEBA DOS\nPRUEBA UNO' });
+    const lote = (await pglite.query(`SELECT division FROM categories
+      WHERE tournament_id = ${T} AND division LIKE 'PRUEBA %' ORDER BY division`)).rows.map(r => r.division);
+    check('Carga en lote: agrega varias categorías de una vez y saltea repetidas',
+      JSON.stringify(lote) === JSON.stringify(['PRUEBA DOS', 'PRUEBA UNO']), lote.join(', '));
+
+    await request(app).post(`/admin/torneos/${T}/franjas/lote`)
+      .send({ discipline: 'LIBRE', bands: 'PRUEBA CHICA 4-5\nPRUEBA GRANDE 6 a 9\nrenglon sin edades' });
+    const lb = (await pglite.query(`SELECT name, min_age, max_age FROM tournament_age_bands
+      WHERE tournament_id = ${T} AND discipline = 'LIBRE' AND name LIKE 'PRUEBA %' ORDER BY min_age`)).rows;
+    check('Carga en lote: entiende "NOMBRE 4-5" y "NOMBRE 6 a 9"',
+      lb.length === 2 && lb[0].name === 'PRUEBA CHICA' && lb[0].min_age === 4 && lb[0].max_age === 5 &&
+      lb[1].name === 'PRUEBA GRANDE' && lb[1].min_age === 6 && lb[1].max_age === 9,
+      JSON.stringify(lb));
+
+    // Restaurar es aditivo: no puede borrar lo que se cargó a mano
+    await request(app).post(`/admin/torneos/${T}/restaurar-catalogo`).send({});
+    const sobrevive = (await pglite.query(`SELECT COUNT(*)::int AS n FROM categories
+      WHERE tournament_id = ${T} AND division = 'PRUEBA UNO'`)).rows[0].n;
+    check('Restaurar el catálogo no borra lo que cargó el administrador', sobrevive === 1);
+
+    // Copiar de otro torneo: trae lo que falta y no duplica
+    const antesCopia = (await pglite.query(`SELECT COUNT(*)::int AS n FROM categories WHERE tournament_id = ${zonaCaba}`)).rows[0].n;
+    await request(app).post(`/admin/torneos/${zonaCaba}/copiar-de`).send({ source_tournament_id: String(T) });
+    const copiadas = (await pglite.query(`SELECT COUNT(*)::int AS n FROM categories
+      WHERE tournament_id = ${zonaCaba} AND division = 'PRUEBA UNO'`)).rows[0].n;
+    check('Copiar de otro torneo trae sus categorías', copiadas === 1);
+
+    await request(app).post(`/admin/torneos/${zonaCaba}/copiar-de`).send({ source_tournament_id: String(T) });
+    const trasDoble = (await pglite.query(`SELECT COUNT(*)::int AS n FROM categories
+      WHERE tournament_id = ${zonaCaba} AND division = 'PRUEBA UNO'`)).rows[0].n;
+    check('Copiar dos veces no duplica nada', trasDoble === 1);
+    check('Copiar no borra lo que el torneo ya tenía',
+      (await pglite.query(`SELECT COUNT(*)::int AS n FROM categories WHERE tournament_id = ${zonaCaba}`)).rows[0].n > antesCopia);
+
+    const noMismo = await request(app).post(`/admin/torneos/${T}/copiar-de`).send({ source_tournament_id: String(T) });
+    check('No deja copiar un torneo sobre sí mismo',
+      decodeURIComponent(noMismo.headers.location || '').includes('tiene que ser otro'),
+      noMismo.headers.location);
   }
 
   await get(ADMIN, '/admin/usuarios');
