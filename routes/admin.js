@@ -356,6 +356,36 @@ router.get('/exportar/excel', async (req, res) => {
   }
 });
 
+// Planilla del torneo: una sola hoja, agrupada por disciplina y, adentro, un
+// bloque por categoría. Es la que se baja desde el dashboard.
+router.get('/exportar/planilla', async (req, res) => {
+  const tournamentId = toInt(req.query.tournament_id);
+  if (!tournamentId) {
+    return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Elegí un torneo para descargar su planilla.'));
+  }
+
+  try {
+    const tournament = await loadTournamentForUser(req, tournamentId);
+    if (!tournament) {
+      return res.redirect('/admin/dashboard?error=' + encodeURIComponent('Torneo no encontrado o fuera de tu alcance.'));
+    }
+    tournament.datesLabel = formatEventDates(tournament.date_from || tournament.event_date, tournament.date_to);
+
+    const rows = await insc.fetchForGroupedSheet(tournament.id);
+    const buffer = await insc.buildXlsxPorCategoria(rows, tournament);
+
+    const slug = String(tournament.name).normalize('NFD').replace(/\p{Diacritic}/gu, '')
+      .replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '').toUpperCase() || 'TORNEO';
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="PLANILLA_${slug}.xlsx"`);
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    console.error('Error exporting tournament sheet:', err);
+    res.status(500).send('Error al generar la planilla del torneo. Intente nuevamente.');
+  }
+});
+
 // Annual Leaderboards & Scores Overview
 router.get('/posiciones', async (req, res) => {
   const clubLeaderboard = await db.prepare(`

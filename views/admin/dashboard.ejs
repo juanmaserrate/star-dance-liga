@@ -37,6 +37,34 @@
     </form>
   </div>
 
+  <!-- Descarga de la planilla de un torneo -->
+  <div class="admin-card" style="margin-bottom: 1.5rem;">
+    <div class="admin-card-head">
+      <div class="head-left">
+        <span class="material-symbols-outlined">download</span>
+        <h2 class="admin-card-title">Descargar Planilla del Torneo</h2>
+      </div>
+    </div>
+    <form action="/admin/exportar/planilla" method="GET" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; padding: 1rem 1.25rem;">
+      <div class="form-group" style="margin-bottom: 0; min-width: 280px; flex: 1;">
+        <label class="form-label" for="planilla_tournament">Torneo</label>
+        <select id="planilla_tournament" name="tournament_id" class="form-select" required>
+          <option value="">-- Elegí el torneo --</option>
+          <% (tournaments || []).forEach(t => { %>
+            <option value="<%= t.id %>" <%= selectedTournamentId == t.id ? 'selected' : '' %>>
+              <%= t.name %> (<%= t.datesLabel %>)
+            </option>
+          <% }) %>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-gold" style="height: 40px;">⬇️ Descargar Excel</button>
+      <p style="color: var(--text-muted); font-size: 0.85rem; width: 100%; margin: 0.25rem 0 0;">
+        Una sola hoja, agrupada por disciplina y adentro un cuadro por cada categoría, con
+        nombre completo, edad, categoría de edad y club. No incluye las inscripciones canceladas.
+      </p>
+    </form>
+  </div>
+
   <!-- Summary Stat Tiles -->
   <div class="admin-stat-grid">
     <div class="admin-stat">

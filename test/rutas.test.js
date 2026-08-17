@@ -55,6 +55,7 @@ async function main() {
   await require('../lib/ensure_categories_catalog')();
   await require('../lib/tournament_config').seedAllTournaments();
 
+  const insc = require('../lib/inscripciones_export');
   const request = require('supertest');
   const app = await buildApp();
 
@@ -252,6 +253,51 @@ async function main() {
   await get(ADMIN, `/admin/inscripciones/${regId}/editar`);
   const csv = await get(ADMIN, '/admin/exportar/csv');
   check('La exportación incluye la Categoría de Edad', csv.text.includes('CATEGORÍA DE EDAD'));
+
+  // --- Planilla del torneo agrupada por disciplina y categoría ---
+  const dash = await get(ADMIN, '/admin/dashboard');
+  check('El dashboard ofrece descargar la planilla del torneo',
+    dash.text.includes('/admin/exportar/planilla') && dash.text.includes('Descargar Planilla del Torneo'));
+
+  const planilla = await request(app).get(`/admin/exportar/planilla?tournament_id=${zonaSur}`);
+  check('GET /admin/exportar/planilla responde un .xlsx',
+    planilla.status === 200 &&
+    /spreadsheetml/.test(planilla.headers['content-type'] || '') &&
+    /filename="PLANILLA_/.test(planilla.headers['content-disposition'] || ''),
+    `status ${planilla.status} · ${planilla.headers['content-type']}`);
+  check('La planilla no viene vacía', Number(planilla.headers['content-length']) > 3000,
+    `${planilla.headers['content-length']} bytes`);
+
+  const sinTorneo = await request(app).get('/admin/exportar/planilla');
+  check('Sin torneo elegido, la planilla avisa en vez de romper',
+    sinTorneo.status === 302 && decodeURIComponent(sinTorneo.headers.location || '').includes('Elegí un torneo'),
+    `status ${sinTorneo.status}`);
+
+  // El agrupado tiene que respetar el orden del torneo, no el alfabético
+  const filas = await insc.fetchForGroupedSheet(zonaSur);
+  const grupos = insc.groupByDisciplineAndCategory(filas);
+  check('La planilla agrupa por disciplina y adentro por categoría',
+    grupos.length > 0 && grupos.every(g => g.discipline && g.categorias.length > 0 &&
+      g.total === g.categorias.reduce((n, c) => n + c.filas.length, 0)),
+    grupos.map(g => `${g.discipline}(${g.categorias.length} cat/${g.total})`).join(' '));
+  check('La disciplina mayoritaria (LIBRE) va primero, como en el formulario',
+    grupos[0].discipline === 'LIBRE', grupos.map(g => g.discipline).join(' > '));
+  check('Cada fila lleva nombre, edad, categoría de edad y club',
+    filas.every(f => 'nombre' in f && 'edad' in f && 'categoria_edad' in f && 'club' in f));
+
+  const buf = Buffer.from(await insc.buildXlsxPorCategoria(filas,
+    { name: 'ZONA SUR', datesLabel: '6 DE SEPTIEMBRE', venue: 'INSTITUTO ESTRADA' }));
+  check('El archivo generado es un .xlsx válido',
+    buf.length > 3000 && buf[0] === 0x50 && buf[1] === 0x4b, `${buf.length} bytes`);
+
+  const vacia = Buffer.from(await insc.buildXlsxPorCategoria([],
+    { name: 'TORNEO VACÍO', datesLabel: '', venue: '' }));
+  check('Un torneo sin inscripciones genera la planilla igual, sin romper', vacia.length > 2000);
+
+  const scopeAjeno = await get(PROFE_ADMIN, `/admin/exportar/planilla?tournament_id=${zonaSur}`, false);
+  check('Giselle no puede bajar la planilla de un torneo de otra zona',
+    scopeAjeno.status === 302 && decodeURIComponent(scopeAjeno.headers.location || '').includes('fuera de tu alcance'),
+    `status ${scopeAjeno.status}`);
 
   // --- Administrador con alcance limitado (Giselle → CABA) ---
   const torneosGiselle = await get(PROFE_ADMIN, '/admin/torneos');
