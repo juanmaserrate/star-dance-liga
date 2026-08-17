@@ -507,9 +507,9 @@ async function main() {
   hojaPista.eachRow((fila, n) => {
     if (String(fila.getCell(3).value || '') === 'Apellido') {
       if (!encPista) encPista = [3, 4, 5, 6].map(c => String(fila.getCell(c).value || ''));
-      // La primera fila de datos de cada bloque tiene que arrancar en 1
+      // La salida a pista va sin numerar: la define la organización
       const primera = hojaPista.getRow(n + 1).getCell(6).value;
-      if (primera !== null && primera !== undefined && primera !== '') salidas.push(Number(primera));
+      salidas.push(primera === null || primera === undefined || primera === '');
     }
     // Las filas 1 y 2 son el título, combinado de punta a punta: ExcelJS
     // devuelve el valor del maestro en toda la combinación, así que se saltean.
@@ -522,8 +522,8 @@ async function main() {
   check('Las columnas son Apellido, Nombre, Institución y Salida a pista',
     JSON.stringify(encPista) === JSON.stringify(['Apellido', 'Nombre', 'Institución', 'Salida a pista']),
     JSON.stringify(encPista));
-  check('La salida a pista arranca en 1 en cada bloque',
-    salidas.length > 0 && salidas.every(v => v === 1), JSON.stringify(salidas.slice(0, 8)));
+  check('La columna de salida a pista queda sin numerar',
+    salidas.length > 0 && salidas.every(v => v === true), JSON.stringify(salidas.slice(0, 8)));
   check('La columna de horario queda vacía: no hay horarios cargados', horarioVacio);
 
   // Apellido y nombre salen de los campos del padrón, sin recombinarlos
