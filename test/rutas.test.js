@@ -313,6 +313,70 @@ async function main() {
     { name: 'TORNEO VACÍO', datesLabel: '', venue: '' }));
   check('Un torneo sin inscripciones genera la planilla igual, sin romper', vacia.length > 2000);
 
+  // --- Segunda opción: agrupada por categoría, con disciplina como columna ---
+  const porCat = await request(app).get(`/admin/exportar/planilla?tournament_id=${zonaSur}&agrupar=categoria`);
+  check('GET la planilla agrupada por categoría',
+    porCat.status === 200 &&
+    /filename="PLANILLA_.*_POR_CATEGORIA\.xlsx"/.test(porCat.headers['content-disposition'] || ''),
+    porCat.headers['content-disposition']);
+
+  const bloques = insc.groupByCategory(filas);
+  check('Agrupa por categoría sin importar la disciplina',
+    bloques.length > 0 && bloques.every(b => b.label && b.filas.length === b.total),
+    bloques.slice(0, 4).map(b => `${b.label}(${b.total})`).join(' '));
+
+  // La misma categoría de dos disciplinas distintas tiene que caer en un solo
+  // bloque: es el sentido de agrupar por categoría en vez de por disciplina.
+  const sinteticas = [
+    { discipline: 'LIBRE', category_name: 'LIBRE - 4TA', cat_order: 6, nombre: 'B GRANDE', edad: 30, club: 'X' },
+    { discipline: 'PAREJAS MIXTAS', category_name: 'PAREJAS MIXTAS - 4TA', cat_order: 6, nombre: 'A CHICA', edad: 9, club: 'Y' },
+    { discipline: 'LIBRE', category_name: 'LIBRE - 4TA', cat_order: 6, nombre: 'C MEDIANA', edad: 15, club: 'Z' },
+    { discipline: 'FREE DANCE', category_name: 'FREE DANCE - INICIAL', cat_order: 1, nombre: 'D SIN EDAD', edad: null, club: 'W' },
+    { discipline: 'FREE DANCE', category_name: 'FREE DANCE - INICIAL', cat_order: 1, nombre: 'E CHICA', edad: 7, club: 'W' }
+  ];
+  const bs = insc.groupByCategory(sinteticas);
+  const b4ta = bs.find(b => b.label === '4TA');
+  check('Una categoría compartida junta las disciplinas en un solo bloque',
+    b4ta && b4ta.total === 3 &&
+    JSON.stringify([...new Set(b4ta.filas.map(f => f.discipline))].sort()) ===
+      JSON.stringify(['LIBRE', 'PAREJAS MIXTAS']),
+    b4ta ? `${b4ta.label}: ${b4ta.filas.map(f => f.discipline).join(' + ')}` : 'no agrupó');
+  check('Dentro del bloque compartido las edades salen de menor a mayor',
+    b4ta && JSON.stringify(b4ta.filas.map(f => f.edad)) === JSON.stringify([9, 15, 30]),
+    b4ta ? JSON.stringify(b4ta.filas.map(f => f.edad)) : '');
+  const bInicial = bs.find(b => b.label === 'INICIAL');
+  check('Las que no tienen la edad cargada quedan al final del cuadro',
+    bInicial && bInicial.filas[bInicial.filas.length - 1].nombre === 'D SIN EDAD',
+    bInicial ? bInicial.filas.map(f => `${f.nombre}=${f.edad}`).join(' · ') : '');
+  check('Los bloques salen en el orden oficial, no alfabético',
+    JSON.stringify(bs.map(b => b.label)) === JSON.stringify(['INICIAL', '4TA']),
+    bs.map(b => b.label).join(' > '));
+
+  check('Dentro de cada categoría las edades van de menor a mayor',
+    bloques.every(b => {
+      const e = b.filas.map(f => (f.edad === null || f.edad === undefined) ? Infinity : Number(f.edad));
+      return e.every((v, i) => i === 0 || e[i - 1] <= v);
+    }),
+    JSON.stringify(bloques[0].filas.map(f => f.edad)));
+
+  const bufCat = Buffer.from(await insc.buildXlsxPorCategoriaSola(filas,
+    { name: 'ZONA SUR', datesLabel: '6 DE SEPTIEMBRE', venue: 'INSTITUTO ESTRADA' }));
+  const leidoCat = new ExcelJS.Workbook();
+  await leidoCat.xlsx.load(bufCat);
+  const hojaCat = leidoCat.getWorksheet('Planilla');
+  let encCat = null;
+  hojaCat.eachRow(fila => {
+    if (encCat || String(fila.getCell(1).value || '') !== 'NOMBRE COMPLETO') return;
+    encCat = [1, 2, 3, 4, 5, 6].map(c => String(fila.getCell(c).value || ''));
+  });
+  check('La planilla por categoría suma DISCIPLINA como columna',
+    JSON.stringify(encCat) === JSON.stringify(
+      ['NOMBRE COMPLETO', 'EDAD', 'DISCIPLINA', 'CATEGORÍA', 'CATEGORÍA DE EDAD', 'CLUB']),
+    JSON.stringify(encCat));
+
+  check('El dashboard deja elegir cómo agrupar la planilla',
+    dash.text.includes('name="agrupar"') && dash.text.includes('value="categoria"'));
+
   const scopeAjeno = await get(PROFE_ADMIN, `/admin/exportar/planilla?tournament_id=${zonaSur}`, false);
   check('Giselle no puede bajar la planilla de un torneo de otra zona',
     scopeAjeno.status === 302 && decodeURIComponent(scopeAjeno.headers.location || '').includes('fuera de tu alcance'),

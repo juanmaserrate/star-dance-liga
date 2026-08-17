@@ -57,10 +57,18 @@
           <% }) %>
         </select>
       </div>
+      <div class="form-group" style="margin-bottom: 0; min-width: 250px;">
+        <label class="form-label" for="planilla_agrupar">Agrupar por</label>
+        <select id="planilla_agrupar" name="agrupar" class="form-select">
+          <option value="disciplina">Disciplina, y adentro por categoría</option>
+          <option value="categoria">Categoría (la disciplina va como columna)</option>
+        </select>
+      </div>
       <button type="submit" class="btn btn-gold" style="height: 40px;">⬇️ Descargar Excel</button>
       <p style="color: var(--text-muted); font-size: 0.85rem; width: 100%; margin: 0.25rem 0 0;">
-        Una sola hoja, agrupada por disciplina y adentro un cuadro por cada categoría, con
-        nombre completo, edad, categoría de edad y club. No incluye las inscripciones canceladas.
+        Una sola hoja con un cuadro por cada categoría: nombre completo, edad, disciplina,
+        categoría, categoría de edad y club. Dentro de cada cuadro las patinadoras van
+        ordenadas por edad, de menor a mayor. No incluye las inscripciones canceladas.
       </p>
     </form>
   </div>
