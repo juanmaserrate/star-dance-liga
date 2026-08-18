@@ -160,7 +160,15 @@
                   <a href="/profesor/certificado/<%= r.id %>" target="_blank" class="btn btn-outline-gold btn-sm">🖨️ Certificado</a>
                 </td>
                 <td>
-                  <a href="/profesor/inscripciones/<%= r.id %>/editar" class="btn btn-outline-gold btn-sm" title="Editar o mover de torneo">✏️ Editar</a>
+                  <div style="display: flex; gap: 0.3rem;">
+                      <a href="/profesor/inscripciones/<%= r.id %>/editar" class="btn btn-outline-gold btn-sm" title="Editar o mover de torneo">✏️ Editar</a>
+                      <form action="/profesor/inscripciones/<%= r.id %>/eliminar" method="POST" style="margin: 0;">
+                        <button type="submit" class="btn btn-danger btn-sm" title="Eliminar la inscripción"
+                          onclick="return confirm('¿Eliminar esta inscripción?
+
+La patinadora deja de estar anotada en esa categoría. Queda una copia guardada por si hubo un error.');">🗑️</button>
+                      </form>
+                    </div>
                 </td>
               </tr>
             <% }) %>

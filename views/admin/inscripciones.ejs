@@ -51,6 +51,9 @@
   <% if (typeof success !== 'undefined' && success) { %>
     <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
   <% } %>
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger">⚠️ <%= error %></div>
+  <% } %>
 
   <!-- Registrations Table with Every Field in a Separate Column -->
   <div class="card">
@@ -162,7 +165,15 @@
                   <% } %>
                 </td>
                 <td>
-                  <a href="/admin/inscripciones/<%= r.id %>/editar" class="btn btn-outline-gold btn-sm" title="Editar o mover de torneo">✏️ Editar</a>
+                  <div style="display: flex; gap: 0.3rem;">
+                      <a href="/admin/inscripciones/<%= r.id %>/editar" class="btn btn-outline-gold btn-sm" title="Editar o mover de torneo">✏️ Editar</a>
+                      <form action="/admin/inscripciones/<%= r.id %>/eliminar" method="POST" style="margin: 0;">
+                        <button type="submit" class="btn btn-danger btn-sm" title="Eliminar la inscripción"
+                          onclick="return confirm('¿Eliminar esta inscripción?
+
+La patinadora deja de estar anotada en esa categoría. Queda una copia guardada por si hubo un error.');">🗑️</button>
+                      </form>
+                    </div>
                 </td>
               </tr>
             <% }) %>

@@ -164,6 +164,37 @@ async function initDb() {
     -- CAP, con categorías distintas cada uno). En el resto queda en NULL.
     ALTER TABLE categories ADD COLUMN IF NOT EXISTS ruleset TEXT;
 
+    -- Copia de las inscripciones borradas. Borrar una inscripcion la saca de
+    -- la competencia, pero el dato queda guardado aca por si hubo un error:
+    -- quien la borro, cuando, y todo lo que tenia cargado.
+    CREATE TABLE IF NOT EXISTS registrations_eliminadas (
+      id SERIAL PRIMARY KEY,
+      registration_id INTEGER,
+      tournament_id INTEGER,
+      tournament_name TEXT,
+      category_id INTEGER,
+      category_name TEXT,
+      discipline TEXT,
+      student_id INTEGER,
+      student_name TEXT,
+      club_id INTEGER,
+      club_name TEXT,
+      teacher_id INTEGER,
+      teacher_name TEXT,
+      is_group BOOLEAN,
+      group_name TEXT,
+      group_type TEXT,
+      status TEXT,
+      notes TEXT,
+      age INTEGER,
+      age_band TEXT,
+      member_ids TEXT,
+      created_at TIMESTAMP,
+      deleted_by INTEGER,
+      deleted_by_name TEXT,
+      deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS age_band TEXT;
 
     -- Edad de la patinadora al momento de inscribirse. Se precarga desde la

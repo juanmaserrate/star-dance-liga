@@ -2,6 +2,13 @@
 <%- include('profesor_shell', { activeNav: 'mis_alumnas', topbarSection: 'Ficha de Alumna' }) %>
 
 
+  <% if (typeof success !== 'undefined' && success) { %>
+    <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
+  <% } %>
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger">⚠️ <%= error %></div>
+  <% } %>
+
   <div class="card" style="max-width: 900px; margin: 0 auto; border-top: 5px solid var(--gold-primary);">
     <div class="card-header">
       <h1 class="card-title">👤 Ficha Técnica y Datos de la Alumna</h1>
@@ -94,7 +101,16 @@
                     <div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.discipline %></div>
                   </td>
                   <td>
-                    <a href="/profesor/inscripciones/<%= r.id %>/editar" class="btn btn-outline-gold btn-sm" title="Editar o mover de torneo">✏️ Editar</a>
+                    <div style="display: flex; gap: 0.3rem;">
+                      <a href="/profesor/inscripciones/<%= r.id %>/editar" class="btn btn-outline-gold btn-sm" title="Editar o mover de torneo">✏️ Editar</a>
+                      <form action="/profesor/inscripciones/<%= r.id %>/eliminar" method="POST" style="margin: 0;">
+                      <input type="hidden" name="volver_a" value="alumna">
+                        <button type="submit" class="btn btn-danger btn-sm" title="Eliminar la inscripción"
+                          onclick="return confirm('¿Eliminar esta inscripción?
+
+La patinadora deja de estar anotada en esa categoría. Queda una copia guardada por si hubo un error.');">🗑️</button>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               <% }) %>

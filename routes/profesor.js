@@ -450,7 +450,9 @@ router.get('/alumnos/:id/ver', async (req, res) => {
     registrations,
     myClubs: await db.prepare(`
       SELECT c.* FROM clubs c JOIN user_clubs uc ON c.id = uc.club_id WHERE uc.user_id = ? ORDER BY c.name ASC
-    `).all(teacherId)
+    `).all(teacherId),
+    success: req.query.success || null,
+    error: req.query.error || null
   });
 });
 
@@ -923,6 +925,32 @@ router.post('/inscripciones/:id/editar', async (req, res) => {
     .run(tournament_id, category_id, notes, age_band, age, regId);
 
   res.redirect('/profesor/dashboard?success=' + encodeURIComponent('Inscripción actualizada correctamente.'));
+});
+
+
+// Eliminar una inscripción propia. Antes de borrarla se guarda una copia en
+// registrations_eliminadas, así un borrado por error se puede reponer.
+router.post('/inscripciones/:id/eliminar', async (req, res) => {
+  const regId = parseInt(req.params.id, 10);
+  const reg = await inscEdit.getRegistration(regId);
+  if (!reg || reg.teacher_id !== req.session.user.id) {
+    return res.status(404).render('error', {
+      title: 'Inscripción No Encontrada',
+      message: 'La inscripción no existe o no pertenece a tu padrón.'
+    });
+  }
+
+  const volver = req.body.volver_a === 'alumna' && reg.student_id
+    ? `/profesor/alumnos/${reg.student_id}`
+    : '/profesor/dashboard';
+
+  const r = await inscEdit.eliminarRegistration(regId, req.session.user);
+  if (!r.ok) {
+    return res.redirect(volver + '?error=' + encodeURIComponent(r.error));
+  }
+
+  res.redirect(volver + '?success=' + encodeURIComponent(
+    `Inscripción de ${r.quien} en ${reg.tournament_name} eliminada.`));
 });
 
 // Notificaciones de la campana (JSON para el dropdown)

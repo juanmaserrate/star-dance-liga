@@ -309,6 +309,30 @@ router.post('/inscripciones/:id/editar', async (req, res) => {
   res.redirect('/admin/inscripciones?success=' + encodeURIComponent('Inscripción actualizada correctamente.'));
 });
 
+
+// Eliminar una inscripción (administrador). Respeta el alcance por zona: un
+// administrador de CABA no puede borrar inscripciones de otros torneos.
+router.post('/inscripciones/:id/eliminar', async (req, res) => {
+  const regId = toInt(req.params.id);
+  const reg = await inscEdit.getRegistration(regId);
+  if (!reg) {
+    return res.redirect('/admin/inscripciones?error=' + encodeURIComponent('La inscripción no existe o ya fue eliminada.'));
+  }
+
+  const alcance = getAdminScope(req.session.user);
+  if (alcance && !String(reg.tournament_name || '').toUpperCase().includes(String(alcance).toUpperCase())) {
+    return res.redirect('/admin/inscripciones?error=' + encodeURIComponent('Esa inscripción está fuera de tu alcance de administración.'));
+  }
+
+  const r = await inscEdit.eliminarRegistration(regId, req.session.user);
+  if (!r.ok) {
+    return res.redirect('/admin/inscripciones?error=' + encodeURIComponent(r.error));
+  }
+
+  res.redirect('/admin/inscripciones?success=' + encodeURIComponent(
+    `Inscripción de ${r.quien} en ${reg.tournament_name} eliminada.`));
+});
+
 // Export CSV (campos seleccionables, datos completos de la inscripción)
 router.get('/exportar/csv', async (req, res) => {
   const { buscar, disciplina, categoria, fields } = req.query;

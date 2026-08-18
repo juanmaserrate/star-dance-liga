@@ -537,6 +537,104 @@ async function main() {
     scopeAjeno.status === 302 && decodeURIComponent(scopeAjeno.headers.location || '').includes('fuera de tu alcance'),
     `status ${scopeAjeno.status}`);
 
+
+  // --- Eliminar inscripciones (profesora y administrador) ---
+  const totalReg = async () => (await pglite.query(`SELECT COUNT(*)::int AS n FROM registrations`)).rows[0].n;
+  const enPapelera = async () => (await pglite.query(`SELECT COUNT(*)::int AS n FROM registrations_eliminadas`)).rows[0].n;
+
+  // Una inscripción de la profesora (teacher_id = 2)
+  const propia = (await pglite.query(
+    `SELECT id FROM registrations WHERE teacher_id = 2 ORDER BY id DESC LIMIT 1`)).rows[0];
+  const ajena = (await pglite.query(
+    `SELECT id FROM registrations WHERE teacher_id <> 2 ORDER BY id LIMIT 1`)).rows[0];
+
+  const antesBorrar = await totalReg();
+
+  // La profesora NO puede borrar una inscripción de otra
+  if (ajena) {
+    SESSION = PROFE;
+    const noAjena = await request(app).post(`/profesor/inscripciones/${ajena.id}/eliminar`).send({});
+    check('La profesora no puede eliminar inscripciones de otra',
+      noAjena.status === 404 && (await totalReg()) === antesBorrar, `status ${noAjena.status}`);
+  }
+
+  // La profesora SÍ puede borrar la suya
+  SESSION = PROFE;
+  const borrado = await request(app).post(`/profesor/inscripciones/${propia.id}/eliminar`).send({});
+  check('La profesora elimina una inscripción propia',
+    (await totalReg()) === antesBorrar - 1, `${await totalReg()} de ${antesBorrar}`);
+  check('Y el sistema lo confirma en pantalla',
+    decodeURIComponent(borrado.headers.location || '').includes('eliminada'),
+    decodeURIComponent(borrado.headers.location || ''));
+
+  check('La inscripción borrada queda guardada en la papelera', (await enPapelera()) === 1);
+  const copia = (await pglite.query(
+    `SELECT registration_id, student_name, tournament_name, category_name, deleted_by_name
+     FROM registrations_eliminadas ORDER BY id DESC LIMIT 1`)).rows[0];
+  check('La copia guarda qué era y quién la borró',
+    Number(copia.registration_id) === Number(propia.id) &&
+    !!copia.tournament_name && !!copia.category_name && copia.deleted_by_name === 'GISELLE',
+    JSON.stringify(copia));
+
+  check('Los integrantes de la inscripción se van con ella',
+    (await pglite.query(
+      `SELECT COUNT(*)::int AS n FROM registration_members WHERE registration_id = ${propia.id}`)).rows[0].n === 0);
+
+  // Con puntajes cargados no se puede borrar: se perderían los resultados
+  const conPuntaje = (await pglite.query(
+    `SELECT id FROM registrations WHERE teacher_id = 2 ORDER BY id DESC LIMIT 1`)).rows[0];
+  await pglite.query(
+    `INSERT INTO scores (registration_id, judge_id, total_score) VALUES (${conPuntaje.id}, 1, 8.5)`);
+  const antesPuntaje = await totalReg();
+  const conScore = await request(app).post(`/profesor/inscripciones/${conPuntaje.id}/eliminar`).send({});
+  check('No se puede eliminar una inscripción que ya tiene puntajes',
+    (await totalReg()) === antesPuntaje &&
+    decodeURIComponent(conScore.headers.location || '').includes('puntaje'),
+    decodeURIComponent(conScore.headers.location || ''));
+  await pglite.query(`DELETE FROM scores WHERE registration_id = ${conPuntaje.id}`);
+
+  // El administrador puede borrar cualquiera de su alcance
+  SESSION = ADMIN;
+  const deOtra = (await pglite.query(
+    `SELECT id FROM registrations WHERE teacher_id <> 2 ORDER BY id DESC LIMIT 1`)).rows[0];
+  if (deOtra) {
+    const antesAdmin = await totalReg();
+    const borradoAdmin = await request(app).post(`/admin/inscripciones/${deOtra.id}/eliminar`).send({});
+    check('El administrador elimina una inscripción de cualquier profesora',
+      (await totalReg()) === antesAdmin - 1 &&
+      decodeURIComponent(borradoAdmin.headers.location || '').includes('eliminada'),
+      decodeURIComponent(borradoAdmin.headers.location || ''));
+  }
+
+  // Giselle (admin de CABA) no puede borrar inscripciones de otra zona
+  const deZonaSur = (await pglite.query(
+    `SELECT id FROM registrations WHERE tournament_id = ${zonaSur} ORDER BY id DESC LIMIT 1`)).rows[0];
+  if (deZonaSur) {
+    SESSION = PROFE_ADMIN;
+    const antesScope = await totalReg();
+    const fuera = await request(app).post(`/admin/inscripciones/${deZonaSur.id}/eliminar`).send({});
+    check('Un administrador de zona no borra inscripciones de otra zona',
+      (await totalReg()) === antesScope &&
+      decodeURIComponent(fuera.headers.location || '').includes('fuera de tu alcance'),
+      decodeURIComponent(fuera.headers.location || ''));
+  }
+
+  // Borrar algo que ya no existe avisa, no rompe
+  SESSION = ADMIN;
+  const inexistente = await request(app).post('/admin/inscripciones/999999/eliminar').send({});
+  check('Eliminar algo que ya no existe avisa en vez de romper',
+    inexistente.status === 302 &&
+    decodeURIComponent(inexistente.headers.location || '').includes('no existe'),
+    `status ${inexistente.status}`);
+
+  // Los botones tienen que estar en las pantallas
+  const dashProfe = await get(PROFE, '/profesor/dashboard');
+  check('La profesora ve el botón de eliminar en su panel',
+    /\/profesor\/inscripciones\/\d+\/eliminar/.test(dashProfe.text));
+  const listaAdmin = await get(ADMIN, '/admin/inscripciones');
+  check('El administrador ve el botón de eliminar en el listado',
+    /\/admin\/inscripciones\/\d+\/eliminar/.test(listaAdmin.text));
+
   // --- Administrador con alcance limitado (Giselle → CABA) ---
   const torneosGiselle = await get(PROFE_ADMIN, '/admin/torneos');
   check('Giselle ve los torneos de CABA', torneosGiselle.text.includes('ZONA CABA'));
