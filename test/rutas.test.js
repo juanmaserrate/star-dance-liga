@@ -473,14 +473,23 @@ async function main() {
     insc.sheetName('X'.repeat(60), usados).length === 31);
 
 
-  // --- Cuarta opción: planilla de orden de salida a pista ---
-  const ordenPista = await request(app).get(
-    `/admin/exportar/planilla?tournament_id=${zonaSur}&agrupar=orden_pista`);
-  check('GET planilla de orden de pista responde un .xlsx',
-    ordenPista.status === 200 &&
-    /spreadsheetml/.test(ordenPista.headers['content-type'] || '') &&
-    /filename="PLANILLA_.*_ORDEN_DE_PISTA\.xlsx"/.test(ordenPista.headers['content-disposition'] || ''),
-    `status ${ordenPista.status} · ${ordenPista.headers['content-disposition']}`);
+  // --- Libro Mayor: el armado por defecto ---
+  const libroMayor = await request(app).get(
+    `/admin/exportar/planilla?tournament_id=${zonaSur}&agrupar=libro_mayor`);
+  check('GET del Libro Mayor responde un .xlsx',
+    libroMayor.status === 200 &&
+    /spreadsheetml/.test(libroMayor.headers['content-type'] || '') &&
+    /filename="PLANILLA_.*_LIBRO_MAYOR\.xlsx"/.test(libroMayor.headers['content-disposition'] || ''),
+    `status ${libroMayor.status} · ${libroMayor.headers['content-disposition']}`);
+
+  // Sin elegir armado tiene que salir el Libro Mayor
+  const porDefecto = await request(app).get(
+    `/admin/exportar/planilla?tournament_id=${zonaSur}`);
+  check('Sin elegir armado, el que sale es el Libro Mayor',
+    /filename="PLANILLA_.*_LIBRO_MAYOR\.xlsx"/.test(porDefecto.headers['content-disposition'] || ''),
+    porDefecto.headers['content-disposition']);
+  check('El desplegable ofrece el Libro Mayor y viene seleccionado',
+    dash.text.includes('value="libro_mayor" selected') && dash.text.includes('Libro Mayor'));
 
   // El bloque se arma con disciplina + categoría + categoría de edad
   const pistaBloques = insc.groupByOrdenDePista(filas);
@@ -499,16 +508,27 @@ async function main() {
     { name: 'ZONA SUR', datesLabel: '6 DE SEPTIEMBRE', venue: 'INSTITUTO ESTRADA' }));
   const libroPista = new ExcelJS.Workbook();
   await libroPista.xlsx.load(bufPista);
-  const hojaPista = libroPista.getWorksheet('Orden de Pista');
+  const hojaPista = libroPista.getWorksheet('Libro Mayor');
 
   let encPista = null;
   const salidas = [];
+  const edadesLibro = [];
   let horarioVacio = true;
   hojaPista.eachRow((fila, n) => {
     if (String(fila.getCell(3).value || '') === 'Apellido') {
-      if (!encPista) encPista = [3, 4, 5, 6].map(c => String(fila.getCell(c).value || ''));
+      if (!encPista) {
+        encPista = [3, 4, 5, 6, 7].map(c => String(fila.getCell(c).value || ''));
+        // Edades del primer bloque, para verificar el orden
+        // Se corta al salir del bloque: la franja violeta del bloque siguiente
+        // esta combinada y devuelve el titulo, que no es un numero.
+        for (let r = n + 1; r <= hojaPista.rowCount; r++) {
+          const v = Number(hojaPista.getRow(r).getCell(5).value);
+          if (!Number.isFinite(v)) break;
+          edadesLibro.push(v);
+        }
+      }
       // La salida a pista va sin numerar: la define la organización
-      const primera = hojaPista.getRow(n + 1).getCell(6).value;
+      const primera = hojaPista.getRow(n + 1).getCell(7).value;
       salidas.push(primera === null || primera === undefined || primera === '');
     }
     // Las filas 1 y 2 son el título, combinado de punta a punta: ExcelJS
@@ -519,9 +539,13 @@ async function main() {
     }
   });
 
-  check('Las columnas son Apellido, Nombre, Institución y Salida a pista',
-    JSON.stringify(encPista) === JSON.stringify(['Apellido', 'Nombre', 'Institución', 'Salida a pista']),
+  check('Las columnas son Apellido, Nombre, Edad, Institución y Salida a pista',
+    JSON.stringify(encPista) === JSON.stringify(
+      ['Apellido', 'Nombre', 'Edad', 'Institución', 'Salida a pista']),
     JSON.stringify(encPista));
+  check('La columna de edad viene cargada y ordenada de menor a mayor',
+    edadesLibro.length > 0 && edadesLibro.every((v, i) => i === 0 || edadesLibro[i - 1] <= v),
+    JSON.stringify(edadesLibro.slice(0, 10)));
   check('La columna de salida a pista queda sin numerar',
     salidas.length > 0 && salidas.every(v => v === true), JSON.stringify(salidas.slice(0, 8)));
   check('La columna de horario queda vacía: no hay horarios cargados', horarioVacio);

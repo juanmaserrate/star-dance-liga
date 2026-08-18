@@ -60,19 +60,20 @@
       <div class="form-group" style="margin-bottom: 0; min-width: 250px;">
         <label class="form-label" for="planilla_agrupar">Agrupar por</label>
         <select id="planilla_agrupar" name="agrupar" class="form-select">
+          <option value="libro_mayor" selected>Libro Mayor (orden de salida a pista)</option>
           <option value="disciplina">Disciplina, y adentro por categoría</option>
           <option value="categoria">Categoría (la disciplina va como columna)</option>
           <option value="categoria_hojas">Categoría, cada una en una hoja aparte</option>
-          <option value="orden_pista">Orden de salida a pista (formato planilla)</option>
         </select>
       </div>
       <button type="submit" class="btn btn-gold" style="height: 40px;">⬇️ Descargar Excel</button>
       <p style="color: var(--text-muted); font-size: 0.85rem; width: 100%; margin: 0.25rem 0 0;">
-        Las tres primeras arman cuadros con nombre completo, edad, disciplina, categoría,
-        categoría de edad y club, ordenados por edad de menor a mayor; la tercera abre una solapa
-        por categoría. La última reproduce la planilla de pista: un bloque por disciplina,
-        categoría y categoría de edad, con Apellido, Nombre, Institución y salida a pista, más
-        columnas en blanco para el horario y para anotar a mano. No incluye las canceladas.
+        El <strong>Libro Mayor</strong> es la planilla de pista: un bloque por disciplina,
+        categoría y categoría de edad, con Apellido, Nombre, Edad, Institución y salida a pista,
+        más columnas en blanco para el horario y para anotar a mano. Las otras tres arman cuadros
+        con nombre completo, edad, disciplina, categoría, categoría de edad y club; la última abre
+        una solapa por categoría. En todas, las patinadoras van ordenadas por edad de menor a
+        mayor. No incluye las inscripciones canceladas.
       </p>
     </form>
   </div>

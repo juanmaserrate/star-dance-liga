@@ -404,16 +404,18 @@ router.get('/exportar/planilla', async (req, res) => {
     }
     tournament.datesLabel = formatEventDates(tournament.date_from || tournament.event_date, tournament.date_to);
 
-    // Tres armados posibles: por disciplina (con bloques de categoría adentro),
-    // por categoría en una sola hoja, o por categoría con una hoja para cada una.
-    const agrupar = String(req.query.agrupar || 'disciplina');
+    // Cuatro armados posibles. El Libro Mayor es el que se usa el dia del
+    // torneo, asi que es el que sale por defecto.
+    const agrupar = String(req.query.agrupar || 'libro_mayor');
     const armados = {
+      libro_mayor: { build: insc.buildXlsxOrdenDePista, sufijo: '_LIBRO_MAYOR' },
       disciplina: { build: insc.buildXlsxPorCategoria, sufijo: '_POR_DISCIPLINA' },
       categoria: { build: insc.buildXlsxPorCategoriaSola, sufijo: '_POR_CATEGORIA' },
-      categoria_hojas: { build: insc.buildXlsxHojaPorCategoria, sufijo: '_POR_CATEGORIA_EN_HOJAS' },
-      orden_pista: { build: insc.buildXlsxOrdenDePista, sufijo: '_ORDEN_DE_PISTA' }
+      categoria_hojas: { build: insc.buildXlsxHojaPorCategoria, sufijo: '_POR_CATEGORIA_EN_HOJAS' }
     };
-    const armado = armados[agrupar] || armados.disciplina;
+    // Cualquier valor desconocido (incluido el nombre anterior, orden_pista)
+    // cae en el Libro Mayor, que es el armado por defecto.
+    const armado = armados[agrupar] || armados.libro_mayor;
 
     const rows = await insc.fetchForGroupedSheet(tournament.id);
     const buffer = await armado.build(rows, tournament);
