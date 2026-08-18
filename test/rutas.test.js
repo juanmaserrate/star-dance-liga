@@ -539,6 +539,41 @@ async function main() {
 
 
 
+
+  // --- Filtros y buscador de "Mis Inscripciones en Torneos" ---
+  const misInsc = await get(PROFE, '/profesor/dashboard');
+  const mi = misInsc.text;
+
+  check('La tabla de inscripciones tiene buscador con lupa',
+    mi.includes('id="fBuscar"') && mi.includes('🔍'));
+  check('Hay un desplegable por cada columna de la inscripción',
+    ['fTorneo', 'fDisciplina', 'fCategoria', 'fBanda', 'fEdad', 'fTipo', 'fClub']
+      .every(id => mi.includes('id="' + id + '"')),
+    ['fTorneo', 'fDisciplina', 'fCategoria', 'fBanda', 'fEdad', 'fTipo', 'fClub']
+      .filter(id => !mi.includes('id="' + id + '"')).join(', '));
+  check('Se puede limpiar todo de una vez', mi.includes('id="fLimpiar"'));
+
+  // Cada fila viaja con sus datos, que es lo que permite filtrar sin recargar
+  const atributos = ['data-torneo', 'data-disciplina', 'data-categoria',
+    'data-banda', 'data-edad', 'data-tipo', 'data-club', 'data-buscar'];
+  check('Cada fila lleva los datos de su inscripción para poder filtrarla',
+    atributos.every(a => mi.includes(a)),
+    atributos.filter(a => !mi.includes(a)).join(', '));
+
+  // El texto buscable tiene que venir en minúsculas y con los datos de la fila
+  const buscables = [...mi.matchAll(/data-buscar="([^"]*)"/g)].map(m => m[1]);
+  check('El texto buscable incluye alumna, club, torneo y categoría',
+    buscables.length > 0 && buscables.every(b => b === b.toLowerCase() && b.length > 0),
+    JSON.stringify(buscables.slice(0, 2)));
+
+
+  // El aviso de confirmación va en una sola línea: un salto real dentro del
+  // string rompe el onclick y el borrado se ejecutaría sin preguntar.
+  const confirms = [...misInsc.text.matchAll(/onclick="return confirm\(([^)]*)\)/g)].map(m => m[1]);
+  check('El confirm de eliminar no parte líneas',
+    confirms.length > 0 && confirms.every(c => !c.includes(String.fromCharCode(10))),
+    confirms.length + ' encontrados');
+
   // --- Editar inscripción: la disciplina manda sobre categoría y franja ---
   const regFree = (await pglite.query(`
     SELECT r.id FROM registrations r JOIN categories c ON c.id = r.category_id
