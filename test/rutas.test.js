@@ -538,6 +538,54 @@ async function main() {
     `status ${scopeAjeno.status}`);
 
 
+
+  // --- Editar inscripción: la disciplina manda sobre categoría y franja ---
+  const regFree = (await pglite.query(`
+    SELECT r.id FROM registrations r JOIN categories c ON c.id = r.category_id
+    WHERE c.discipline = 'FREE DANCE' ORDER BY r.id LIMIT 1`)).rows[0];
+
+  if (regFree) {
+    const editar = await get(ADMIN, `/admin/inscripciones/${regFree.id}/editar`);
+    const t = editar.text;
+
+    check('El formulario de edición tiene desplegable de Disciplina',
+      t.includes('id="discipline_select"'));
+    check('La Disciplina va arriba de la Categoría',
+      t.indexOf('id="discipline_select"') !== -1 &&
+      t.indexOf('id="discipline_select"') < t.indexOf('id="category_id"'));
+    check('Arranca con la disciplina que tiene la inscripción',
+      /<option value="FREE DANCE" selected>/.test(t), 'no viene preseleccionada');
+
+    // Las categorías viajan con su disciplina, para poder filtrarlas en pantalla
+    const catsEditar = JSON.parse((t.match(/data-all-categories='([^']+)'/) || [])[1] || '[]');
+    check('El formulario lleva las categorías de todas las disciplinas del torneo',
+      new Set(catsEditar.map(c => c.discipline)).size > 1,
+      [...new Set(catsEditar.map(c => c.discipline))].join(', '));
+    check('Cada categoría viaja con su disciplina y su reglamento',
+      catsEditar.every(c => 'discipline' in c && 'ruleset' in c));
+    check('La categoría actual viaja para poder preseleccionarla',
+      /data-actual="\d+"/.test(t));
+
+    // Las franjas de edad van por disciplina: FREE DANCE tiene, LIBRE no
+    const bandasEditar = JSON.parse(
+      (t.match(/const EDIT_AGE_BANDS = ([^;]+);/) || [])[1] || '{}');
+    check('Las franjas de edad llegan agrupadas por disciplina',
+      Array.isArray(bandasEditar['FREE DANCE']) && bandasEditar['FREE DANCE'].length > 0,
+      Object.keys(bandasEditar).join(', '));
+    check('LIBRE no ofrece franjas de edad',
+      !bandasEditar['LIBRE'] || bandasEditar['LIBRE'].length === 0);
+
+    // Y la profesora ve exactamente lo mismo
+    const propiaEdit = (await pglite.query(
+      `SELECT id FROM registrations WHERE teacher_id = 2 ORDER BY id LIMIT 1`)).rows[0];
+    if (propiaEdit) {
+      const editProfe = await get(PROFE, `/profesor/inscripciones/${propiaEdit.id}/editar`);
+      check('La profesora también tiene el desplegable de Disciplina',
+        editProfe.text.includes('id="discipline_select"') &&
+        editProfe.text.includes('data-all-categories'));
+    }
+  }
+
   // --- Eliminar inscripciones (profesora y administrador) ---
   const totalReg = async () => (await pglite.query(`SELECT COUNT(*)::int AS n FROM registrations`)).rows[0].n;
   const enPapelera = async () => (await pglite.query(`SELECT COUNT(*)::int AS n FROM registrations_eliminadas`)).rows[0].n;

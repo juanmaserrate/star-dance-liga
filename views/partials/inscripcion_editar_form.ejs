@@ -65,18 +65,30 @@
         <small style="color: var(--text-muted);">Al cambiar el torneo se recargan las categorías disponibles. Solo se permiten torneos con categorías cargadas.</small>
       </div>
 
+      <!-- Disciplina: manda sobre qué categorías y qué categorías de edad se
+           ofrecen abajo. Al cambiarla, los dos desplegables se rearman. -->
       <div class="form-group">
-        <label class="form-label" for="category_id">Categoría *</label>
-        <select id="category_id" name="category_id" class="form-select" required>
+        <label class="form-label" for="discipline_select">Disciplina *</label>
+        <select id="discipline_select" class="form-select">
           <% if (categories.length === 0) { %>
             <option value="">-- El torneo seleccionado no tiene categorías cargadas --</option>
           <% } else { %>
-            <option value="">-- Seleccionar categoría --</option>
-            <% categories.forEach(c => { %>
-              <option value="<%= c.id %>" <%= suggestedId == c.id ? 'selected' : '' %> data-discipline="<%= c.discipline %>">
-                <%= c.label %> (<%= c.discipline %><% if (c.ruleset) { %> · <%= c.ruleset %><% } %>)
-              </option>
+            <% [...new Set(categories.map(c => c.discipline))].forEach(d => { %>
+              <option value="<%= d %>" <%= reg.discipline === d ? 'selected' : '' %>><%= d %></option>
             <% }) %>
+          <% } %>
+        </select>
+        <small style="color: var(--text-muted);">Si cambiás de disciplina, abajo aparecen las categorías y categorías de edad de la nueva.</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="category_id">Categoría *</label>
+        <select id="category_id" name="category_id" class="form-select" required
+          data-all-categories='<%- JSON.stringify(categories.map(c => ({ id: c.id, label: c.label || c.name, discipline: c.discipline, ruleset: c.ruleset || null }))) %>'
+          data-suggested="<%= suggestedId || '' %>"
+          data-actual="<%= reg.category_id %>">
+          <% if (categories.length === 0) { %>
+            <option value="">-- El torneo seleccionado no tiene categorías cargadas --</option>
           <% } %>
         </select>
         <% if (suggestedId) { %>
@@ -135,11 +147,50 @@
   const BANDS_NORM = {};
   Object.keys(EDIT_AGE_BANDS).forEach(k => { BANDS_NORM[normDisc(k)] = EDIT_AGE_BANDS[k]; });
 
-  function selectedDiscipline() {
+  function disciplinaElegida() {
+    const sel = document.getElementById('discipline_select');
+    return sel ? sel.value : '';
+  }
+
+  // La disciplina manda: el desplegable de categoría solo muestra las de esa
+  // disciplina. Si se cambia de disciplina, se rearma con las de la nueva.
+  function poblarCategorias(conservarActual) {
     const cat = document.getElementById('category_id');
-    if (!cat) return '';
-    const opt = cat.options[cat.selectedIndex];
-    return opt ? (opt.getAttribute('data-discipline') || '') : '';
+    if (!cat) return;
+
+    const todas = cat.dataset.allCategories ? JSON.parse(cat.dataset.allCategories) : [];
+    if (!todas.length) return;
+
+    const previa = cat.value;
+    const disc = disciplinaElegida();
+    const dela = todas.filter(c => c.discipline === disc);
+
+    cat.innerHTML = '';
+    const vacia = document.createElement('option');
+    vacia.value = '';
+    vacia.textContent = dela.length ? '-- Seleccionar categoría --' : '-- Esta disciplina no tiene categorías --';
+    cat.appendChild(vacia);
+
+    dela.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.setAttribute('data-discipline', c.discipline);
+      opt.textContent = c.ruleset ? c.label + ' · ' + c.ruleset : c.label;
+      cat.appendChild(opt);
+    });
+
+    // Al abrir: la categoría actual de la inscripción, o la sugerida.
+    // Al cambiar de disciplina: lo que hubiera quedado seleccionado, si sigue.
+    const candidatas = conservarActual
+      ? [cat.dataset.actual, cat.dataset.suggested]
+      : [previa];
+    const elegida = candidatas.find(v => v && dela.some(c => String(c.id) === String(v)));
+    cat.value = elegida || '';
+  }
+
+  function selectedDiscipline() {
+    // La franja de edad depende de la disciplina elegida arriba.
+    return disciplinaElegida();
   }
 
   function bandLabel(b) {
@@ -190,7 +241,17 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    poblarCategorias(true);
     refreshBands(false);
+
+    const disc = document.getElementById('discipline_select');
+    if (disc) {
+      disc.addEventListener('change', () => {
+        poblarCategorias(false);
+        refreshBands(true);
+      });
+    }
+
     const cat = document.getElementById('category_id');
     if (cat) cat.addEventListener('change', () => refreshBands(true));
     const ageInput = document.getElementById('age');
