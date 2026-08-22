@@ -7,6 +7,7 @@ const { formatEventDates, formatDeadline } = require('../lib/dates');
 const { formatCategoryName } = require('../lib/categories');
 const insc = require('../lib/inscripciones_export');
 const inscEdit = require('../lib/inscripcion_editar');
+const errDb = require('../lib/errores_db');
 const tcfg = require('../lib/tournament_config');
 
 // All routes require role 'admin' (o el combinado 'profesor_admin')
@@ -1347,8 +1348,10 @@ router.post('/usuarios', async (req, res) => {
   } catch (err) {
     console.error('Error creating user:', err);
     let msg = 'Error al crear usuario.';
-    if (err.message && err.message.includes('UNIQUE constraint failed')) {
-      msg = 'El nombre de usuario ya existe.';
+    if (errDb.esDuplicado(err)) {
+      msg = errDb.campoDuplicado(err) === 'email'
+        ? 'Ese email ya está registrado en otro usuario.'
+        : 'El nombre de usuario ya existe.';
     }
     res.redirect('/admin/usuarios?error=' + encodeURIComponent(msg));
   }
@@ -1502,8 +1505,10 @@ router.post('/alumnos/nuevo', async (req, res) => {
   } catch (err) {
     console.error('Error adding skater by admin:', err);
     let msg = 'Error al registrar la deportista.';
-    if (err.message && err.message.includes('UNIQUE constraint failed')) {
-      msg = 'Ya existe una patinadora registrada en el padrón con ese DNI (Unicidad activa).';
+    if (errDb.esDuplicado(err)) {
+      msg = errDb.campoDuplicado(err) === 'cuil'
+        ? 'Ese CUIL ya está cargado en otra patinadora. Revisá el número.'
+        : await errDb.mensajeDniRepetido(req.body.dni);
     }
     const clubs = await db.prepare(`SELECT * FROM clubs ORDER BY name ASC`).all();
     const teachers = await db.prepare(`SELECT * FROM users WHERE role = 'profesor' OR role = 'admin' ORDER BY full_name ASC`).all();

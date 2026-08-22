@@ -564,6 +564,46 @@ async function main() {
 
 
 
+
+  // --- DNI repetido: el aviso tiene que decir quién lo tiene ---
+  const errDb = require('../lib/errores_db');
+  const yaCargada = (await pglite.query(
+    `SELECT dni, first_name, last_name FROM students WHERE dni IS NOT NULL LIMIT 1`)).rows[0];
+
+  // El error de PostgreSQL no dice "UNIQUE constraint failed" (eso era SQLite):
+  // llega con code 23505. El chequeo viejo nunca daba verdadero.
+  check('Se reconoce el duplicado por el código de PostgreSQL',
+    errDb.esDuplicado({ code: '23505' }) === true &&
+    errDb.esDuplicado({ message: 'duplicate key value violates unique constraint "students_dni_key"' }) === true &&
+    errDb.esDuplicado({ message: 'otra cosa' }) === false);
+  check('Se distingue qué campo se repitió',
+    errDb.campoDuplicado({ constraint: 'students_dni_key' }) === 'dni' &&
+    errDb.campoDuplicado({ constraint: 'students_cuil_key' }) === 'cuil');
+
+  const avisoDni = await errDb.mensajeDniRepetido(yaCargada.dni);
+  check('El aviso de DNI repetido nombra a la patinadora que ya está cargada',
+    avisoDni.includes(yaCargada.dni) && avisoDni.includes(yaCargada.last_name),
+    avisoDni);
+  check('Y explica qué hacer', avisoDni.includes('administrador'));
+
+  // De punta a punta: cargar una alumna con un DNI que ya existe
+  SESSION = PROFE;
+  const antesAlta = (await pglite.query(`SELECT COUNT(*)::int AS n FROM students`)).rows[0].n;
+  const altaRepetida = await request(app).post('/profesor/alumnos/nuevo').send({
+    full_name: 'PRUEBA REPETIDA',
+    dni: yaCargada.dni,
+    birth_date: '2016-06-14',
+    health_insurance: 'OSEIV',
+    policy_number: '60226/2',
+    club_id: '1'
+  });
+  check('No se carga la alumna repetida',
+    (await pglite.query(`SELECT COUNT(*)::int AS n FROM students`)).rows[0].n === antesAlta);
+  check('Y la pantalla explica el motivo, no un error genérico',
+    altaRepetida.text.includes('ya está cargado') &&
+    !altaRepetida.text.includes('Error al registrar la patinadora'),
+    altaRepetida.text.includes('Error al registrar') ? 'salio el mensaje generico' : 'sin mensaje');
+
   // --- Filtros y buscador de "Mis Inscripciones en Torneos" ---
   const misInsc = await get(PROFE, '/profesor/dashboard');
   const mi = misInsc.text;

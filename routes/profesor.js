@@ -7,6 +7,7 @@ const db = require('../database');
 const { formatEventDates } = require('../lib/dates');
 const { formatCategoryName } = require('../lib/categories');
 const inscEdit = require('../lib/inscripcion_editar');
+const errDb = require('../lib/errores_db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 // True cuando la petición viene de un fetch del frontend (wizards) y espera JSON.
@@ -396,8 +397,10 @@ router.post('/alumnos/nuevo', upload.single('documento'), async (req, res) => {
   } catch (err) {
     console.error('Error saving student:', err);
     let errMsg = 'Error al registrar la patinadora.';
-    if (err.message && err.message.includes('UNIQUE constraint failed: students.dni')) {
-      errMsg = 'Ya existe una patinadora registrada con ese DNI.';
+    if (errDb.esDuplicado(err)) {
+      errMsg = errDb.campoDuplicado(err) === 'cuil'
+        ? 'Ese CUIL ya está cargado en otra patinadora. Revisá el número.'
+        : await errDb.mensajeDniRepetido(dni);
     }
     if (ajax) return res.status(400).json({ ok: false, message: errMsg });
 
@@ -818,7 +821,7 @@ router.post('/inscribir', async (req, res) => {
   } catch (err) {
     console.error('Error in registration:', err);
     let errorMsg = 'Error al procesar la inscripción.';
-    if (err.message && err.message.includes('UNIQUE constraint failed')) {
+    if (errDb.esDuplicado(err)) {
       errorMsg = 'Una de las patinadoras ya se encuentra inscripta en esa categoría.';
     }
     if (ajax) return res.status(400).json({ ok: false, message: errorMsg });
