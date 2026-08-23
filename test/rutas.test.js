@@ -504,45 +504,50 @@ async function main() {
     pistaBloques.reduce((n, b) => n + b.total, 0) === filas.length,
     `${pistaBloques.reduce((n, b) => n + b.total, 0)} de ${filas.length}`);
 
-  const bufPista = Buffer.from(await insc.buildXlsxOrdenDePista(filas,
+  const bufPista = Buffer.from(await insc.buildXlsxLibroMayor(filas,
     { name: 'ZONA SUR', datesLabel: '6 DE SEPTIEMBRE', venue: 'INSTITUTO ESTRADA' }));
   const libroPista = new ExcelJS.Workbook();
   await libroPista.xlsx.load(bufPista);
   const hojaPista = libroPista.getWorksheet('Libro Mayor');
 
+  // Columnas de la plantilla: A horario · B apellido · C nombre · D edad
+  // E institucion · F salida a pista · G/H/I los tres jueces
   let encPista = null;
   const salidas = [];
   const edadesLibro = [];
   let horarioVacio = true;
+  let jueces = null;
+
   hojaPista.eachRow((fila, n) => {
-    if (String(fila.getCell(3).value || '') === 'Apellido') {
-      if (!encPista) {
-        encPista = [3, 4, 5, 6, 7].map(c => String(fila.getCell(c).value || ''));
-        // Edades del primer bloque, para verificar el orden
-        // Se corta al salir del bloque: la franja violeta del bloque siguiente
-        // esta combinada y devuelve el titulo, que no es un numero.
-        for (let r = n + 1; r <= hojaPista.rowCount; r++) {
-          const v = Number(hojaPista.getRow(r).getCell(5).value);
-          if (!Number.isFinite(v)) break;
-          edadesLibro.push(v);
-        }
+    if (String(fila.getCell(2).value || '') !== 'Apellido') return;
+
+    if (!encPista) {
+      encPista = [2, 3, 4, 5].map(c => String(fila.getCell(c).value || ''));
+      jueces = [7, 8, 9].map(c => String(fila.getCell(c).value || ''));
+      // Edades del primer bloque. Cada patinadora ocupa dos renglones, asi que
+      // se avanza de a dos; se corta al llegar a la franja del bloque siguiente.
+      for (let r = n + 1; r <= hojaPista.rowCount; r += 2) {
+        const v = Number(hojaPista.getRow(r).getCell(4).value);
+        if (!Number.isFinite(v)) break;
+        edadesLibro.push(v);
       }
-      // La salida a pista va sin numerar: la define la organización
-      const primera = hojaPista.getRow(n + 1).getCell(7).value;
-      salidas.push(primera === null || primera === undefined || primera === '');
     }
-    // Las filas 1 y 2 son el título, combinado de punta a punta: ExcelJS
-    // devuelve el valor del maestro en toda la combinación, así que se saltean.
-    if (n > 2) {
-      const h = fila.getCell(2).value;
-      if (h !== null && h !== undefined && h !== '') horarioVacio = false;
-    }
+
+    // La salida a pista va sin numerar: la define la organizacion
+    const primera = hojaPista.getRow(n + 1).getCell(6).value;
+    salidas.push(primera === null || primera === undefined || primera === '');
+
+    // El horario queda vacio: no hay horarios cargados en el sistema
+    const h = fila.getCell(1).value;
+    if (h !== null && h !== undefined && h !== '') horarioVacio = false;
   });
 
-  check('Las columnas son Apellido, Nombre, Edad, Institución y Salida a pista',
-    JSON.stringify(encPista) === JSON.stringify(
-      ['Apellido', 'Nombre', 'Edad', 'Institución', 'Salida a pista']),
+  check('El Libro Mayor usa las columnas de la plantilla',
+    JSON.stringify(encPista) === JSON.stringify(['Apellido', 'Nombre', 'Edad', 'Institución']),
     JSON.stringify(encPista));
+  check('Y las tres columnas de jueces para puntuar a mano',
+    JSON.stringify(jueces) === JSON.stringify(['JUEZ 1', 'JUEZ 2', 'JUEZ 3']),
+    JSON.stringify(jueces));
   check('La columna de edad viene cargada y ordenada de menor a mayor',
     edadesLibro.length > 0 && edadesLibro.every((v, i) => i === 0 || edadesLibro[i - 1] <= v),
     JSON.stringify(edadesLibro.slice(0, 10)));
@@ -550,11 +555,29 @@ async function main() {
     salidas.length > 0 && salidas.every(v => v === true), JSON.stringify(salidas.slice(0, 8)));
   check('La columna de horario queda vacía: no hay horarios cargados', horarioVacio);
 
-  // Apellido y nombre salen de los campos del padrón, sin recombinarlos
-  const conAlumna = filas.find(f => !f.is_group && f.apellido && f.nombre_pila);
-  check('Apellido y Nombre se toman tal cual están en el padrón',
-    !!conAlumna && conAlumna.nombre === `${conAlumna.apellido} ${conAlumna.nombre_pila}`,
-    conAlumna ? `${conAlumna.apellido} | ${conAlumna.nombre_pila}` : 'sin datos');
+  // Formato de la plantilla: titulo amarillo, franja violeta, celda celeste
+  const titulo = hojaPista.getCell(1, 1);
+  check('El título va sobre fondo amarillo, como en la plantilla',
+    titulo.fill && titulo.fill.fgColor && titulo.fill.fgColor.argb === 'FFFFFF00',
+    JSON.stringify(titulo.fill));
+  check('El título dice el torneo y la fecha',
+    String(titulo.value).includes('ZONA SUR') && String(titulo.value).includes('SEPTIEMBRE'),
+    String(titulo.value));
+
+  const franja = hojaPista.getCell(2, 2);
+  check('La franja del bloque va violeta con el nombre completo del bloque',
+    franja.fill && franja.fill.fgColor && franja.fill.fgColor.argb === 'FF7030A0' &&
+    String(franja.value).length > 0,
+    JSON.stringify({ fill: franja.fill && franja.fill.fgColor, valor: franja.value }));
+  check('La celda del horario va celeste',
+    hojaPista.getCell(3, 1).fill.fgColor.argb === 'FF00B0F0',
+    JSON.stringify(hojaPista.getCell(3, 1).fill));
+  check('Cada patinadora ocupa dos renglones, como en la plantilla',
+    hojaPista.getCell(4, 2).isMerged && hojaPista.getCell(5, 2).master.address === 'B4',
+    JSON.stringify({ merged: hojaPista.getCell(4, 2).isMerged }));
+  check('El ancho de las columnas es el de la plantilla',
+    hojaPista.getColumn(2).width === 62.9 && hojaPista.getColumn(5).width === 67.3,
+    JSON.stringify([hojaPista.getColumn(2).width, hojaPista.getColumn(5).width]));
 
   const scopeAjeno = await get(PROFE_ADMIN, `/admin/exportar/planilla?tournament_id=${zonaSur}`, false);
   check('Giselle no puede bajar la planilla de un torneo de otra zona',

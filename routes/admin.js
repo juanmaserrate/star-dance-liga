@@ -409,7 +409,7 @@ router.get('/exportar/planilla', async (req, res) => {
     // torneo, asi que es el que sale por defecto.
     const agrupar = String(req.query.agrupar || 'libro_mayor');
     const armados = {
-      libro_mayor: { build: insc.buildXlsxOrdenDePista, sufijo: '_LIBRO_MAYOR' },
+      libro_mayor: { build: insc.buildXlsxLibroMayor, sufijo: '_LIBRO_MAYOR' },
       disciplina: { build: insc.buildXlsxPorCategoria, sufijo: '_POR_DISCIPLINA' },
       categoria: { build: insc.buildXlsxPorCategoriaSola, sufijo: '_POR_CATEGORIA' },
       categoria_hojas: { build: insc.buildXlsxHojaPorCategoria, sufijo: '_POR_CATEGORIA_EN_HOJAS' }
