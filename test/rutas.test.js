@@ -504,6 +504,45 @@ async function main() {
     pistaBloques.reduce((n, b) => n + b.total, 0) === filas.length,
     `${pistaBloques.reduce((n, b) => n + b.total, 0)} de ${filas.length}`);
 
+
+  // --- La exportación no puede perder inscripciones en el camino ---
+  // Los JOIN de la consulta (club, categoría, torneo) son internos: si alguno
+  // no encontrara pareja, esas filas desaparecerían de la planilla sin aviso.
+  const activasSur = (await pglite.query(
+    `SELECT COUNT(*)::int AS n FROM registrations
+     WHERE tournament_id = ${zonaSur} AND COALESCE(status,'') <> 'cancelled'`)).rows[0].n;
+  check('La planilla trae TODAS las inscripciones activas del torneo',
+    filas.length === activasSur, `${filas.length} de ${activasSur}`);
+
+  // Ningún club puede quedar afuera, tengan tildes o eñes en el nombre
+  const clubesEnBase = (await pglite.query(
+    `SELECT DISTINCT cl.name FROM registrations r JOIN clubs cl ON cl.id = r.club_id
+     WHERE r.tournament_id = ${zonaSur} AND COALESCE(r.status,'') <> 'cancelled'
+     ORDER BY 1`)).rows.map(r => r.name);
+  const clubesEnPlanilla = [...new Set(filas.map(f => f.club))].sort();
+  check('Ningún club se pierde en la exportación',
+    clubesEnBase.length === clubesEnPlanilla.length &&
+    clubesEnBase.every(c => clubesEnPlanilla.includes(c)),
+    'faltan: ' + clubesEnBase.filter(c => !clubesEnPlanilla.includes(c)).join(', '));
+
+  // Un club con tilde y eñe tiene que viajar igual que cualquier otro
+  await pglite.query(`INSERT INTO clubs (id, name) VALUES (9901, 'ATLÉTICO ÑANDÚ')
+    ON CONFLICT (id) DO NOTHING`);
+  const catPrueba = (await pglite.query(
+    `SELECT id FROM categories WHERE tournament_id = ${zonaSur} LIMIT 1`)).rows[0];
+  await pglite.query(`INSERT INTO registrations
+    (tournament_id, category_id, student_id, club_id, teacher_id, status, age)
+    VALUES (${zonaSur}, ${catPrueba.id}, 2, 9901, 2, 'registered', 12)`);
+
+  const conTilde = await insc.fetchForGroupedSheet(zonaSur);
+  check('Un club con tilde y eñe sale en la planilla',
+    conTilde.some(f => f.club === 'ATLÉTICO ÑANDÚ'),
+    [...new Set(conTilde.map(f => f.club))].join(' | '));
+  check('Y al sumarlo no se pierde ninguna de las anteriores',
+    conTilde.length === filas.length + 1, `${conTilde.length} vs ${filas.length + 1}`);
+
+  await pglite.query(`DELETE FROM registrations WHERE club_id = 9901`);
+
   const bufPista = Buffer.from(await insc.buildXlsxLibroMayor(filas,
     { name: 'ZONA SUR', datesLabel: '6 DE SEPTIEMBRE', venue: 'INSTITUTO ESTRADA' }));
   const libroPista = new ExcelJS.Workbook();
