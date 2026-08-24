@@ -627,6 +627,50 @@ async function main() {
 
 
 
+
+  // --- Apellido y Nombre: campos separados, sin adivinar ---
+  const formAlta = await get(PROFE, '/profesor/alumnos/nuevo');
+  check('El alta de alumna pide Apellido y Nombre por separado',
+    formAlta.text.includes('name="last_name"') && formAlta.text.includes('name="first_name"'));
+  check('Ya no hay un campo único que el sistema tenga que partir',
+    !formAlta.text.includes('name="full_name"'));
+
+  // Se guardan tal cual, cada uno en su casillero
+  SESSION = PROFE;
+  await request(app).post('/profesor/alumnos/nuevo').send({
+    last_name: 'moreira', first_name: 'aylin jazmín',
+    dni: '99000111', birth_date: '2015-03-02',
+    health_insurance: 'OSDE', policy_number: '123', club_id: '1'
+  });
+  const cargada = (await pglite.query(
+    `SELECT last_name, first_name FROM students WHERE dni = '99000111'`)).rows[0];
+  check('El apellido queda en apellido y el nombre en nombre',
+    cargada && cargada.last_name === 'MOREIRA' && cargada.first_name === 'AYLIN JAZMÍN',
+    JSON.stringify(cargada));
+
+  // Un nombre compuesto ya no se parte por el primer espacio
+  await request(app).post('/profesor/alumnos/nuevo').send({
+    last_name: 'PARRA RAMIREZ', first_name: 'KENDRA',
+    dni: '99000222', birth_date: '2014-01-10',
+    health_insurance: 'OSDE', policy_number: '123', club_id: '1'
+  });
+  const compuesto = (await pglite.query(
+    `SELECT last_name, first_name FROM students WHERE dni = '99000222'`)).rows[0];
+  check('Un apellido de dos palabras se respeta entero',
+    compuesto && compuesto.last_name === 'PARRA RAMIREZ' && compuesto.first_name === 'KENDRA',
+    JSON.stringify(compuesto));
+
+  // Los dos son obligatorios: sin apellido no se guarda
+  const antesSinApellido = (await pglite.query(`SELECT COUNT(*)::int AS n FROM students`)).rows[0].n;
+  await request(app).post('/profesor/alumnos/nuevo').send({
+    first_name: 'SOLO NOMBRE', dni: '99000333', birth_date: '2014-01-10',
+    health_insurance: 'OSDE', policy_number: '123', club_id: '1'
+  });
+  check('Sin apellido no se carga la alumna',
+    (await pglite.query(`SELECT COUNT(*)::int AS n FROM students`)).rows[0].n === antesSinApellido);
+
+  await pglite.query(`DELETE FROM students WHERE dni IN ('99000111','99000222','99000333')`);
+
   // --- DNI repetido: el aviso tiene que decir quién lo tiene ---
   const errDb = require('../lib/errores_db');
   const yaCargada = (await pglite.query(

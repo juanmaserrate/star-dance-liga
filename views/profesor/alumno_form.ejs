@@ -20,10 +20,27 @@
         1. Datos Personales (Almacenamiento en MAYÚSCULAS)
       </h3>
 
-      <div class="form-group">
-        <label class="form-label" for="full_name">Nombre y Apellido * <small style="color: var(--text-muted);">(ej: MARTINEZ SOFIA)</small></label>
-        <input type="text" id="full_name" name="full_name" class="form-control" value="<%= student ? ((student.last_name || '') + ' ' + (student.first_name || '')).trim() : '' %>" placeholder="EJ: MARTINEZ SOFIA" required style="text-transform: uppercase;">
+      <!-- Apellido y Nombre van en campos separados a proposito. Antes habia
+           uno solo y el sistema tenia que adivinar donde cortaba: si la
+           profesora escribia "SOFIA MARTINEZ" quedaba SOFIA de apellido. -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="last_name">Apellido * <small style="color: var(--text-muted);">(ej: MARTINEZ)</small></label>
+          <input type="text" id="last_name" name="last_name" class="form-control"
+                 value="<%= student ? (student.last_name || '') : '' %>"
+                 placeholder="EJ: MARTINEZ" required style="text-transform: uppercase;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="first_name">Nombre * <small style="color: var(--text-muted);">(ej: SOFIA)</small></label>
+          <input type="text" id="first_name" name="first_name" class="form-control"
+                 value="<%= student ? (student.first_name || '') : '' %>"
+                 placeholder="EJ: SOFIA" required style="text-transform: uppercase;">
+        </div>
       </div>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin: -0.4rem 0 1rem;">
+        Cada uno en su casillero: así el apellido y el nombre salen bien en el Libro Mayor y en los certificados.
+      </p>
 
       <div class="form-row">
         <div class="form-group">
