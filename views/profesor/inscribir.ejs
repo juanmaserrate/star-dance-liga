@@ -289,7 +289,9 @@
       STUDENTS.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.id;
-        opt.textContent = s.last_name + ', ' + s.first_name + ' (DNI: ' + s.dni + ' | ' + s.age + ' AÑOS | ' + s.club_name + ')';
+        // Apellido primero y bien separado del nombre, para elegir sin dudar
+        opt.textContent = s.last_name + ', ' + s.first_name +
+          '  —  DNI ' + s.dni + ' · ' + s.age + ' años · ' + s.club_name;
         if (i === 1 && PRESELECTED_ID && String(PRESELECTED_ID) === String(s.id)) opt.selected = true;
         sel.appendChild(opt);
       });

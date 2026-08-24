@@ -165,7 +165,8 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Alumna</th>
+              <th>Apellido</th>
+              <th>Nombre</th>
               <th>Disciplina</th>
               <th>Categoría</th>
               <th>Edad</th>
@@ -200,10 +201,13 @@
                 data-club="<%= r.club_name || '' %>"
                 data-buscar="<%= buscable %>">
                 <td>
-                  <strong><%= r.last_name %>, <%= r.first_name %></strong>
+                  <strong><%= r.last_name %></strong>
+                  <div style="font-size: 0.78rem; color: var(--text-muted);">DNI: <%= r.dni %></div>
+                </td>
+                <td>
+                  <strong><%= r.first_name %></strong>
                   <div style="font-size: 0.78rem; color: var(--text-muted);">
-                    DNI: <%= r.dni %><%= r.club_name ? ' · ' + r.club_name : '' %>
-                    <% if (r.is_group) { %>
+                    <%= r.club_name || '' %><% if (r.is_group) { %>
                       · <%= r.member_count > 1 ? ('Grupo (' + (r.member_index + 1) + '/' + r.member_count + ')') : 'Grupo' %><%= r.group_name ? ' — ' + r.group_name : '' %>
                     <% } %>
                   </div>

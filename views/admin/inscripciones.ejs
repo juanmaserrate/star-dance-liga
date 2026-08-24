@@ -108,7 +108,8 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Nombre y Apellido</th>
+              <th>Apellido</th>
+              <th>Nombre</th>
               <th>DNI</th>
               <th>CUIL</th>
               <th>Fecha Nac.</th>
@@ -127,8 +128,10 @@
           <tbody>
             <% registrations.forEach(r => { %>
               <tr>
-                <td>
-                  <% if (r.is_group) { %>
+                <% if (r.is_group) { %>
+                  <!-- Los grupos no tienen apellido y nombre propios: el nombre de
+                       fantasia ocupa las dos columnas, con sus integrantes debajo. -->
+                  <td colspan="2">
                     <strong style="color: var(--gold-light);"><%= r.group_name || 'GRUPO' %></strong>
                     <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.3rem;"><%= r.group_type %></div>
                     <div style="display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-start;">
@@ -136,10 +139,11 @@
                         <span class="badge badge-violet"><%= m.last_name %>, <%= m.first_name %><% if (m.dni) { %> (DNI <%= m.dni %>)<% } %></span>
                       <% }) %>
                     </div>
-                  <% } else { %>
-                    <strong><%= r.last_name %>, <%= r.first_name %></strong>
-                  <% } %>
-                </td>
+                  </td>
+                <% } else { %>
+                  <td><strong><%= r.last_name %></strong></td>
+                  <td><%= r.first_name %></td>
+                <% } %>
                 <td><strong style="color: var(--gold-light);"><%= r.dni %></strong></td>
                 <td><%= r.cuil || '-' %></td>
                 <td><%= r.birth_date || '-' %></td>

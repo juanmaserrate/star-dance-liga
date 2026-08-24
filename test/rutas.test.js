@@ -628,6 +628,41 @@ async function main() {
 
 
 
+
+  // --- Apellido y Nombre en columnas separadas ---
+  const tablaProfe = await get(PROFE, '/profesor/dashboard');
+  check('La tabla de la profesora separa Apellido y Nombre',
+    tablaProfe.text.includes('<th>Apellido</th>') && tablaProfe.text.includes('<th>Nombre</th>') &&
+    !tablaProfe.text.includes('<th>Alumna</th>'));
+
+  const tablaAdmin = await get(ADMIN, '/admin/inscripciones');
+  check('La tabla del administrador también los separa',
+    tablaAdmin.text.includes('<th>Apellido</th>') && tablaAdmin.text.includes('<th>Nombre</th>') &&
+    !tablaAdmin.text.includes('<th>Nombre y Apellido</th>'));
+
+  const cuentaColumnas = (html) => {
+    const thead = (html.match(/<thead>[\s\S]*?<\/thead>/) || [''])[0];
+    return (thead.match(/<th[\s>]/g) || []).length;
+  };
+  check('El encabezado del administrador suma una columna, no dos',
+    cuentaColumnas(tablaAdmin.text) === 15, String(cuentaColumnas(tablaAdmin.text)));
+  // Lo que importa es que ninguna fila se desalinee: contando los colspan,
+  // cada fila tiene que dar las mismas columnas que el encabezado.
+  const filasAdmin = (tablaAdmin.text.match(/<tr>[\s\S]*?<\/tr>/g) || [])
+    .filter(f => f.includes('<td'));
+  const anchoDeFila = (f) => (f.match(/<td[^>]*>/g) || [])
+    .reduce((n, td) => {
+      const m = td.match(/colspan="(\d+)"/);
+      return n + (m ? Number(m[1]) : 1);
+    }, 0);
+  check('Ninguna fila queda desalineada con el encabezado',
+    filasAdmin.length > 0 && filasAdmin.every(f => anchoDeFila(f) === 15),
+    JSON.stringify(filasAdmin.map(anchoDeFila).slice(0, 6)));
+
+  const formInsc = await get(PROFE, '/profesor/inscribir');
+  check('Al inscribir, la alumna se elige por Apellido, Nombre',
+    formInsc.text.includes("s.last_name + ', ' + s.first_name"));
+
   // --- Apellido y Nombre: campos separados, sin adivinar ---
   const formAlta = await get(PROFE, '/profesor/alumnos/nuevo');
   check('El alta de alumna pide Apellido y Nombre por separado',
