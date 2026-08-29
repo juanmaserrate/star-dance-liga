@@ -924,6 +924,59 @@ async function main() {
     /\/admin\/inscripciones\/\d+\/eliminar/.test(listaAdmin.text));
 
 
+
+  // --- Borrado de usuarios: sin dejar el sistema sin administracion ---
+  SESSION = ADMIN;
+  const contarUsuarios = async () => (await pglite.query(`SELECT COUNT(*)::int AS n FROM users`)).rows[0].n;
+
+  // Un usuario suelto, sin alumnas ni inscripciones, se borra
+  await pglite.query(`INSERT INTO users (id, username, password_hash, full_name, role, club_id)
+    VALUES (9801, 'suelto', 'x', 'USUARIO SUELTO', 'profesor', 1) ON CONFLICT (id) DO NOTHING`);
+  const antesSuelto = await contarUsuarios();
+  const borroSuelto = await request(app).post('/admin/usuarios/9801/eliminar').send({});
+  check('Un usuario sin datos se puede eliminar',
+    (await contarUsuarios()) === antesSuelto - 1 &&
+    decodeURIComponent(borroSuelto.headers.location || '').includes('eliminado'),
+    decodeURIComponent(borroSuelto.headers.location || ''));
+
+  // Una profesora con alumnas NO se borra: se las llevaria en cascada
+  const conPadron = (await pglite.query(
+    `SELECT teacher_id FROM students GROUP BY teacher_id ORDER BY COUNT(*) DESC LIMIT 1`)).rows[0];
+  const alumnasAntes = (await pglite.query(
+    `SELECT COUNT(*)::int AS n FROM students WHERE teacher_id = ${conPadron.teacher_id}`)).rows[0].n;
+  const bloqueado = await request(app).post(`/admin/usuarios/${conPadron.teacher_id}/eliminar`).send({});
+  check('No se borra una profesora que tiene padrón cargado',
+    (await pglite.query(`SELECT COUNT(*)::int AS n FROM students WHERE teacher_id = ${conPadron.teacher_id}`)).rows[0].n === alumnasAntes &&
+    decodeURIComponent(bloqueado.headers.location || '').includes('patinadora'),
+    decodeURIComponent(bloqueado.headers.location || ''));
+
+  // El administrador general se puede borrar SI queda otro sin restriccion de zona
+  await pglite.query(`INSERT INTO users (id, username, password_hash, full_name, role, club_id, admin_scope)
+    VALUES (9802, 'otroadmin', 'x', 'OTRO ADMIN', 'profesor_admin', 1, NULL) ON CONFLICT (id) DO NOTHING`);
+  await pglite.query(`INSERT INTO users (id, username, password_hash, full_name, role, club_id)
+    VALUES (9803, 'adminviejo', 'x', 'ADMIN VIEJO', 'admin', 1) ON CONFLICT (id) DO NOTHING`);
+  const borroAdmin = await request(app).post('/admin/usuarios/9803/eliminar').send({});
+  check('Se puede borrar un admin si queda otro administrador general',
+    (await pglite.query(`SELECT COUNT(*)::int AS n FROM users WHERE id = 9803`)).rows[0].n === 0,
+    decodeURIComponent(borroAdmin.headers.location || ''));
+
+  // Pero no si es el ultimo administrador general (los de zona no cuentan)
+  await pglite.query(`UPDATE users SET admin_scope = 'CABA' WHERE id = 9802`);
+  await pglite.query(`UPDATE users SET admin_scope = 'CABA' WHERE role IN ('admin','profesor_admin') AND id NOT IN (1, 9802)`);
+  await pglite.query(`INSERT INTO users (id, username, password_hash, full_name, role, club_id)
+    VALUES (9804, 'ultimo', 'x', 'ULTIMO ADMIN', 'admin', 1) ON CONFLICT (id) DO NOTHING`);
+  await pglite.query(`UPDATE users SET admin_scope = 'CABA' WHERE id = 1`);
+  const ultimo = await request(app).post('/admin/usuarios/9804/eliminar').send({});
+  check('No se borra al último administrador general',
+    (await pglite.query(`SELECT COUNT(*)::int AS n FROM users WHERE id = 9804`)).rows[0].n === 1 &&
+    decodeURIComponent(ultimo.headers.location || '').includes('último administrador'),
+    decodeURIComponent(ultimo.headers.location || ''));
+
+  // Se deja todo como estaba para no ensuciar las pruebas siguientes
+  await pglite.query(`DELETE FROM users WHERE id IN (9802, 9804)`);
+  await pglite.query(`UPDATE users SET admin_scope = NULL WHERE id = 1`);
+  await pglite.query(`UPDATE users SET admin_scope = NULL WHERE username <> 'gisellelorenaalarcon@hotmail.com' AND role IN ('admin','profesor_admin')`);
+
   // --- Módulo de clubes: listado a pantalla completa, alta por botón ---
   const clubesAdmin = await get(ADMIN, '/admin/clubes');
   check('El listado de clubes ya no comparte la fila con el formulario',

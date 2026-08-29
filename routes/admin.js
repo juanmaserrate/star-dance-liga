@@ -1684,11 +1684,35 @@ router.post('/usuarios/:id/eliminar', async (req, res) => {
     return res.redirect('/admin/usuarios?error=' + encodeURIComponent('Usuario no encontrado.'));
   }
 
-  if (user.role === 'admin') {
-    const adminCount = await db.prepare(`SELECT COUNT(*) as count FROM users WHERE role = 'admin'`).get();
-    if (adminCount.count <= 1) {
-      return res.redirect('/admin/usuarios?error=' + encodeURIComponent('No se puede eliminar: es el único administrador del sistema.'));
+  // No se puede quedar sin administracion general. Cuentan tanto 'admin' como
+  // 'profesor_admin', porque los dos administran; los de zona (admin_scope) no,
+  // porque justamente no pueden entrar a la gestion de usuarios.
+  if (user.role === 'admin' || user.role === 'profesor_admin') {
+    const quedan = await db.prepare(`
+      SELECT COUNT(*) AS count FROM users
+      WHERE role IN ('admin', 'profesor_admin') AND admin_scope IS NULL AND id <> ?
+    `).get(userId);
+    if (Number(quedan.count) === 0) {
+      return res.redirect('/admin/usuarios?error=' + encodeURIComponent(
+        'No se puede eliminar: es el último administrador general del sistema. Nombrá otro administrador antes de borrar este.'));
     }
+  }
+
+  // Borrar un usuario arrastra en cascada sus alumnas y sus inscripciones. Si
+  // tiene padron cargado se frena: primero hay que pasarlo a otra profesora.
+  const carga = await db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM students WHERE teacher_id = ?) AS alumnas,
+      (SELECT COUNT(*) FROM registrations WHERE teacher_id = ?) AS inscripciones
+  `).get(userId, userId);
+
+  if (Number(carga.alumnas) > 0 || Number(carga.inscripciones) > 0) {
+    const detalle = [
+      Number(carga.alumnas) > 0 ? `${carga.alumnas} patinadora(s) en su padrón` : null,
+      Number(carga.inscripciones) > 0 ? `${carga.inscripciones} inscripción(es)` : null
+    ].filter(Boolean).join(' y ');
+    return res.redirect('/admin/usuarios?error=' + encodeURIComponent(
+      `No se puede eliminar a ${user.full_name}: tiene ${detalle}. Si se borra, esos datos se van con el usuario. Pasá primero sus alumnas a otra profesora.`));
   }
 
   try {
