@@ -494,11 +494,21 @@ async function main() {
   // El bloque se arma con disciplina + categoría + categoría de edad
   const pistaBloques = insc.groupByOrdenDePista(filas);
   const conFranja = pistaBloques.find(b => b.franja);
-  check('Cada bloque titula disciplina + categoría + categoría de edad',
-    !!conFranja && conFranja.titulo === `${conFranja.discipline} ${conFranja.label} ${conFranja.franja}`,
+  // En la plantilla LIBRE va sin prefijo (es la disciplina por defecto);
+  // el resto se nombra con su disciplina adelante.
+  const titulaBien = (b) => {
+    const prefijo = b.discipline === 'LIBRE' ? '' : b.discipline + ' ';
+    const esperado = (prefijo + b.label + (b.franja ? ' ' + b.franja : '')).toUpperCase().trim();
+    return b.titulo === esperado;
+  };
+  check('Cada bloque titula categoría + categoría de edad',
+    !!conFranja && titulaBien(conFranja),
     conFranja ? conFranja.titulo : 'sin bloques con franja');
-  check('Si la inscripción no tiene categoría de edad, el título no la inventa',
-    pistaBloques.filter(b => !b.franja).every(b => b.titulo === `${b.discipline} ${b.label}`),
+  check('LIBRE va sin prefijo de disciplina, como en la plantilla',
+    pistaBloques.filter(b => b.discipline === 'LIBRE').every(b => !b.titulo.startsWith('LIBRE')),
+    JSON.stringify(pistaBloques.filter(b => b.discipline === 'LIBRE').slice(0, 3).map(b => b.titulo)));
+  check('Si no se puede saber la franja, el título no la inventa',
+    pistaBloques.filter(b => !b.franja).every(titulaBien),
     JSON.stringify(pistaBloques.filter(b => !b.franja).slice(0, 3).map(b => b.titulo)));
   check('Ninguna inscripción se pierde ni se duplica al agrupar',
     pistaBloques.reduce((n, b) => n + b.total, 0) === filas.length,
@@ -549,8 +559,8 @@ async function main() {
   await libroPista.xlsx.load(bufPista);
   const hojaPista = libroPista.getWorksheet('Libro Mayor');
 
-  // Columnas de la plantilla: A horario · B apellido · C nombre · D edad
-  // E institucion · F salida a pista · G/H/I los tres jueces
+  // Columnas de la plantilla: A horario · B apellido · C nombre ·
+  // D institucion · E salida a pista · F/G/H los tres jueces
   let encPista = null;
   const salidas = [];
   const edadesLibro = [];
@@ -562,7 +572,7 @@ async function main() {
 
     if (!encPista) {
       encPista = [2, 3, 4, 5].map(c => String(fila.getCell(c).value || ''));
-      jueces = [7, 8, 9].map(c => String(fila.getCell(c).value || ''));
+      jueces = [6, 7, 8].map(c => String(fila.getCell(c).value || ''));
       // Edades del primer bloque. Cada patinadora ocupa dos renglones, asi que
       // se avanza de a dos; se corta al llegar a la franja del bloque siguiente.
       for (let r = n + 1; r <= hojaPista.rowCount; r += 2) {
@@ -582,14 +592,18 @@ async function main() {
   });
 
   check('El Libro Mayor usa las columnas de la plantilla',
-    JSON.stringify(encPista) === JSON.stringify(['Apellido', 'Nombre', 'Edad', 'Institución']),
+    JSON.stringify(encPista) === JSON.stringify(['Apellido', 'Nombre', 'Institución', 'Salida a pista']),
     JSON.stringify(encPista));
   check('Y las tres columnas de jueces para puntuar a mano',
     JSON.stringify(jueces) === JSON.stringify(['JUEZ 1', 'JUEZ 2', 'JUEZ 3']),
     JSON.stringify(jueces));
-  check('La columna de edad viene cargada y ordenada de menor a mayor',
-    edadesLibro.length > 0 && edadesLibro.every((v, i) => i === 0 || edadesLibro[i - 1] <= v),
-    JSON.stringify(edadesLibro.slice(0, 10)));
+  // La plantilla no tiene columna de edad: la edad quedo en el titulo del
+  // bloque, que es como subdivide la organizacion.
+  check('Dentro del bloque las patinadoras van ordenadas por edad',
+    pistaBloques.every(b => {
+      const e = b.filas.map(f => Number.isFinite(Number(f.edad)) ? Number(f.edad) : Infinity);
+      return e.every((v, i) => i === 0 || e[i - 1] <= v);
+    }));
   check('La columna de salida a pista queda sin numerar',
     salidas.length > 0 && salidas.every(v => v === true), JSON.stringify(salidas.slice(0, 8)));
   check('La columna de horario queda vacía: no hay horarios cargados', horarioVacio);
@@ -615,8 +629,8 @@ async function main() {
     hojaPista.getCell(4, 2).isMerged && hojaPista.getCell(5, 2).master.address === 'B4',
     JSON.stringify({ merged: hojaPista.getCell(4, 2).isMerged }));
   check('El ancho de las columnas es el de la plantilla',
-    hojaPista.getColumn(2).width === 62.9 && hojaPista.getColumn(5).width === 67.3,
-    JSON.stringify([hojaPista.getColumn(2).width, hojaPista.getColumn(5).width]));
+    hojaPista.getColumn(2).width === 20.6 && hojaPista.getColumn(4).width === 29.8,
+    JSON.stringify([hojaPista.getColumn(2).width, hojaPista.getColumn(4).width]));
 
   const scopeAjeno = await get(PROFE_ADMIN, `/admin/exportar/planilla?tournament_id=${zonaSur}`, false);
   check('Giselle no puede bajar la planilla de un torneo de otra zona',
