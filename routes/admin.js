@@ -1296,7 +1296,11 @@ router.post('/clubes', async (req, res) => {
     res.redirect('/admin/clubes?success=' + encodeURIComponent('Club registrado exitosamente.'));
   } catch (err) {
     console.error('Error adding club:', err);
-    res.redirect('/admin/clubes?error=' + encodeURIComponent('Error al registrar club.'));
+    // clubs.name es unico: si ya existe, conviene decirlo en vez del generico.
+    const msg = errDb.esDuplicado(err)
+      ? `Ya hay un club registrado con el nombre ${name.trim().toUpperCase()}.`
+      : 'Error al registrar club.';
+    res.redirect('/admin/clubes?error=' + encodeURIComponent(msg));
   }
 });
 

@@ -1,86 +1,154 @@
 <%- include('../partials/header', { title: 'Clubes Afiliados' }) %>
 <%- include('admin_shell', { activeNav: 'clubes', topbarSection: 'Clubes' }) %>
 
-
-  <div style="margin-bottom: 1.5rem;">
-    <h1 style="color: var(--gold-light); font-size: 1.8rem;">Clubes e Instituciones Afiliadas</h1>
-    <p style="color: var(--text-muted);">Padrón oficial de clubes participantes de la Liga Star Dance.</p>
+  <div class="page-head-row">
+    <div class="page-head">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span class="material-symbols-outlined" style="font-size: 2.4rem; color: var(--gold-light); font-variation-settings: 'FILL' 1;">account_balance</span>
+        <h1 class="page-title" style="margin-bottom: 0;">Clubes e Instituciones Afiliadas</h1>
+      </div>
+      <p class="page-sub" style="margin-top: 0.5rem;">Padrón oficial de clubes participantes de la Liga Star Dance.</p>
+    </div>
+    <div class="page-head-actions">
+      <button type="button" class="btn btn-gold" onclick="toggleNewClubForm()" style="display: flex; align-items: center; gap: 0.5rem;">
+        <span class="material-symbols-outlined" id="toggleBtnIcon" style="font-size: 1.1rem;">add</span>
+        <span id="toggleBtnText">Nuevo Club</span>
+      </button>
+    </div>
   </div>
-
 
   <% if (typeof success !== 'undefined' && success) { %>
     <div class="alert alert-success alert-auto-dismiss">✅ <%= success %></div>
   <% } %>
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger alert-auto-dismiss">⚠️ <%= error %></div>
+  <% } %>
 
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
-    <!-- Add Club Form -->
-    <div class="card" style="margin: 0;">
-      <h2 class="card-title" style="margin-bottom: 1rem;">🏛️ Registrar Nuevo Club</h2>
-      
-      <form action="/admin/clubes" method="POST">
-        <div class="form-group">
-          <label class="form-label" for="name">Nombre del Club / Escuela *</label>
-          <input type="text" id="name" name="name" class="form-control" placeholder="Ej: Club Deportivo Estrella" required>
-        </div>
+  <!-- Alta de club: oculta hasta que se toca el botón. Si el alta falló, se
+       abre sola para que no haya que volver a buscarla. -->
+  <div class="card" id="newClubFormCard"
+       style="display: <%= (typeof error !== 'undefined' && error) ? 'block' : 'none' %>; max-width: 600px; margin: 0 auto 2rem auto; border: 1px solid var(--gold-primary); box-shadow: 0 0 20px rgba(212,175,55,0.15); animation: slideDown 0.3s ease-out;">
+    <div class="card-header" style="border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 0.75rem;">
+      <h2 class="card-title" style="font-size: 1.2rem; color: var(--gold-light);">🏛️ Registrar Nuevo Club</h2>
+    </div>
 
+    <form action="/admin/clubes" method="POST" style="margin-top: 1rem;">
+      <div class="form-group">
+        <label class="form-label" for="name">Nombre del Club / Escuela *</label>
+        <input type="text" id="name" name="name" class="form-control" placeholder="EJ: CLUB DEPORTIVO ESTRELLA" required style="text-transform: uppercase;">
+      </div>
+
+      <div class="form-row">
         <div class="form-group">
           <label class="form-label" for="city">Ciudad / Provincia</label>
-          <input type="text" id="city" name="city" class="form-control" placeholder="Ej: San Juan / Mendoza">
+          <input type="text" id="city" name="city" class="form-control" placeholder="EJ: LOMAS DE ZAMORA">
         </div>
 
         <div class="form-group">
           <label class="form-label" for="representative">Representante / Delegado</label>
           <input type="text" id="representative" name="representative" class="form-control" placeholder="Nombre del responsable">
         </div>
+      </div>
 
-        <div class="form-group">
-          <label class="form-label" for="contact_phone">Teléfono de Contacto</label>
-          <input type="text" id="contact_phone" name="contact_phone" class="form-control" placeholder="Ej: +54 9 ...">
-        </div>
+      <div class="form-group">
+        <label class="form-label" for="contact_phone">Teléfono de Contacto</label>
+        <input type="text" id="contact_phone" name="contact_phone" class="form-control" placeholder="EJ: +54 9 11 ...">
+      </div>
 
-        <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 0.5rem;">
-          ✨ Registrar Club
-        </button>
-      </form>
-    </div>
-
-    <!-- Clubs List Table -->
-    <div class="card" style="margin: 0;">
-      <h2 class="card-title" style="margin-bottom: 1rem;">📋 Clubes Inscriptos (<%= clubs.length %>)</h2>
-
-      <% if (clubs && clubs.length > 0) { %>
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Club</th>
-                <th>Ciudad</th>
-                <th>Representante</th>
-                <th>Profesores</th>
-                <th>Alumnos</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% clubs.forEach(c => { %>
-                <tr>
-                  <td><strong><%= c.name %></strong></td>
-                  <td><%= c.city || 'No especificada' %></td>
-                  <td>
-                    <%= c.representative || '-' %><br>
-                    <small style="color: var(--gold-primary);"><%= c.contact_phone %></small>
-                  </td>
-                  <td><span class="badge badge-violet"><%= c.teacher_count %> profes</span></td>
-                  <td><strong><%= c.student_count %> atletas</strong></td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
-      <% } else { %>
-        <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No hay clubes registrados.</p>
-      <% } %>
-    </div>
+      <div style="display: flex; gap: 0.6rem; margin-top: 1.25rem; flex-wrap: wrap;">
+        <button type="submit" class="btn btn-gold">✨ Registrar Club</button>
+        <button type="button" class="btn btn-secondary" onclick="toggleNewClubForm()">Cancelar</button>
+      </div>
+    </form>
   </div>
+
+  <!-- Listado de clubes: ocupa todo el ancho de la pantalla -->
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <div class="head-left">
+        <span class="material-symbols-outlined">list</span>
+        <h2 class="admin-card-title">Clubes Inscriptos</h2>
+      </div>
+      <span class="count-chip"><%= clubs.length %> <%= clubs.length === 1 ? 'club' : 'clubes' %></span>
+    </div>
+
+    <% if (clubs && clubs.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Club</th>
+              <th>Ciudad</th>
+              <th>Representante</th>
+              <th>Teléfono</th>
+              <th>Profesores</th>
+              <th>Alumnas</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% clubs.forEach(c => { %>
+              <tr>
+                <td><strong><%= c.name %></strong></td>
+                <td><%= c.city || 'No especificada' %></td>
+                <td><%= c.representative || '-' %></td>
+                <td><span style="color: var(--gold-primary);"><%= c.contact_phone || '-' %></span></td>
+                <td><span class="badge badge-violet"><%= c.teacher_count %> profes</span></td>
+                <td><strong><%= c.student_count %> atletas</strong></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 2rem;">
+        Todavía no hay clubes registrados.<br>
+        Tocá <strong>Nuevo Club</strong> arriba para cargar el primero.
+      </p>
+    <% } %>
+  </div>
+
 </main>
+
+<script>
+  function toggleNewClubForm() {
+    const card = document.getElementById('newClubFormCard');
+    const icon = document.getElementById('toggleBtnIcon');
+    const text = document.getElementById('toggleBtnText');
+
+    if (card.style.display === 'none') {
+      card.style.display = 'block';
+      if (icon) icon.innerText = 'close';
+      text.innerText = 'Cerrar Formulario';
+      document.getElementById('name').focus();
+    } else {
+      card.style.display = 'none';
+      if (icon) icon.innerText = 'add';
+      text.innerText = 'Nuevo Club';
+    }
+  }
+
+  // Si el formulario quedó abierto por un error, el botón tiene que decirlo.
+  document.addEventListener('DOMContentLoaded', () => {
+    const card = document.getElementById('newClubFormCard');
+    if (card && card.style.display === 'block') {
+      const icon = document.getElementById('toggleBtnIcon');
+      if (icon) icon.innerText = 'close';
+      document.getElementById('toggleBtnText').innerText = 'Cerrar Formulario';
+    }
+  });
+</script>
+
+<style>
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
 
 <%- include('../partials/footer') %>

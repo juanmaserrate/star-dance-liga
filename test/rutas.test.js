@@ -923,6 +923,35 @@ async function main() {
   check('El administrador ve el botón de eliminar en el listado',
     /\/admin\/inscripciones\/\d+\/eliminar/.test(listaAdmin.text));
 
+
+  // --- Módulo de clubes: listado a pantalla completa, alta por botón ---
+  const clubesAdmin = await get(ADMIN, '/admin/clubes');
+  check('El listado de clubes ya no comparte la fila con el formulario',
+    !clubesAdmin.text.includes('grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))'));
+  check('Hay un botón para dar de alta un club',
+    clubesAdmin.text.includes('onclick="toggleNewClubForm()"') &&
+    clubesAdmin.text.includes('Nuevo Club'));
+  check('El formulario arranca oculto',
+    /id="newClubFormCard"[\s\S]{0,200}display: none/.test(clubesAdmin.text));
+  check('El listado muestra las columnas del padrón de clubes',
+    ['Club', 'Ciudad', 'Representante', 'Teléfono', 'Profesores', 'Alumnas']
+      .every(h => clubesAdmin.text.includes('<th>' + h + '</th>')));
+
+  // Si el alta falla, el formulario tiene que quedar abierto con el aviso
+  const clubesConError = await request(app).get('/admin/clubes?error=' + encodeURIComponent('Falló'));
+  check('Ante un error el formulario se abre solo',
+    /id="newClubFormCard"[\s\S]{0,200}display: block/.test(clubesConError.text));
+
+  // Un club repetido se avisa por nombre, no con un error genérico
+  const nombreClub = (await pglite.query(`SELECT name FROM clubs LIMIT 1`)).rows[0].name;
+  const clubRepetido = await request(app).post('/admin/clubes').send({ name: nombreClub });
+  check('Un club con nombre repetido lo dice',
+    decodeURIComponent(clubRepetido.headers.location || '').includes('Ya hay un club registrado'),
+    decodeURIComponent(clubRepetido.headers.location || ''));
+
+  // Giselle (admin de zona) también entra a clubes
+  await get(PROFE_ADMIN, '/admin/clubes');
+
   // --- Administrador con alcance limitado (Giselle → CABA) ---
   const torneosGiselle = await get(PROFE_ADMIN, '/admin/torneos');
   check('Giselle ve los torneos de CABA', torneosGiselle.text.includes('ZONA CABA'));
