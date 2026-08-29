@@ -1006,6 +1006,49 @@ async function main() {
   await get(PROFE_ADMIN, '/admin/clubes');
 
 
+
+  // --- Usuarios: lista en vez de tarjetas ---
+  const listaUsuarios = await get(ADMIN, '/admin/usuarios');
+  check('Los usuarios ya no se muestran como tarjetas',
+    !listaUsuarios.text.includes('admin-user-card') &&
+    !listaUsuarios.text.includes('admin-user-grid'));
+  check('Se muestran en una tabla con sus columnas',
+    ['Usuario', 'Rol y alcance', 'Club', 'Contacto', 'Estado', 'Acciones']
+      .every(h => listaUsuarios.text.includes('<th>' + h + '</th>')),
+    ['Usuario', 'Rol y alcance', 'Club', 'Contacto', 'Estado', 'Acciones']
+      .filter(h => !listaUsuarios.text.includes('<th>' + h + '</th>')).join(', '));
+
+  // Las acciones que estaban en la tarjeta tienen que seguir estando
+  check('Cada fila conserva el cambio de rol y alcance',
+    /action="\/admin\/usuarios\/\d+\/rol"/.test(listaUsuarios.text) &&
+    listaUsuarios.text.includes('name="admin_scope"'));
+  // Sin regex: se arma la ruta con un id real y se busca tal cual.
+  const idOtro = (await pglite.query(`SELECT id FROM users WHERE id <> 1 ORDER BY id LIMIT 1`)).rows[0].id;
+  check('Se conservan restablecer y eliminar en cada fila',
+    listaUsuarios.text.includes('/admin/usuarios/' + idOtro + '/restablecer') &&
+    listaUsuarios.text.includes('/admin/usuarios/' + idOtro + '/eliminar'));
+
+  // Verificar y reenviar solo tienen sentido con el email sin confirmar,
+  // asi que se marca uno como pendiente para comprobar que aparecen.
+  await pglite.query(`UPDATE users SET email_verified = false WHERE id = 2`);
+  const conPendiente = await get(ADMIN, '/admin/usuarios');
+  check('Con un email pendiente aparecen verificar y reenviar',
+    conPendiente.text.includes('/verificar') &&
+    conPendiente.text.includes('/reenviar-verificacion') &&
+    conPendiente.text.includes('Pendiente'));
+  await pglite.query(`UPDATE users SET email_verified = true WHERE id = 2`);
+
+  check('La lista tiene buscador y filtros por rol y club',
+    ['uBuscar', 'uRol', 'uClub', 'uLimpiar'].every(id => listaUsuarios.text.includes('id="' + id + '"')));
+  check('Cada usuario viaja con sus datos para poder filtrarlo',
+    ['data-rol', 'data-club', 'data-buscar'].every(a => listaUsuarios.text.includes(a)));
+
+  // El aviso de borrado no puede partir lineas: rompe el onsubmit
+  const confirmsUsuarios = [...listaUsuarios.text.matchAll(/onsubmit="return confirm\(([^)]*)\)/g)].map(m => m[1]);
+  check('El confirm de eliminar usuario no parte líneas',
+    confirmsUsuarios.length > 0 && confirmsUsuarios.every(c => !c.includes(String.fromCharCode(10))),
+    confirmsUsuarios.length + ' encontrados');
+
   // --- Clubes: buscador, filtros y ficha del club ---
   const listaClubes = await get(ADMIN, '/admin/clubes');
   check('El listado de clubes tiene buscador con lupa',

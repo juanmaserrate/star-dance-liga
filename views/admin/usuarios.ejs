@@ -87,139 +87,230 @@
     </form>
   </div>
 
-  <!-- Aesthetic User Cards Grid -->
-  <div class="admin-card" style="padding: 0;">
-    <div class="admin-user-grid">
-      <% if (usersList && usersList.length > 0) { %>
-        <% usersList.forEach(u => { %>
-          <%
-            let initials = 'SD';
-            if (u.full_name) {
-              const parts = u.full_name.trim().split(' ');
-              initials = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]) : parts[0].substring(0, 2);
-            }
-            initials = initials.toUpperCase();
-
-            let roleBadgeClass = 'role-badge-profesor';
-            if (u.role === 'admin') roleBadgeClass = 'role-badge-admin';
-            else if (u.role === 'juez') roleBadgeClass = 'role-badge-juez';
-            else if (u.role === 'profesor_admin') roleBadgeClass = 'role-badge-admin';
-
-            let roleLabel = 'Profe';
-            if (u.role === 'admin') roleLabel = 'Admin';
-            else if (u.role === 'juez') roleLabel = 'Juez';
-            else if (u.role === 'profesor_admin') roleLabel = 'Profe + Admin';
-          %>
-
-          <div class="admin-user-card">
-            <div class="admin-user-head">
-              <div class="admin-user-avatar"><%= initials %></div>
-              <span class="role-badge <%= roleBadgeClass %>"><%= roleLabel %></span>
-            </div>
-
-            <h3 class="admin-user-name"><%= u.full_name %></h3>
-            <p class="admin-user-handle">@<%= u.username %></p>
-
-            <div class="admin-user-meta">
-              <% if (u.club_name) { %>
-                <div class="row">
-                  <span class="material-symbols-outlined">account_balance</span>
-                  <span><%= u.club_name %></span>
-                </div>
-              <% } %>
-
-              <div class="row">
-                <span class="material-symbols-outlined">mail</span>
-                <span><%= u.email || 'Sin correo registrado' %></span>
-              </div>
-
-              <div class="row">
-                <span class="verify-chip <%= u.email_verified ? 'verify-ok' : 'verify-pending' %>">
-                  <span class="material-symbols-outlined"><%= u.email_verified ? 'check' : 'hourglass_empty' %></span>
-                  <%= u.email_verified ? 'Verificado' : 'Pendiente' %>
-                </span>
-              </div>
-
-              <% if (u.phone) { %>
-                <div class="row">
-                  <span class="material-symbols-outlined">phone</span>
-                  <span><%= u.phone %></span>
-                </div>
-              <% } %>
-
-              <% if (u.admin_scope) { %>
-                <div class="row">
-                  <span class="material-symbols-outlined">shield</span>
-                  <span>Solo torneos de <strong><%= u.admin_scope %></strong></span>
-                </div>
-              <% } %>
-            </div>
-
-            <!-- Rol y alcance de administración -->
-            <form action="/admin/usuarios/<%= u.id %>/rol" method="POST" style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 0.75rem;">
-              <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 130px;">
-                <label class="form-label" style="font-size: 0.75rem;">Rol</label>
-                <select name="role" class="form-select" style="padding: 0.35rem 0.5rem; font-size: 0.82rem;">
-                  <option value="profesor" <%= u.role === 'profesor' ? 'selected' : '' %>>Profesor/a</option>
-                  <option value="profesor_admin" <%= u.role === 'profesor_admin' ? 'selected' : '' %>>Profe + Admin</option>
-                  <option value="admin" <%= u.role === 'admin' ? 'selected' : '' %>>Administrador/a</option>
-                  <option value="juez" <%= u.role === 'juez' ? 'selected' : '' %>>Juez</option>
-                </select>
-              </div>
-              <div class="form-group" style="margin-bottom: 0; width: 110px;">
-                <label class="form-label" style="font-size: 0.75rem;">Zona</label>
-                <input type="text" name="admin_scope" class="form-control" value="<%= u.admin_scope || '' %>" placeholder="Todas" style="text-transform: uppercase; padding: 0.35rem 0.5rem; font-size: 0.82rem;">
-              </div>
-              <button type="submit" class="btn btn-outline-gold btn-sm" title="Guardar rol y alcance">💾</button>
-            </form>
-
-            <div class="admin-user-actions">
-              <form action="/admin/usuarios/<%= u.id %>/restablecer" method="POST" style="margin: 0; width: 100%;">
-                <button type="submit" class="btn btn-ghost" title="Enviar mail con link de recuperación">
-                  <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 0.3rem;">mail</span>
-                  Enviar Acceso por Mail
-                </button>
-              </form>
-              <% if (!user || u.id !== user.id) { %>
-                <form action="/admin/usuarios/<%= u.id %>/eliminar" method="POST"
-                      onsubmit="return confirm('¿Eliminar esta cuenta y TODOS sus datos (alumnas, inscripciones, documentos)? Esta acción no se puede deshacer.');"
-                      style="margin: 0; width: 100%;">
-                  <button type="submit" class="btn btn-danger btn-sm" title="Eliminar cuenta y todos sus datos">
-                    <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 0.25rem;">delete</span>
-                    Eliminar
-                  </button>
-                </form>
-              <% } %>
-              <% if (!u.email_verified) { %>
-                <div class="btn-row">
-                  <form action="/admin/usuarios/<%= u.id %>/verificar" method="POST">
-                    <button type="submit" class="btn btn-gold btn-sm" title="Confirmar email manualmente">
-                      <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 0.25rem;">check_circle</span>
-                      Verificar
-                    </button>
-                  </form>
-                  <form action="/admin/usuarios/<%= u.id %>/reenviar-verificacion" method="POST">
-                    <button type="submit" class="btn btn-secondary btn-sm" title="Reenviar enlace de verificación">
-                      <span class="material-symbols-outlined" style="font-size: 1rem; margin-right: 0.25rem;">replay</span>
-                      Reenviar
-                    </button>
-                  </form>
-                </div>
-              <% } %>
-            </div>
-          </div>
-        <% }) %>
-      <% } else { %>
-        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
-          <p style="color: var(--text-muted);">No se encontraron usuarios registrados.</p>
-        </div>
-      <% } %>
+  <!-- Listado de usuarios -->
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <div class="head-left">
+        <span class="material-symbols-outlined">list</span>
+        <h2 class="admin-card-title">Usuarios Registrados</h2>
+      </div>
+      <span class="count-chip" id="uContador"><%= usersList ? usersList.length : 0 %></span>
     </div>
+
+    <% if (usersList && usersList.length > 0) { %>
+      <div id="usuarioFiltros" style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-gold); display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.6rem; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0; position: relative;">
+          <label class="form-label" for="uBuscar">Buscar</label>
+          <span style="position: absolute; left: 0.75rem; top: 2.15rem; color: var(--gold-light);">&#128269;</span>
+          <input type="search" id="uBuscar" class="form-control" style="padding-left: 2.4rem;"
+                 placeholder="Nombre, usuario, email o club&hellip;" autocomplete="off">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="uRol">Rol</label>
+          <select id="uRol" class="form-select" data-campo="rol"></select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="uClub">Club</label>
+          <select id="uClub" class="form-select" data-campo="club"></select>
+        </div>
+        <button type="button" id="uLimpiar" class="btn btn-secondary btn-sm" style="height: 40px;">Limpiar</button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Rol y alcance</th>
+              <th>Club</th>
+              <th>Contacto</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="usuariosBody">
+            <% usersList.forEach(u => { %>
+              <%
+                let initials = 'SD';
+                if (u.full_name) {
+                  const parts = u.full_name.trim().split(' ');
+                  initials = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]) : parts[0].substring(0, 2);
+                }
+                initials = initials.toUpperCase();
+
+                let roleBadgeClass = 'role-badge-profesor';
+                if (u.role === 'admin' || u.role === 'profesor_admin') roleBadgeClass = 'role-badge-admin';
+                else if (u.role === 'juez') roleBadgeClass = 'role-badge-juez';
+
+                let roleLabel = 'Profe';
+                if (u.role === 'admin') roleLabel = 'Admin';
+                else if (u.role === 'juez') roleLabel = 'Juez';
+                else if (u.role === 'profesor_admin') roleLabel = 'Profe + Admin';
+
+                const buscable = [u.full_name, u.username, u.email, u.club_name, u.phone]
+                  .filter(Boolean).join(' ').toLowerCase();
+              %>
+              <tr data-rol="<%= roleLabel %>"
+                  data-club="<%= u.club_name || '' %>"
+                  data-buscar="<%= buscable %>">
+                <td>
+                  <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <div class="admin-user-avatar" style="width: 34px; height: 34px; font-size: 0.8rem; flex-shrink: 0;"><%= initials %></div>
+                    <div>
+                      <strong><%= u.full_name %></strong>
+                      <div style="font-size: 0.78rem; color: var(--text-muted);">@<%= u.username %></div>
+                    </div>
+                  </div>
+                </td>
+
+                <td>
+                  <span class="role-badge <%= roleBadgeClass %>"><%= roleLabel %></span>
+                  <% if (u.admin_scope) { %>
+                    <div style="font-size: 0.75rem; color: var(--gold-light); margin-top: 0.2rem;">Solo <%= u.admin_scope %></div>
+                  <% } %>
+                  <form action="/admin/usuarios/<%= u.id %>/rol" method="POST" style="display: flex; gap: 0.3rem; align-items: center; margin-top: 0.4rem;">
+                    <select name="role" class="form-select" style="padding: 0.25rem 0.4rem; font-size: 0.78rem; min-width: 108px;">
+                      <option value="profesor" <%= u.role === 'profesor' ? 'selected' : '' %>>Profesor/a</option>
+                      <option value="profesor_admin" <%= u.role === 'profesor_admin' ? 'selected' : '' %>>Profe + Admin</option>
+                      <option value="admin" <%= u.role === 'admin' ? 'selected' : '' %>>Administrador/a</option>
+                      <option value="juez" <%= u.role === 'juez' ? 'selected' : '' %>>Juez</option>
+                    </select>
+                    <input type="text" name="admin_scope" class="form-control" value="<%= u.admin_scope || '' %>"
+                           placeholder="Zona" title="Zona a la que se limita. Vacío = todas."
+                           style="text-transform: uppercase; padding: 0.25rem 0.4rem; font-size: 0.78rem; width: 74px;">
+                    <button type="submit" class="btn btn-outline-gold btn-sm" title="Guardar rol y alcance">💾</button>
+                  </form>
+                </td>
+
+                <td><%= u.club_name || '-' %></td>
+
+                <td>
+                  <div style="font-size: 0.85rem;"><%= u.email || 'Sin correo' %></div>
+                  <% if (u.phone) { %>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);"><%= u.phone %></div>
+                  <% } %>
+                </td>
+
+                <td>
+                  <span class="verify-chip <%= u.email_verified ? 'verify-ok' : 'verify-pending' %>">
+                    <span class="material-symbols-outlined"><%= u.email_verified ? 'check' : 'hourglass_empty' %></span>
+                    <%= u.email_verified ? 'Verificado' : 'Pendiente' %>
+                  </span>
+                </td>
+
+                <td>
+                  <div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">
+                    <form action="/admin/usuarios/<%= u.id %>/restablecer" method="POST" style="margin: 0;">
+                      <button type="submit" class="btn btn-ghost btn-sm" title="Enviar mail con link de recuperación">✉️</button>
+                    </form>
+                    <% if (!u.email_verified) { %>
+                      <form action="/admin/usuarios/<%= u.id %>/verificar" method="POST" style="margin: 0;">
+                        <button type="submit" class="btn btn-gold btn-sm" title="Confirmar email manualmente">✅</button>
+                      </form>
+                      <form action="/admin/usuarios/<%= u.id %>/reenviar-verificacion" method="POST" style="margin: 0;">
+                        <button type="submit" class="btn btn-secondary btn-sm" title="Reenviar enlace de verificación">🔄</button>
+                      </form>
+                    <% } %>
+                    <% if (!user || u.id !== user.id) { %>
+                      <form action="/admin/usuarios/<%= u.id %>/eliminar" method="POST" style="margin: 0;"
+                            onsubmit="return confirm('¿Eliminar la cuenta de <%= u.full_name %>?\n\nSi tiene alumnas o inscripciones cargadas, el sistema no la va a borrar y te lo va a avisar.');">
+                        <button type="submit" class="btn btn-danger btn-sm" title="Eliminar cuenta">🗑️</button>
+                      </form>
+                    <% } %>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="padding: 0.75rem 1.25rem;">
+        <span id="uSinResultados" style="display: none; color: var(--gold-light); font-size: 0.88rem;">
+          Ning&uacute;n usuario coincide con lo que buscás.
+        </span>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 3rem;">No se encontraron usuarios registrados.</p>
+    <% } %>
   </div>
 
 </main>
 
 <script>
+  // --- Buscador y filtros del listado de usuarios ---
+  (function () {
+    const barra = document.getElementById('usuarioFiltros');
+    const cuerpo = document.getElementById('usuariosBody');
+    if (!barra || !cuerpo) return;
+
+    const filas = Array.from(cuerpo.querySelectorAll('tr'));
+    const selects = Array.from(barra.querySelectorAll('select[data-campo]'));
+    const buscador = document.getElementById('uBuscar');
+    const contador = document.getElementById('uContador');
+    const vacio = document.getElementById('uSinResultados');
+
+    function pasa(fila, exceptuar) {
+      const texto = (buscador.value || '').trim().toLowerCase();
+      if (texto && !(fila.dataset.buscar || '').includes(texto)) return false;
+      return selects.every(function (sel) {
+        const campo = sel.dataset.campo;
+        if (campo === exceptuar || !sel.value) return true;
+        return (fila.dataset[campo] || '') === sel.value;
+      });
+    }
+
+    function poblar() {
+      selects.forEach(function (sel) {
+        const campo = sel.dataset.campo;
+        const elegido = sel.value;
+        const posibles = [...new Set(
+          filas.filter(function (f) { return pasa(f, campo); })
+               .map(function (f) { return f.dataset[campo] || ''; })
+               .filter(Boolean)
+        )].sort(function (a, b) { return a.localeCompare(b, 'es'); });
+        if (elegido && posibles.indexOf(elegido) === -1) posibles.unshift(elegido);
+
+        sel.innerHTML = '';
+        const todas = document.createElement('option');
+        todas.value = '';
+        todas.textContent = 'Todos';
+        sel.appendChild(todas);
+        posibles.forEach(function (v) {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          sel.appendChild(opt);
+        });
+        sel.value = elegido;
+      });
+    }
+
+    function aplicar() {
+      let visibles = 0;
+      filas.forEach(function (f) {
+        const ok = pasa(f, null);
+        f.style.display = ok ? '' : 'none';
+        if (ok) visibles++;
+      });
+      contador.textContent = visibles === filas.length
+        ? filas.length + (filas.length === 1 ? ' usuario' : ' usuarios')
+        : 'Mostrando ' + visibles + ' de ' + filas.length;
+      vacio.style.display = visibles === 0 ? 'inline' : 'none';
+      poblar();
+    }
+
+    selects.forEach(function (sel) { sel.addEventListener('change', aplicar); });
+    buscador.addEventListener('input', aplicar);
+    document.getElementById('uLimpiar').addEventListener('click', function () {
+      buscador.value = '';
+      selects.forEach(function (sel) { sel.value = ''; });
+      aplicar();
+    });
+
+    aplicar();
+  })();
+
   function toggleNewUserForm() {
     const card = document.getElementById('newUserFormCard');
     const icon = document.getElementById('toggleBtnIcon');
