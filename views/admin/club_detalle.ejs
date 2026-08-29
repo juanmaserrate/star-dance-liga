@@ -1,0 +1,184 @@
+<%- include('../partials/header', { title: 'Club - ' + club.name }) %>
+<%- include('admin_shell', { activeNav: 'clubes', topbarSection: 'Clubes' }) %>
+
+  <div class="page-head-row">
+    <div class="page-head">
+      <span class="page-eyebrow">Ficha del Club</span>
+      <h1 class="page-title"><%= club.name %></h1>
+      <p class="page-sub">
+        <%= club.city || 'Ciudad no especificada' %>
+        <% if (club.representative) { %> · Representante: <strong style="color: var(--gold-light);"><%= club.representative %></strong><% } %>
+        <% if (club.contact_phone) { %> · <%= club.contact_phone %><% } %>
+      </p>
+    </div>
+    <div class="page-head-actions">
+      <a href="/admin/clubes" class="btn btn-secondary">&larr; Volver a Clubes</a>
+    </div>
+  </div>
+
+  <!-- Resumen -->
+  <div class="admin-stat-grid">
+    <div class="admin-stat">
+      <div class="admin-stat-icon"><span class="material-symbols-outlined">school</span></div>
+      <div>
+        <div class="admin-stat-val"><%= teachers.length %></div>
+        <div class="admin-stat-label"><%= teachers.length === 1 ? 'Profesora' : 'Profesoras' %></div>
+      </div>
+    </div>
+    <div class="admin-stat">
+      <div class="admin-stat-icon"><span class="material-symbols-outlined">roller_skating</span></div>
+      <div>
+        <div class="admin-stat-val"><%= students.length %></div>
+        <div class="admin-stat-label"><%= students.length === 1 ? 'Patinadora' : 'Patinadoras' %></div>
+      </div>
+    </div>
+    <div class="admin-stat">
+      <div class="admin-stat-icon"><span class="material-symbols-outlined">assignment</span></div>
+      <div>
+        <div class="admin-stat-val"><%= registrations.length %></div>
+        <div class="admin-stat-label"><%= registrations.length === 1 ? 'Inscripción' : 'Inscripciones' %></div>
+      </div>
+    </div>
+  </div>
+
+  <% if (porTorneo && porTorneo.length > 0) { %>
+    <div class="admin-card" style="margin-bottom: 1.5rem;">
+      <div class="admin-card-head">
+        <div class="head-left">
+          <span class="material-symbols-outlined">emoji_events</span>
+          <h2 class="admin-card-title">Inscripciones por Torneo</h2>
+        </div>
+      </div>
+      <div>
+        <% porTorneo.forEach(t => { %>
+          <div class="admin-list-row">
+            <span style="font-weight: 600; text-transform: uppercase; color: var(--text-main);"><%= t.torneo %></span>
+            <span class="count-chip"><%= t.n %> inscripciones</span>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Profesoras -->
+  <div class="admin-card" style="margin-bottom: 1.5rem;">
+    <div class="admin-card-head">
+      <div class="head-left">
+        <span class="material-symbols-outlined">groups</span>
+        <h2 class="admin-card-title">Profesoras del Club</h2>
+      </div>
+      <span class="count-chip"><%= teachers.length %></span>
+    </div>
+    <% if (teachers.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Profesora</th><th>Rol</th><th>Email</th><th>Teléfono</th>
+              <th>Alumnas en este club</th><th>Inscripciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% teachers.forEach(t => { %>
+              <tr>
+                <td><strong><%= t.full_name %></strong>
+                  <div style="font-size: 0.78rem; color: var(--text-muted);">@<%= t.username %></div>
+                </td>
+                <td><span class="badge"><%= t.role === 'profesor_admin' ? 'PROFESORA / ADMIN' : t.role.toUpperCase() %></span></td>
+                <td><%= t.email || '-' %></td>
+                <td><%= t.phone || '-' %></td>
+                <td><span class="badge badge-violet"><%= t.alumnas %></span></td>
+                <td><strong><%= t.inscripciones %></strong></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 1.5rem;">Este club no tiene profesoras asignadas.</p>
+    <% } %>
+  </div>
+
+  <!-- Patinadoras -->
+  <div class="admin-card" style="margin-bottom: 1.5rem;">
+    <div class="admin-card-head">
+      <div class="head-left">
+        <span class="material-symbols-outlined">roller_skating</span>
+        <h2 class="admin-card-title">Patinadoras del Club</h2>
+      </div>
+      <span class="count-chip"><%= students.length %></span>
+    </div>
+    <% if (students.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Apellido</th><th>Nombre</th><th>DNI</th><th>Edad</th>
+              <th>Obra Social</th><th>Profesora</th><th>Inscripciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% students.forEach(s => { %>
+              <tr>
+                <td><strong><%= s.last_name %></strong></td>
+                <td><%= s.first_name %></td>
+                <td><%= s.dni %></td>
+                <td><span class="badge badge-violet"><%= s.edad %> años</span></td>
+                <td><%= s.health_insurance || '-' %>
+                  <% if (s.policy_number) { %><div style="font-size: 0.78rem; color: var(--text-muted);"><%= s.policy_number %></div><% } %>
+                </td>
+                <td><%= s.teacher_name || '-' %></td>
+                <td><strong><%= s.inscripciones %></strong></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 1.5rem;">Este club todavía no tiene patinadoras cargadas.</p>
+    <% } %>
+  </div>
+
+  <!-- Inscripciones -->
+  <div class="admin-card">
+    <div class="admin-card-head">
+      <div class="head-left">
+        <span class="material-symbols-outlined">assignment</span>
+        <h2 class="admin-card-title">Inscripciones del Club</h2>
+      </div>
+      <span class="count-chip"><%= registrations.length %></span>
+    </div>
+    <% if (registrations.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Torneo</th><th>Alumna / Grupo</th><th>Disciplina</th>
+              <th>Categoría</th><th>Edad</th><th>Categoría de Edad</th><th>Profesora</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% registrations.forEach(r => { %>
+              <tr>
+                <td><%= r.tournament_name %></td>
+                <td><strong><%= r.alumna %></strong>
+                  <% if (r.is_group) { %><div style="font-size: 0.78rem; color: var(--text-muted);"><%= r.group_type %></div><% } %>
+                </td>
+                <td><span class="badge"><%= r.discipline %></span></td>
+                <td><span class="badge badge-violet"><%= r.categoria %></span></td>
+                <td><%= r.age ? r.age + ' años' : '-' %></td>
+                <td><%= r.age_band || '-' %></td>
+                <td><%= r.teacher_name || '-' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); text-align: center; padding: 1.5rem;">Este club todavía no tiene inscripciones a torneos.</p>
+    <% } %>
+  </div>
+
+</main>
+
+<%- include('../partials/footer') %>

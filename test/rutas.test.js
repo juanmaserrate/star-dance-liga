@@ -1005,6 +1005,51 @@ async function main() {
   // Giselle (admin de zona) también entra a clubes
   await get(PROFE_ADMIN, '/admin/clubes');
 
+
+  // --- Clubes: buscador, filtros y ficha del club ---
+  const listaClubes = await get(ADMIN, '/admin/clubes');
+  check('El listado de clubes tiene buscador con lupa',
+    listaClubes.text.includes('id="cBuscar"'));
+  check('Tiene filtros por ciudad y por actividad',
+    listaClubes.text.includes('id="cCiudad"') && listaClubes.text.includes('id="cActividad"') &&
+    listaClubes.text.includes('id="cLimpiar"'));
+  check('Cada club viaja con sus datos para poder filtrarlo',
+    ['data-ciudad', 'data-actividad', 'data-buscar'].every(a => listaClubes.text.includes(a)));
+  check('Cada club enlaza a su ficha',
+    /href="\/admin\/clubes\/\d+"/.test(listaClubes.text));
+
+  const clubConDatos = (await pglite.query(`
+    SELECT c.id FROM clubs c
+    WHERE EXISTS (SELECT 1 FROM registrations r WHERE r.club_id = c.id)
+    LIMIT 1`)).rows[0];
+
+  if (clubConDatos) {
+    const ficha = await get(ADMIN, `/admin/clubes/${clubConDatos.id}`);
+    check('La ficha muestra profesoras, patinadoras e inscripciones',
+      ['Profesoras del Club', 'Patinadoras del Club', 'Inscripciones del Club']
+        .every(t => ficha.text.includes(t)));
+    check('La ficha desglosa las inscripciones por torneo',
+      ficha.text.includes('Inscripciones por Torneo'));
+
+    // Los totales de la ficha tienen que coincidir con la base
+    const esperado = (await pglite.query(`
+      SELECT
+        (SELECT COUNT(*)::int FROM students WHERE club_id = ${clubConDatos.id}) AS alumnas,
+        (SELECT COUNT(*)::int FROM registrations WHERE club_id = ${clubConDatos.id}) AS inscripciones`)).rows[0];
+    const valores = [...ficha.text.matchAll(/class="admin-stat-val">(\d+)</g)].map(m => Number(m[1]));
+    check('Los totales de la ficha coinciden con la base',
+      valores.length === 3 && valores[1] === esperado.alumnas && valores[2] === esperado.inscripciones,
+      `ficha ${JSON.stringify(valores)} vs base ${JSON.stringify(esperado)}`);
+  }
+
+  // Un club inexistente avisa en vez de romper
+  const fichaFantasma = await request(app).get('/admin/clubes/999999');
+  check('Un club inexistente devuelve aviso, no error del servidor',
+    fichaFantasma.status === 404, `status ${fichaFantasma.status}`);
+
+  // El profesor/administrador también puede ver la ficha
+  await get(PROFE_ADMIN, `/admin/clubes/${clubConDatos ? clubConDatos.id : 1}`);
+
   // --- Administrador con alcance limitado (Giselle → CABA) ---
   const torneosGiselle = await get(PROFE_ADMIN, '/admin/torneos');
   check('Giselle ve los torneos de CABA', torneosGiselle.text.includes('ZONA CABA'));

@@ -1282,6 +1282,77 @@ router.get('/clubes', async (req, res) => {
   });
 });
 
+
+// Ficha de un club: sus profesoras, sus alumnas y todas sus inscripciones.
+router.get('/clubes/:id', async (req, res) => {
+  const clubId = toInt(req.params.id);
+  if (!clubId) return res.redirect('/admin/clubes?error=' + encodeURIComponent('Club inválido.'));
+
+  const club = await db.prepare(`SELECT * FROM clubs WHERE id = ?`).get(clubId);
+  if (!club) {
+    return res.status(404).render('error', {
+      title: 'Club No Encontrado',
+      message: 'El club que buscás no existe o fue eliminado.'
+    });
+  }
+
+  // Profesoras del club: las asignadas por user_clubs y las que lo tienen como
+  // club principal. Se unifican para no dejar a nadie afuera.
+  const teachers = await db.prepare(`
+    SELECT u.id, u.full_name, u.username, u.email, u.phone, u.role,
+      (SELECT COUNT(*) FROM students s WHERE s.teacher_id = u.id AND s.club_id = ?) AS alumnas,
+      (SELECT COUNT(*) FROM registrations r WHERE r.teacher_id = u.id AND r.club_id = ?) AS inscripciones
+    FROM users u
+    WHERE u.id IN (SELECT uc.user_id FROM user_clubs uc WHERE uc.club_id = ?)
+       OR u.club_id = ?
+    ORDER BY u.full_name ASC
+  `).all(clubId, clubId, clubId, clubId);
+
+  const students = await db.prepare(`
+    SELECT s.id, s.last_name, s.first_name, s.dni, s.birth_date,
+      s.health_insurance, s.policy_number,
+      COALESCE(u.full_name, u.username) AS teacher_name,
+      (EXTRACT(YEAR FROM CURRENT_DATE) - EXTRACT(YEAR FROM s.birth_date))::int AS edad,
+      (SELECT COUNT(*) FROM registrations r WHERE r.student_id = s.id) AS inscripciones
+    FROM students s
+    LEFT JOIN users u ON u.id = s.teacher_id
+    WHERE s.club_id = ?
+    ORDER BY s.last_name ASC, s.first_name ASC
+  `).all(clubId);
+
+  const registrations = await db.prepare(`
+    SELECT r.id, r.age, r.age_band, r.is_group, r.group_name, r.group_type, r.status,
+      t.name AS tournament_name,
+      COALESCE(t.date_from, t.event_date) AS fecha,
+      c.discipline, c.name AS category_name,
+      COALESCE(s.last_name || ' ' || s.first_name, r.group_name) AS alumna,
+      COALESCE(u.full_name, u.username) AS teacher_name
+    FROM registrations r
+    JOIN tournaments t ON t.id = r.tournament_id
+    JOIN categories c ON c.id = r.category_id
+    LEFT JOIN students s ON s.id = r.student_id
+    LEFT JOIN users u ON u.id = r.teacher_id
+    WHERE r.club_id = ?
+    ORDER BY t.name ASC, c.discipline ASC, c.order_index ASC, alumna ASC
+  `).all(clubId);
+  registrations.forEach(r => { r.categoria = formatCategoryName(r.category_name, r.discipline); });
+
+  // Cuántas inscripciones aportó a cada torneo
+  const porTorneo = await db.prepare(`
+    SELECT t.name AS torneo, COUNT(*) AS n
+    FROM registrations r JOIN tournaments t ON t.id = r.tournament_id
+    WHERE r.club_id = ?
+    GROUP BY t.name ORDER BY n DESC
+  `).all(clubId);
+
+  res.render('admin/club_detalle', {
+    user: req.session.user,
+    club, teachers, students, registrations, porTorneo,
+    success: req.query.success || null,
+    error: req.query.error || null
+  });
+});
+
 // Save Club
 router.post('/clubes', async (req, res) => {
   const { name, representative, contact_phone, city } = req.body;
