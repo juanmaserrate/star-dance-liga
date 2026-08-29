@@ -1040,6 +1040,36 @@ async function main() {
     check('Los totales de la ficha coinciden con la base',
       valores.length === 3 && valores[1] === esperado.alumnas && valores[2] === esperado.inscripciones,
       `ficha ${JSON.stringify(valores)} vs base ${JSON.stringify(esperado)}`);
+
+    // La edad se deduce de la ficha cuando la inscripcion no la tiene guardada
+    const sinEdad = (await pglite.query(`
+      SELECT r.id FROM registrations r JOIN students s ON s.id = r.student_id
+      WHERE r.club_id = ${clubConDatos.id} AND s.birth_date IS NOT NULL LIMIT 1`)).rows[0];
+    if (sinEdad) {
+      await pglite.query(`UPDATE registrations SET age = NULL WHERE id = ${sinEdad.id}`);
+      const fichaSinEdad = await get(ADMIN, `/admin/clubes/${clubConDatos.id}`);
+      // Solo la tabla de inscripciones: el resto de la ficha usa guiones
+      // legitimamente (email o telefono vacios de una profesora, por ejemplo).
+      const tablaInsc = fichaSinEdad.text.slice(fichaSinEdad.text.indexOf('Inscripciones del Club'));
+      const conEdad = (tablaInsc.match(/<td>\d+ años<\/td>/g) || []).length;
+      const sinEdadEnPantalla = (tablaInsc.match(/<td>-<\/td>/g) || []).length;
+      check('La ficha deduce la edad de la fecha de nacimiento',
+        conEdad > 0 && sinEdadEnPantalla === 0,
+        `${conEdad} con edad, ${sinEdadEnPantalla} vacías`);
+    }
+
+    // Se distingue "no aplica" de "sin asignar" segun la disciplina use franjas
+    const fichaBandas = await get(ADMIN, `/admin/clubes/${clubConDatos.id}`);
+    const usaFranjas = (await pglite.query(`
+      SELECT COUNT(*)::int AS n FROM registrations r
+      JOIN categories c ON c.id = r.category_id
+      WHERE r.club_id = ${clubConDatos.id} AND COALESCE(r.age_band,'') = ''
+        AND NOT EXISTS (SELECT 1 FROM tournament_age_bands b
+          WHERE b.tournament_id = r.tournament_id AND b.discipline = c.discipline)`)).rows[0].n;
+    check('Las disciplinas sin franjas dicen "No aplica", no un guion suelto',
+      usaFranjas === 0 || fichaBandas.text.includes('No aplica'),
+      `${usaFranjas} inscripciones de disciplinas sin franjas`);
+
   }
 
   // Un club inexistente avisa en vez de romper

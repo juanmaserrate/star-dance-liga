@@ -166,8 +166,16 @@
                 </td>
                 <td><span class="badge"><%= r.discipline %></span></td>
                 <td><span class="badge badge-violet"><%= r.categoria %></span></td>
-                <td><%= r.age ? r.age + ' años' : '-' %></td>
-                <td><%= r.age_band || '-' %></td>
+                <td><%= r.edad ? r.edad + ' años' : '-' %></td>
+                <td>
+                  <% if (r.age_band) { %>
+                    <span class="badge"><%= r.age_band %></span>
+                  <% } else if (Number(r.franjas_disciplina) > 0) { %>
+                    <span style="color: var(--gold-light);">Sin asignar</span>
+                  <% } else { %>
+                    <span style="color: var(--text-muted);">No aplica</span>
+                  <% } %>
+                </td>
                 <td><%= r.teacher_name || '-' %></td>
               </tr>
             <% }) %>

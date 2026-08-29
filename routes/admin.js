@@ -1321,10 +1321,21 @@ router.get('/clubes/:id', async (req, res) => {
   `).all(clubId);
 
   const registrations = await db.prepare(`
-    SELECT r.id, r.age, r.age_band, r.is_group, r.group_name, r.group_type, r.status,
+    SELECT r.id, r.age_band, r.is_group, r.group_name, r.group_type, r.status,
       t.name AS tournament_name,
       COALESCE(t.date_from, t.event_date) AS fecha,
       c.discipline, c.name AS category_name,
+      -- La edad guardada manda; si la inscripcion es vieja y no la tiene, se
+      -- deduce de la ficha de la alumna, igual que en el Libro Mayor.
+      COALESCE(
+        r.age,
+        CASE WHEN s.birth_date IS NOT NULL
+          THEN (EXTRACT(YEAR FROM CURRENT_DATE) - EXTRACT(YEAR FROM s.birth_date))::int END
+      ) AS edad,
+      -- Cuantas franjas tiene la disciplina en ese torneo: sirve para
+      -- distinguir "no aplica" (LIBRE, DUO) de "falta cargarla" (FREE DANCE).
+      (SELECT COUNT(*) FROM tournament_age_bands b
+        WHERE b.tournament_id = r.tournament_id AND b.discipline = c.discipline) AS franjas_disciplina,
       COALESCE(s.last_name || ' ' || s.first_name, r.group_name) AS alumna,
       COALESCE(u.full_name, u.username) AS teacher_name
     FROM registrations r
