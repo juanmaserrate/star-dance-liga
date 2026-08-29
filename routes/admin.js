@@ -90,11 +90,11 @@ router.get('/dashboard', async (req, res) => {
   const totalTournaments = tournaments.length;
 
   const registrationsByClub = await db.prepare(`
-    SELECT cl.name as club_name, COUNT(r.id) as count
+    SELECT cl.id AS club_id, cl.name as club_name, COUNT(r.id) as count
     FROM registrations r
     JOIN clubs cl ON r.club_id = cl.id
     WHERE 1=1${regWhere}
-    GROUP BY cl.id
+    GROUP BY cl.id, cl.name
     ORDER BY count DESC
   `).all(...regParams);
 
@@ -113,7 +113,8 @@ router.get('/dashboard', async (req, res) => {
     COALESCE(s.last_name, '') as last_name,
     cl.name as club_name,
     t.name as tournament_name,
-    c.name as category_name
+    c.name as category_name,
+    c.discipline
     FROM registrations r
     LEFT JOIN students s ON r.student_id = s.id
     JOIN clubs cl ON r.club_id = cl.id

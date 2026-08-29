@@ -1021,6 +1021,37 @@ async function main() {
 
 
 
+
+  // --- Dashboard: los resumenes llevan al detalle ---
+  const dashDetalle = await get(ADMIN, '/admin/dashboard');
+  check('Cada club del resumen enlaza a su ficha',
+    /href="\/admin\/clubes\/\d+"/.test(dashDetalle.text) &&
+    dashDetalle.text.includes('admin-list-link'));
+  check('Cada disciplina enlaza a sus inscripciones',
+    dashDetalle.text.includes('/admin/inscripciones?disciplina='));
+  check('Cada inscripción reciente enlaza a su ficha',
+    /href="\/admin\/inscripciones\/\d+\/editar"/.test(dashDetalle.text));
+  check('Las tarjetas tienen su atajo de "ver todas"',
+    dashDetalle.text.includes('Ver todos los clubes') && dashDetalle.text.includes('Ver todas'));
+
+  // El filtro de torneo tiene que viajar con los enlaces
+  const dashFiltrado2 = await get(ADMIN, `/admin/dashboard?tournament_id=${zonaSur}`);
+  check('Al filtrar por torneo, los enlaces conservan el filtro',
+    dashFiltrado2.text.includes('tournament_id=' + zonaSur + '"') ||
+    dashFiltrado2.text.includes('&amp;tournament_id=' + zonaSur),
+    'no viaja el filtro');
+
+  // La tabla de ultimas inscripciones muestra apellido y nombre separados
+  check('Las últimas inscripciones separan Apellido y Nombre',
+    dashDetalle.text.includes('<th>Apellido</th>') && dashDetalle.text.includes('<th>Nombre</th>'));
+  check('Y suman torneo y categoría, que antes no se veían',
+    dashDetalle.text.includes('<th>Torneo</th>') && dashDetalle.text.includes('<th>Categoría</th>'));
+
+  // Los destinos tienen que existir de verdad
+  const clubDelResumen = (dashDetalle.text.match(/href="\/admin\/clubes\/(\d+)"/) || [])[1];
+  if (clubDelResumen) await get(ADMIN, `/admin/clubes/${clubDelResumen}`);
+  await get(ADMIN, '/admin/inscripciones?disciplina=LIBRE');
+
   // --- Usuarios: lista en vez de tarjetas ---
   const listaUsuarios = await get(ADMIN, '/admin/usuarios');
   check('Los usuarios ya no se muestran como tarjetas',

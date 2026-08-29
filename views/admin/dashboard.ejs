@@ -68,12 +68,12 @@
       </div>
       <button type="submit" class="btn btn-gold" style="height: 40px;">⬇️ Descargar Excel</button>
       <p style="color: var(--text-muted); font-size: 0.85rem; width: 100%; margin: 0.25rem 0 0;">
-        El <strong>Libro Mayor</strong> es la planilla de pista: un bloque por disciplina,
-        categoría y categoría de edad, con Apellido, Nombre, Edad, Institución y salida a pista,
-        más columnas en blanco para el horario y para anotar a mano. Las otras tres arman cuadros
-        con nombre completo, edad, disciplina, categoría, categoría de edad y club; la última abre
-        una solapa por categoría. En todas, las patinadoras van ordenadas por edad de menor a
-        mayor. No incluye las inscripciones canceladas.
+        El <strong>Libro Mayor</strong> es la planilla de pista: un bloque por cada categoría
+        subdividida por franja de edad, con Apellido, Nombre, Institución, salida a pista y las
+        tres columnas de jueces. El horario y la salida a pista quedan en blanco para completar
+        a mano. Las otras tres arman cuadros con nombre completo, edad, disciplina, categoría,
+        categoría de edad y club; la última abre una solapa por categoría. En todas, las
+        patinadoras van ordenadas por edad de menor a mayor. No incluye las canceladas.
       </p>
     </form>
   </div>
@@ -97,23 +97,35 @@
     </div>
   </div>
 
-  <!-- Secondary Grid -->
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+  <%
+    // El filtro de torneo viaja en todos los enlaces, para que al ampliar la
+    // informacion se siga viendo lo mismo que en el dashboard.
+    const filtroTorneo = selectedTournamentId ? 'tournament_id=' + selectedTournamentId : '';
+    const conFiltro = (base) => base + (filtroTorneo ? (base.includes('?') ? '&' : '?') + filtroTorneo : '');
+  %>
+
+  <!-- Resumen por club y por disciplina -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
     <!-- Patinadoras por Club -->
     <div class="admin-card" style="margin: 0; display: flex; flex-direction: column;">
       <div class="admin-card-head">
         <div class="head-left">
           <span class="material-symbols-outlined">account_balance</span>
-          <h3 class="admin-card-title">Patinadoras por Club</h3>
+          <h3 class="admin-card-title">Inscripciones por Club</h3>
         </div>
+        <a href="/admin/clubes" class="btn btn-ghost btn-sm">Ver todos los clubes &rarr;</a>
       </div>
       <div style="flex: 1;">
         <% if (registrationsByClub && registrationsByClub.length > 0) { %>
           <% registrationsByClub.forEach(c => { %>
-            <div class="admin-list-row">
+            <a href="/admin/clubes/<%= c.club_id %>" class="admin-list-row admin-list-link"
+               title="Ver la ficha de <%= c.club_name %>: profesoras, patinadoras e inscripciones">
               <span style="font-weight: 600; text-transform: uppercase; color: var(--text-main);"><%= c.club_name %></span>
-              <span class="count-chip"><%= c.count %> inscripciones</span>
-            </div>
+              <span style="display: flex; align-items: center; gap: 0.4rem;">
+                <span class="count-chip"><%= c.count %> inscripciones</span>
+                <span class="material-symbols-outlined" style="font-size: 1.1rem; color: var(--gold-light);">chevron_right</span>
+              </span>
+            </a>
           <% }) %>
         <% } else { %>
           <p style="color: var(--text-muted); padding: 1.5rem; text-align: center;">Sin datos registrados aún.</p>
@@ -128,54 +140,70 @@
           <span class="material-symbols-outlined">category</span>
           <h3 class="admin-card-title">Inscripciones por Disciplina</h3>
         </div>
+        <a href="<%= conFiltro('/admin/inscripciones') %>" class="btn btn-ghost btn-sm">Ver todas &rarr;</a>
       </div>
       <div style="flex: 1;">
         <% if (registrationsByDiscipline && registrationsByDiscipline.length > 0) { %>
           <% registrationsByDiscipline.forEach(d => { %>
-            <div class="admin-list-row">
+            <a href="<%= conFiltro('/admin/inscripciones?disciplina=' + encodeURIComponent(d.discipline)) %>"
+               class="admin-list-row admin-list-link"
+               title="Ver las inscripciones de <%= d.discipline %>">
               <span style="font-weight: 600; text-transform: uppercase; color: var(--text-main);"><%= d.discipline %></span>
-              <span class="count-chip"><%= d.count %> inscripciones</span>
-            </div>
+              <span style="display: flex; align-items: center; gap: 0.4rem;">
+                <span class="count-chip"><%= d.count %> inscripciones</span>
+                <span class="material-symbols-outlined" style="font-size: 1.1rem; color: var(--gold-light);">chevron_right</span>
+              </span>
+            </a>
           <% }) %>
         <% } else { %>
           <p style="color: var(--text-muted); padding: 1.5rem; text-align: center;">Sin datos registrados aún.</p>
         <% } %>
       </div>
     </div>
+  </div>
 
-    <!-- Últimas Inscripciones Activas -->
-    <div class="admin-card" style="margin: 0; display: flex; flex-direction: column;">
-      <div class="admin-card-head">
-        <div class="head-left">
-          <span class="material-symbols-outlined">bolt</span>
-          <h3 class="admin-card-title">Últimas Inscripciones Activas</h3>
-        </div>
+  <!-- Últimas inscripciones: a lo ancho, que es donde entra la tabla -->
+  <div class="admin-card" style="margin-bottom: 2rem;">
+    <div class="admin-card-head">
+      <div class="head-left">
+        <span class="material-symbols-outlined">bolt</span>
+        <h3 class="admin-card-title">Últimas Inscripciones Activas</h3>
       </div>
-      <% if (recentRegistrations && recentRegistrations.length > 0) { %>
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Apellido</th>
-                <th>Club</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% recentRegistrations.forEach(r => { %>
-                <tr>
-                  <td><strong><%= r.first_name %></strong></td>
-                  <td><strong><%= r.last_name %></strong></td>
-                  <td><%= r.club_name %></td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
-      <% } else { %>
-        <p style="color: var(--text-muted); padding: 1.5rem; text-align: center;">Sin inscripciones recientes.</p>
-      <% } %>
+      <a href="<%= conFiltro('/admin/inscripciones') %>" class="btn btn-ghost btn-sm">Ver todas &rarr;</a>
     </div>
+    <% if (recentRegistrations && recentRegistrations.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Apellido</th>
+              <th>Nombre</th>
+              <th>Club</th>
+              <th>Torneo</th>
+              <th>Categoría</th>
+              <th>Ficha</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% recentRegistrations.forEach(r => { %>
+              <tr>
+                <td><strong><%= r.last_name %></strong></td>
+                <td><%= r.first_name %></td>
+                <td><%= r.club_name %></td>
+                <td><%= r.tournament_name %></td>
+                <td><span class="badge badge-violet"><%= formatCategoryName(r.category_name, r.discipline) %></span></td>
+                <td>
+                  <a href="/admin/inscripciones/<%= r.id %>/editar" class="btn btn-outline-gold btn-sm"
+                     title="Abrir la inscripción">Ver</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p style="color: var(--text-muted); padding: 1.5rem; text-align: center;">Sin inscripciones recientes.</p>
+    <% } %>
   </div>
 
   <!-- Master Skaters Table in Status Module -->
@@ -244,6 +272,19 @@
       <p style="color: var(--text-muted); text-align: center; padding: 2.5rem;">No hay patinadoras registradas en el sistema aún.</p>
     <% } %>
   </div>
+
+<style>
+  /* Los renglones de los resumenes llevan a la pantalla con el detalle */
+  .admin-list-link {
+    display: flex; justify-content: space-between; align-items: center;
+    text-decoration: none; cursor: pointer;
+    transition: background 0.15s ease, padding-left 0.15s ease;
+  }
+  .admin-list-link:hover {
+    background: rgba(212, 175, 55, 0.10);
+    padding-left: 1.6rem;
+  }
+</style>
 
 </main>
 
